@@ -350,7 +350,6 @@ fct renderPixel(state, x, y) {
 /// Advances one PPU dot and returns true when a new frame completes.
 pub fct tick(state) {
     var core << state["core"];
-    core.frameComplete << false;
     if (core.scanline ==-1 and core.dot == 1) {
         core.status << core.status band 0x1F;
         core.nmiPending << false;

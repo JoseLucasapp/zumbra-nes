@@ -1,0 +1,59 @@
+/// Persistent desktop and emulator preferences.
+pub struct Settings {
+    scale: int;
+    vsync: bool;
+    fullscreen: bool;
+    volume: int;
+    muted: bool;
+    showFps: bool;
+    unlimited: bool;
+    p1A: int;
+    p1B: int;
+    p1Select: int;
+    p1Start: int;
+    p1Up: int;
+    p1Down: int;
+    p1Left: int;
+    p1Right: int;
+    p2A: int;
+    p2B: int;
+    p2Select: int;
+    p2Start: int;
+    p2Up: int;
+    p2Down: int;
+    p2Left: int;
+    p2Right: int;
+}
+
+/// SDL scancode defaults: arrows/Z/X/Enter/RightShift and WASD/G/H/T/Y.
+pub fct defaults() {
+    Settings(3, true, false, 80, false, true, false, 29, 27, 229, 40, 82, 81, 80, 79, 10, 11, 23, 28, 26, 22, 4, 7);
+}
+pub fct asDictionary(value) {
+    var result << {
+    };
+    result["scale"] << value.scale;
+    result["vsync"] << value.vsync;
+    result["fullscreen"] << value.fullscreen;
+    result["volume"] << value.volume;
+    result["muted"] << value.muted;
+    result["showFps"] << value.showFps;
+    result["unlimited"] << value.unlimited;
+    result["p1A"] << value.p1A;
+    result["p1B"] << value.p1B;
+    result["p1Select"] << value.p1Select;
+    result["p1Start"] << value.p1Start;
+    result["p1Up"] << value.p1Up;
+    result["p1Down"] << value.p1Down;
+    result["p1Left"] << value.p1Left;
+    result["p1Right"] << value.p1Right;
+    result["p2A"] << value.p2A;
+    result["p2B"] << value.p2B;
+    result["p2Select"] << value.p2Select;
+    result["p2Start"] << value.p2Start;
+    result["p2Up"] << value.p2Up;
+    result["p2Down"] << value.p2Down;
+    result["p2Left"] << value.p2Left;
+    result["p2Right"] << value.p2Right;
+    result;
+}

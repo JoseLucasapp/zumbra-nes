@@ -1,0 +1,12 @@
+import "../src/core/palette.zum" as palette;
+import "../src/testing/assert.zum" as test;
+var indices << bytes(2);
+indices[0] << 0u8;
+indices[1] << 1u8;
+var rgba << palette.rgba(indices);
+test.assertInt(sizeOf(rgba), 8, "two RGBA pixels");
+test.assertU8(rgba[0], 84u8, "palette red");
+test.assertU8(rgba[1], 84u8, "palette green");
+test.assertU8(rgba[2], 84u8, "palette blue");
+test.assertU8(rgba[3], 255u8, "palette alpha");
+show("palette_test: ok");

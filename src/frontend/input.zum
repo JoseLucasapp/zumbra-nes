@@ -1,0 +1,62 @@
+import "../core/controller.zum" as controller;
+import "native_bridge.zum" as native;
+fct pressed(context, key, player, gamepadButton) {
+    native.keyDown(context, key) or native.gamepadButton(context, player, gamepadButton);
+}
+
+/// Builds the complete NES button mask for one player from keyboard and gamepad.
+pub fct playerMask(context, settings, player) {
+    var mask << 0;
+    if (player == 1) {
+        if (pressed(context, settings.p1A, 1, 0)) {
+            mask << mask bor controller.BUTTON_A;
+        }
+        if (pressed(context, settings.p1B, 1, 1)) {
+            mask << mask bor controller.BUTTON_B;
+        }
+        if (pressed(context, settings.p1Select, 1, 4)) {
+            mask << mask bor controller.BUTTON_SELECT;
+        }
+        if (pressed(context, settings.p1Start, 1, 6)) {
+            mask << mask bor controller.BUTTON_START;
+        }
+        if (pressed(context, settings.p1Up, 1, 11)) {
+            mask << mask bor controller.BUTTON_UP;
+        }
+        if (pressed(context, settings.p1Down, 1, 12)) {
+            mask << mask bor controller.BUTTON_DOWN;
+        }
+        if (pressed(context, settings.p1Left, 1, 13)) {
+            mask << mask bor controller.BUTTON_LEFT;
+        }
+        if (pressed(context, settings.p1Right, 1, 14)) {
+            mask << mask bor controller.BUTTON_RIGHT;
+        }
+    } else {
+        if (pressed(context, settings.p2A, 2, 0)) {
+            mask << mask bor controller.BUTTON_A;
+        }
+        if (pressed(context, settings.p2B, 2, 1)) {
+            mask << mask bor controller.BUTTON_B;
+        }
+        if (pressed(context, settings.p2Select, 2, 4)) {
+            mask << mask bor controller.BUTTON_SELECT;
+        }
+        if (pressed(context, settings.p2Start, 2, 6)) {
+            mask << mask bor controller.BUTTON_START;
+        }
+        if (pressed(context, settings.p2Up, 2, 11)) {
+            mask << mask bor controller.BUTTON_UP;
+        }
+        if (pressed(context, settings.p2Down, 2, 12)) {
+            mask << mask bor controller.BUTTON_DOWN;
+        }
+        if (pressed(context, settings.p2Left, 2, 13)) {
+            mask << mask bor controller.BUTTON_LEFT;
+        }
+        if (pressed(context, settings.p2Right, 2, 14)) {
+            mask << mask bor controller.BUTTON_RIGHT;
+        }
+    }
+    mask;
+}

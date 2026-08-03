@@ -31,12 +31,33 @@ def prg(size: int, reset_offset: int) -> bytearray:
     return data
 
 
+
+def playable_prg(size: int) -> bytearray:
+    data = bytearray([0xEA] * size)
+    program = bytes([
+        0x78,             # SEI
+        0xD8,             # CLD
+        0xA2, 0xFF,       # LDX #$FF
+        0x9A,             # TXS
+        0xA9, 0x00,       # LDA #$00
+        0x8D, 0x00, 0x20, # STA $2000
+        0x8D, 0x01, 0x20, # STA $2001
+        0x4C, 0x0D, 0x80, # JMP $800D
+    ])
+    data[0:len(program)] = program
+    for vector_offset in (0x3FFA, 0x3FFC, 0x3FFE):
+        target = 0x8000 if vector_offset == 0x3FFC else 0x800D
+        data[vector_offset] = target & 0xFF
+        data[vector_offset + 1] = (target >> 8) & 0xFF
+    return data
+
 def chr_data(size: int) -> bytearray:
     return bytearray((index * 7 + 1) & 0xFF for index in range(size))
 
 
 files: dict[str, bytes] = {}
 files["nrom-128-horizontal.nes"] = bytes(header(1, 1) + prg(16384, 0x3FFC) + chr_data(8192))
+files["z22-playable-loop.nes"] = bytes(header(1, 1) + playable_prg(16384) + chr_data(8192))
 files["nrom-256-chr-ram.nes"] = bytes(header(2, 0, flags6=0x03) + prg(32768, 0x7FFC))
 trainer = bytearray([0x5A] * 512)
 files["nrom-trainer.nes"] = bytes(header(1, 1, flags6=0x04) + trainer + prg(16384, 0x3FFC) + chr_data(8192))

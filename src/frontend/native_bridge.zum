@@ -1,0 +1,209 @@
+/// Pure-Zumbra bridge over the official desktop/media runtime introduced in Zumbra 0.14.3.
+pub const COMMAND_OPEN << 0;
+pub const COMMAND_PAUSE << 1;
+pub const COMMAND_RESET << 2;
+pub const COMMAND_FULLSCREEN << 3;
+pub const COMMAND_MUTE << 4;
+pub const COMMAND_FRAME << 5;
+pub const COMMAND_LIBRARY << 6;
+pub const COMMAND_ACHIEVEMENTS << 7;
+pub const COMMAND_CONTROLS << 8;
+pub const COMMAND_FASTER << 9;
+pub const COMMAND_VOLUME_DOWN << 10;
+pub const COMMAND_VOLUME_UP << 11;
+pub const COMMAND_EXPORT << 12;
+pub const COMMAND_IMPORT << 13;
+pub const COMMAND_CLOSE << 14;
+pub const COMMAND_SCALE_DOWN << 15;
+pub const COMMAND_SCALE_UP << 16;
+pub const COMMAND_FPS << 17;
+pub const COMMAND_VSYNC << 18;
+fct commandStates() {
+    var values <<[];
+    var index << 0;
+    while (index < 19) {
+        addToArrayEnd(values, false);
+        index << index + 1;
+    }
+    values;
+}
+
+/// Creates the official Zumbra desktop application and window.
+pub fct create(title, scale, vsync, fullscreen, requestedHeadless) {
+    var backend << "auto";
+    if (requestedHeadless) {
+        backend << "headless";
+    }
+    var app << desktopApp({
+        "name": "Zumbra NES", "version": "0.4.0", "identifier": "dev.zumbra.nes", "backend": backend, "quitOnLastWindow": true, "closeOnRequest": true
+    });
+    var window << desktopWindow(app, {
+        "title": title, "width": 256 * scale, "height": 240 * scale, "resizable": true, "highDPI": true, "fullscreen": fullscreen
+    });
+    desktopWindowSetVSync(window, vsync);
+    {
+        "app": app, "window": window, "closed": false, "commands": commandStates(), "volume": 80, "muted": false, "headless": desktopBackend(app) == "headless"
+    };
+}
+pub fct headless(context) {
+    context["headless"];
+}
+pub fct valid(context) {
+    desktopWindowOpen(context["window"]);
+}
+pub fct error(context) {
+    context;
+    "desktop runtime initialization failed";
+}
+pub fct destroy(context) {
+    desktopWindowClose(context["window"]);
+    desktopClose(context["app"]);
+}
+pub fct poll(context) {
+    var event << desktopPoll(context["app"], 0);
+    if (toString(event) == "null") {
+        return false;
+    }
+    var kind << event["type"];
+    if (kind == "quit" or kind == "terminating" or kind == "window_close_requested" or kind == "window_closed") {
+        context["closed"] << true;
+    }
+    true;
+}
+pub fct shouldClose(context) {
+    context["closed"] or!desktopWindowOpen(context["window"]);
+}
+pub fct keyDown(context, scancode) {
+    desktopKeyDown(context["app"], scancode);
+}
+pub fct gamepadButton(context, player, button) {
+    desktopGamepadButton(context["app"], player, button);
+}
+pub fct commandPressed(context, command, scancode) {
+    var current << keyDown(context, scancode);
+    var previous << context["commands"][command];
+    context["commands"][command] << current;
+    current and!previous;
+}
+pub fct present(context, pixels) {
+    desktopWindowPresentRGBA(context["window"], pixels, 256, 240);
+}
+pub fct queueAudio(context, samples) {
+    desktopAudioQueue(context["app"], samples, context["volume"], context["muted"]);
+}
+pub fct audioQueued(context) {
+    desktopAudioQueued(context["app"]);
+}
+pub fct setVolume(context, volume) {
+    context["volume"] << volume;
+    true;
+}
+pub fct setScale(context, scale) {
+    desktopWindowSetSize(context["window"], 256 * scale, 240 * scale);
+    true;
+}
+pub fct setVsync(context, vsync) {
+    desktopWindowSetVSync(context["window"], vsync);
+    true;
+}
+pub fct setMuted(context, muted) {
+    context["muted"] << muted;
+    true;
+}
+pub fct setFullscreen(context, fullscreen) {
+    desktopWindowSetFullscreen(context["window"], fullscreen);
+    true;
+}
+pub fct setStatus(context, status) {
+    desktopWindowSetTitle(context["window"], "Zumbra NES — " + status);
+    true;
+}
+pub fct notify(context, title, message) {
+    desktopNotify(context["app"], {
+        "title": title, "body": message, "urgency": "normal"
+    });
+}
+pub fct ticks(context) {
+    context;
+    profileNowNs() / 1000000u64;
+}
+pub fct delay(context, milliseconds) {
+    context;
+    sleepMs(milliseconds);
+    true;
+}
+pub fct unixSeconds() {
+    unixTimeSeconds();
+}
+pub fct initialRom() {
+    var args << processArgs();
+    if (sizeOf(args) > 1) {
+        return args[1];
+    }
+    "";
+}
+pub fct dataPath(context) {
+    var paths << desktopPaths(context["app"]);
+    var path << paths["data"] + "/zumbra-nes";
+    createFile(path + "/.zumbra-runtime", "0.4.0");
+    path;
+}
+pub fct pickRom(context) {
+    var selected << desktopPickFile(context["app"], {
+        "title": "Abrir ROM NES/Famicom", "multiple": false
+    });
+    if (sizeOf(selected) == 0) {
+        return "";
+    }
+    selected[0];
+}
+pub fct showPanel(context, title, body) {
+    var panel << desktopWindow(context["app"], {
+        "title": title, "width": 640, "height": 480, "resizable": true, "highDPI": true
+    });
+    var content << uiColumn({
+        "padding": 24, "gap": 12, "overflowY": "auto"
+    },[uiText({
+        "text": title, "fontSize": 24, "fontWeight": "bold"
+    },[]), uiText({
+        "text": body, "fontSize": 15, "wrap": true
+    },[])]);
+    uiMount(context["app"], panel, content, {
+        "theme": uiTheme("dark")
+    });
+    desktopWindowShow(panel);
+    true;
+}
+fct anyKeyDown(context) {
+    var code << 0;
+    while (code < 512) {
+        if (keyDown(context, code)) {
+            return code;
+        }
+        code << code + 1;
+    }
+    - 1;
+}
+pub fct captureKey(context, prompt) {
+    notify(context, "Remapeamento", prompt);
+    while (anyKeyDown(context) >= 0) {
+        poll(context);
+        sleepMs(10);
+    }
+    while (!shouldClose(context)) {
+        poll(context);
+        var code << anyKeyDown(context);
+        if (code == 41) {
+            return-1;
+        }
+        if (code >= 0) {
+            while (keyDown(context, code)) {
+                poll(context);
+                sleepMs(10);
+            }
+            return code;
+        }
+        sleepMs(10);
+    }
+    - 1;
+}

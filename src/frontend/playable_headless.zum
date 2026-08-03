@@ -1,0 +1,50 @@
+import "../achievements/catalog.zum" as catalog;
+import "../achievements/engine.zum" as achievements;
+import "../core/audio_output.zum" as audioOutput;
+import "../core/cartridge.zum" as cartridge;
+import "../core/console.zum" as console;
+import "../core/palette.zum" as palette;
+import "../persistence/store.zum" as store;
+/// Deterministic Z22 report covering video, audio, persistence and achievements.
+pub struct PlayableReport {
+    version: string;
+    mapper: u16;
+    frames: u64;
+    rgbaBytes: int;
+    frameDigest: string;
+    audioSamples: int;
+    audioDigest: string;
+    schemaVersion: int;
+    achievements: int;
+    recentRoms: int;
+}
+pub fct runFile(path) {
+    var db << store.memory();
+    var cart << cartridge.load(path);
+    var info << cart["info"];
+    var machine << console.create(cart);
+    console.runFrame(machine, 200000);
+    var pixels << palette.rgba(machine["bus"]["ppu"]["framebuffer"]);
+    var cursor << audioOutput.createCursor();
+    var samples << audioOutput.drain(machine["bus"]["apu"], cursor);
+    store.recordRom(db, info, 1u64);
+    store.seedAchievements(db, info.digest, catalog.defaults());
+    var unlocked << achievements.evaluate(db, info.digest, machine, 1, 0, 0, 1u64);
+    var recent << store.recentRoms(db, 10);
+    var report << PlayableReport("0.4.0", info.header.mapper, machine["bus"]["ppu"]["core"].frame, sizeOf(pixels), sha256(pixels), sizeOf(samples), sha256(samples), store.schemaVersion(db), sizeOf(unlocked), sizeOf(recent));
+    store.close(db);
+    report;
+}
+pub fct printReport(report) {
+    show("Zumbra NES Z22 playable");
+    show(report.version);
+    show(report.mapper);
+    show(report.frames);
+    show(report.rgbaBytes);
+    show(report.frameDigest);
+    show(report.audioSamples);
+    show(report.audioDigest);
+    show(report.schemaVersion);
+    show(report.achievements);
+    show(report.recentRoms);
+}

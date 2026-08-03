@@ -1,48 +1,57 @@
 # Zumbra NES
 
-Emulador NES/Famicom em desenvolvimento, escrito em **Zumbra 0.14.2**.
+Emulador NES/Famicom local-first escrito em **Zumbra 0.14.3**. O repositório da aplicação contém somente código Zumbra: SDL3, vídeo, áudio, teclado e gamepads são acessados pelas APIs oficiais do runtime.
 
-A versão `0.3.0` conclui o marco **Z21**: PPU, APU, controles, OAM DMA e o scheduler completo de CPU/PPU/APU foram integrados ao núcleo criado nas Z19 e Z20. O projeto permanece headless nesta versão; janela, teclado/gamepad real, conquistas e persistência do usuário pertencem à Z22.
+A versão `0.4.0` conclui a **Z22**: o núcleo headless das Z19–Z21 agora possui frontend desktop SDL3, vídeo e áudio reais, teclado/gamepad para dois jogadores, abertura de ROM, controles de execução, biblioteca SQLite, sessões e conquistas locais offline.
 
-## Implementado
+## Recursos
 
-### Z19 — fundação
+### Emulação
 
-- parser iNES 1.0 e identificação básica de NES 2.0;
-- cartucho, trainer, PRG ROM/RAM e CHR ROM/RAM;
-- Mapper 0 com NROM-128 e NROM-256;
-- barramento inicial, vetores e fixtures sintéticas.
+- iNES 1.0 e detecção básica NES 2.0;
+- Mapper 0/NROM-128/NROM-256;
+- CPU Ricoh 2A03 com 151 opcodes oficiais;
+- PPU 2C02, background, sprites, scrolling, VBlank/NMI e OAM DMA;
+- APU pulse 1/2, triangle, noise e DMC;
+- dois controles, IRQs e scheduler CPU/PPU/APU;
+- paridade determinística entre VM e backend C11;
+- fronteira de frame persistente, evitando que instruções longas percam o evento de frame completo.
 
-### Z20 — CPU 6502
+### Z22 desktop
 
-- CPU Ricoh 2A03/NMOS 6502;
-- 151 opcodes oficiais;
-- todos os modos oficiais de endereçamento;
-- stack, flags, reset, IRQ, NMI, BRK e ciclos agregados;
-- page crossing e bug do `JMP ($xxFF)`.
+- janela SDL3 redimensionável com escala inteira e letterboxing;
+- framebuffer `256×240` convertido para RGBA;
+- áudio mono PCM em 44,1 kHz;
+- teclado, dois gamepads, hot-plug e remapeamento dos dois jogadores;
+- fullscreen, VSync, escala 1×–4×, pausa, reset, fechamento/avanço de frame, mute, volume e contador de FPS;
+- ROM por argumento da CLI, seletor de arquivo ou lista recente;
+- suporte jogável atual limitado a Mapper 0/NROM;
+- nenhuma ROM comercial incluída.
 
-### Z21 — hardware do NES
+### Persistência e conquistas
 
-- PPU Ricoh 2C02 com `PPUCTRL`, `PPUMASK`, `PPUSTATUS`, OAM, scroll, endereço e dados;
-- pattern tables, nametables, attribute tables, palette RAM e mirroring horizontal/vertical/four-screen;
-- framebuffer determinístico de `256×240` índices de paleta;
-- background, sprites 8×8/8×16, prioridade, flip, sprite zero hit e overflow;
-- scanlines, dots, VBlank, NMI e odd-frame cycle skip;
-- OAM DMA por `$4014`, com 513/514 ciclos de stall;
-- dois controles em `$4016/$4017`, strobe e leitura serial A/B/Select/Start/direções;
-- APU com pulse 1/2, triangle, noise e DMC;
-- envelopes, sweep, length counters, linear counter, LFSR, frame counter e IRQs;
-- buffer PCM determinístico e digest SHA-256;
-- scheduler central com razão `3 PPU : 1 CPU : 1 APU`;
-- propagação PPU NMI, APU IRQ, DMA e fetch do DMC;
-- paridade de saída entre VM e executável C11.
+O SQLite é a fonte principal para:
+
+- configurações e remapeamento;
+- biblioteca e ROMs recentes;
+- sessões e tempo jogado;
+- definições, progresso e desbloqueios de conquistas.
+
+JSON é usado somente para exportação, importação e depuração.
+
+
+### Código da aplicação
+
+O `zumbra-nes` não possui arquivos `.c` ou `.h` nem declarações `extern "C"`. A aplicação chama `desktopWindowPresentRGBA`, `desktopAudioQueue`, `desktopKeyDown`, `desktopGamepadButton`, `desktopWindowSetVSync`, `processArgs`, `unixTimeSeconds` e `createFile` diretamente em Zumbra 0.14.3. O backend C11/SDL3 gerado permanece uma implementação interna do compilador/runtime, fora do código-fonte da aplicação.
 
 ## Requisitos
 
-- Zumbra `0.14.2` no `PATH`;
-- Linux para o gate nativo oficial atual;
-- `clang` ou `gcc`;
-- dependências nativas exigidas pela distribuição da Zumbra.
+- Linux amd64;
+- Zumbra `0.14.3`;
+- Clang ou GCC;
+- `libsqlite3-0`;
+- `libsdl3-0` para a interface jogável;
+- `zenity` recomendado para o seletor de ROM.
 
 ```bash
 zumbra --version
@@ -51,55 +60,105 @@ zumbra --version
 Resultado esperado:
 
 ```text
-0.14.2
+0.14.3
 ```
+
+## Executar
+
+Build desktop:
+
+```bash
+zumbra app build \
+  --manifest zumbra-app.toml \
+  --target linux \
+  --arch amd64 \
+  --release \
+  -o build/zumbra-nes
+```
+
+Abrir sem ROM, usando seletor/recente:
+
+```bash
+./build/zumbra-nes
+```
+
+Abrir uma ROM própria:
+
+```bash
+./build/zumbra-nes /caminho/jogo.nes
+```
+
+### Controles padrão
+
+| Ação | Jogador 1 | Jogador 2 |
+|---|---|---|
+| Direcional | Setas | WASD |
+| A | Z | G |
+| B | X | H |
+| Select | Shift direito | T |
+| Start | Enter | Y |
+
+Atalhos do emulador:
+
+- `O`: abrir ROM;
+- `P`: pausar/continuar;
+- `R`: reset;
+- `N`: avançar um frame;
+- `M`: mute;
+- `F1`: biblioteca local;
+- `F2`: conquistas;
+- `F3`: remapear os dois jogadores;
+- `F4`: alternar velocidade ilimitada;
+- `F5`: fechar a ROM atual;
+- `F6` / `F7`: diminuir/aumentar escala entre 1× e 4×;
+- `F8`: exportar dados locais para JSON;
+- `F9`: importar o JSON exportado;
+- `F10`: mostrar/ocultar FPS;
+- `F11`: fullscreen;
+- `F12`: alternar VSync;
+- `-` / `=`: diminuir/aumentar volume;
+- `Esc`: sair.
 
 ## Testes
 
 ```bash
-zumbra project check
-zumbra project test
-zumbra project run
+scripts/test-z22-playable.sh
 ```
 
-Gate oficial da Z21:
+O gate executa:
 
-```bash
-scripts/test-z21-hardware.sh
-```
+- hashes das fixtures;
+- verificação dos 151 opcodes;
+- formatter e linter;
+- análise do projeto;
+- **55 testes**;
+- documentação;
+- execução VM e C11 headless;
+- paridade VM/native;
+- build do frontend desktop sem fontes C locais;
+- smoke desktop sem display;
+- AppDir e `.deb`;
+- higiene do repositório.
 
-O gate executa hashes das fixtures, verificação dos 151 opcodes, formatter, linter, pipeline, **43 testes**, documentação, VM, build C11, execução nativa, paridade VM/native e higiene.
-
-Para diagnóstico sem o build nativo, sem substituir a aprovação oficial:
-
-```bash
-Z21_SKIP_NATIVE=1 scripts/test-z21-hardware.sh
-```
-
-Os gates históricos encaminham para o gate atual. As árvores originais permanecem preservadas nas tags `v0.1.0` e `v0.2.0`.
-
-## Saída headless
-
-O programa principal carrega uma fixture NROM sintética, executa duas instruções da CPU, configura pulse e controle, avança um frame de hardware e imprime estado estável:
+Resultado final:
 
 ```text
-Zumbra NES Z21 hardware
-CPU A = 1
-CPU instructions = 2
-PPU frame = 1
-controller A = 1
-frame/audio SHA-256
+Z22 playable emulator gate passed.
 ```
 
-## ROMs
+## Empacotamento Linux
 
-O repositório aceita somente ROMs sintéticas, homebrew com redistribuição permitida ou dumps produzidos legalmente pelo próprio usuário. Nenhuma ROM comercial é incluída.
+```bash
+scripts/package-z22-linux.sh
+```
 
-## Estado
+O script gera AppDir e `.deb`. AppImage também é gerado quando `appimagetool` está disponível em `PATH` ou em `tools/`.
 
-- Z19: publicada como `v0.1.0`;
-- Z20: publicada como `v0.2.0`;
-- Z21: hardware headless completo no escopo da versão `0.3.0`;
-- próximo marco: Z22, com frontend desktop jogável, input real, seleção de ROM e conquistas locais em SQLite.
+## Estado do roadmap
 
-Documentação técnica: [`docs/ppu.md`](docs/ppu.md), [`docs/apu.md`](docs/apu.md), [`docs/architecture.md`](docs/architecture.md) e [`docs/z21-completion.md`](docs/z21-completion.md).
+- Z19 / `v0.1.0`: fundação e Mapper 0;
+- Z20 / `v0.2.0`: CPU 6502;
+- Z21 / `v0.3.0`: PPU, APU, controles e sincronização;
+- Z22 / `v0.4.0`: frontend jogável, SQLite e conquistas locais.
+
+A próxima etapa é a Z23: compatibilidade, novos mappers, save states e validação com ROMs homebrew/test suites legalmente redistribuíveis.

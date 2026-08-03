@@ -1,0 +1,11 @@
+import "../src/frontend/settings.zum" as settings;
+import "../src/testing/assert.zum" as test;
+var value << settings.defaults();
+test.assertInt(value.scale, 3, "default integer scale");
+test.assertInt(value.p1A, 29, "default Z key");
+test.assertInt(value.p1Right, 79, "default right arrow");
+test.assertInt(value.volume, 80, "default volume");
+var dictionary << settings.asDictionary(value);
+test.assertInt(dictionary["p2Left"], 4, "second player A key as left");
+test.assertBool(dictionary["vsync"], "vsync enabled");
+show("settings_test: ok");

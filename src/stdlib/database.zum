@@ -1,0 +1,34 @@
+/// Project-local SQLite façade backed by Zumbra's database builtins.
+pub fct open(path) {
+    sqliteOpen(path);
+}
+pub fct memory() {
+    sqliteMemory();
+}
+pub fct exec(database, sql, parameters) {
+    sqliteExec(database, sql, parameters);
+}
+pub fct query(database, sql, parameters) {
+    sqliteQuery(database, sql, parameters);
+}
+pub fct queryOne(database, sql, parameters) {
+    sqliteQueryOne(database, sql, parameters);
+}
+pub fct migrate(database, migrations) {
+    sqliteMigrate(database, migrations);
+}
+pub fct schemaVersion(database) {
+    sqliteSchemaVersion(database);
+}
+pub fct integrity(database) {
+    sqliteIntegrityCheck(database);
+}
+pub fct close(database) {
+    sqliteClose(database);
+}
+pub fct isOpen(database) {
+    sqliteIsOpen(database);
+}
+pub fct path(database) {
+    sqlitePath(database);
+}

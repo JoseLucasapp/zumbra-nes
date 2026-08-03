@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.zumbra.nes</id>
+  <name>Zumbra NES</name>
+  <summary>Local-first NES/Famicom emulator written in Zumbra</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+  <description><p>Runs Mapper 0 NES/Famicom ROMs with local settings, play sessions and offline achievements.</p></description>
+  <launchable type="desktop-id">dev.zumbra.nes.desktop</launchable>
+  <url type="homepage">https://github.com/JoseLucasapp/zumbra-nes</url>
+  <provides><binary>zumbra-nes</binary></provides>
+  <releases><release version="0.4.0" date="2026-08-03"/></releases>
+</component>

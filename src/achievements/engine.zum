@@ -1,0 +1,52 @@
+import "../core/bus.zum" as bus;
+import "../persistence/store.zum" as store;
+fct valueFor(machine, row, frames, controllerMask, seconds) {
+    var ruleType << row["type"];
+    if (ruleType == "frame_count") {
+        return frames;
+    }
+    if (ruleType == "instruction_count") {
+        return machine["cpu"].instructions;
+    }
+    if (ruleType == "session_seconds") {
+        return seconds;
+    }
+    if (ruleType == "controller_mask") {
+        if (controllerMask != 0) {
+            return row["target"];
+        }
+        return 0;
+    }
+    if (ruleType == "memory_equals") {
+        var value << bus.read(machine["bus"], row["address"]);
+        if (value == row["target"]) {
+            return row["target"];
+        }
+        return 0;
+    }
+    if (ruleType == "memory_at_least") {
+        return bus.read(machine["bus"], row["address"]);
+    }
+    0;
+}
+
+/// Evaluates and persists achievement progress, returning newly unlocked rows.
+pub fct evaluate(db, digest, machine, frames, controllerMask, seconds, timestamp) {
+    var rows << store.achievementRows(db, digest);
+    var unlocked <<[];
+    var index << 0;
+    while (index < sizeOf(rows)) {
+        var row << rows[index];
+        var progress << valueFor(machine, row, frames, controllerMask, seconds);
+        var complete << progress >= row["target"];
+        var wasUnlocked << row["unlocked"] == 1;
+        store.updateAchievement(db, digest, row["id"], progress, complete, timestamp);
+        if (complete and!wasUnlocked) {
+            addToArrayEnd(unlocked, {
+                "id": row["id"], "title": row["title"], "description": row["description"]
+            });
+        }
+        index << index + 1;
+    }
+    unlocked;
+}

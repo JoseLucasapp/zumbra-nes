@@ -1,78 +1,97 @@
-# Validation report — Z21 hardware 0.3.0
+# Validação Z22
 
-## Status
-
-A Z21 integra o hardware headless do NES sobre a CPU da Z20. A aprovação oficial exige Zumbra 0.14.2, 43 testes, build C11 e saída idêntica entre VM e nativo.
-
-## Cobertura funcional
-
-### PPU
-
-- oito registradores CPU com espelhamento;
-- CHR ROM/RAM, nametables e palette mirrors;
-- mirroring horizontal, vertical e four-screen;
-- background e attribute tables;
-- sprites 8×8/8×16, flip, prioridade, sprite zero hit e overflow;
-- scroll, `v/t/x/w`, PPUDATA buffer e incremento 1/32;
-- scanlines, dots, VBlank, NMI e odd-frame skip;
-- framebuffer `256×240` e digest.
-
-### APU
-
-- pulse 1/2, triangle, noise e DMC;
-- envelope, sweep, length/linear counters e LFSR;
-- frame sequencer 4/5-step e IRQ;
-- DMC address/length/loop/IRQ e fetch pelo bus;
-- mixer determinístico e PCM ring buffer.
-
-### I/O e scheduler
-
-- dois controles serializados;
-- OAM DMA com 513/514 ciclos;
-- razão 3:1 PPU/CPU e 1:1 APU/CPU;
-- NMI da PPU e IRQ da APU conectadas à CPU;
-- paridade VM/native.
-
-## Gate oficial
+## Gate completo
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z21-hardware.sh
+cd ~/projects/zumbra-nes
+
+unset Z22_SKIP_NATIVE Z22_SKIP_PACKAGES ZUMBRA_BIN
+export ZUMBRA_BIN=/usr/local/bin/zumbra
+
+EXPECTED_ZUMBRA_VERSION=0.14.3 \
+  scripts/test-z22-playable.sh
 ```
 
-O gate executa:
-
-1. SHA-256 das fixtures;
-2. tabela/decoder dos 151 opcodes;
-3. formatter e linter;
-4. `project info` e versão 0.3.0;
-5. análise semântica;
-6. 43 testes;
-7. documentação;
-8. execução pela VM;
-9. validação do relatório Z21;
-10. build C11;
-11. execução nativa;
-12. comparação VM/native;
-13. higiene.
-
-## Critérios de aprovação
+Resultado esperado:
 
 ```text
 Zumbra NES repository hygiene checks passed.
-Z21 NES hardware gate passed.
+Z22 playable emulator gate passed.
 ```
 
-Também devem existir:
 
-```text
-build/zumbra-nes
-build/vm-run-raw.txt
-build/vm-smoke.txt
-build/native-smoke.txt
+## Código somente Zumbra
+
+```bash
+find . -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print
+grep -R --include='*.zum' -n 'extern "C"' src tests
 ```
 
-E não pode haver diferença em:
+Os dois comandos devem ficar sem saída. C gerado dentro de `build/` é detalhe interno do backend C11 e não faz parte do código-fonte da aplicação.
+
+## Paridade VM/C11
 
 ```bash
 diff -u build/vm-smoke.txt build/native-smoke.txt
 ```
+
+O comando não deve imprimir diferenças.
+
+## Smoke desktop real
+
+Instale os requisitos de runtime disponíveis na distribuição:
+
+```bash
+sudo apt install libsqlite3-0 libsdl3-0 zenity
+```
+
+Execute com uma ROM própria Mapper 0/NROM:
+
+```bash
+./build/zumbra-nes /caminho/rom-propria.nes
+```
+
+Validar manualmente:
+
+- janela, escala 1×–4×, redimensionamento e fullscreen;
+- vídeo sem distorção e com letterboxing;
+- áudio contínuo, volume e mute;
+- teclado, dois gamepads e hot-plug;
+- remapeamento dos dois jogadores;
+- pause/reset/frame advance/fechar ROM;
+- VSync, modo ilimitado e FPS;
+- abertura por seletor e ROM recente;
+- banco em `~/.local/share/zumbra-nes/zumbra-nes.sqlite3`;
+- sessões, exportação/importação e notificações de conquista.
+
+## Pacotes
+
+```bash
+scripts/package-z22-linux.sh
+```
+
+Verifique:
+
+```bash
+ZUMBRA_DESKTOP_HEADLESS=1 dist/zumbra-nes-0.4.0-linux-amd64.AppDir/AppRun
+
+dpkg-deb --info dist/zumbra-nes_0.4.0_amd64.deb
+dpkg-deb --contents dist/zumbra-nes_0.4.0_amd64.deb
+```
+
+Instalação real do `.deb`:
+
+```bash
+sudo apt install ./dist/zumbra-nes_0.4.0_amd64.deb
+ZUMBRA_DESKTOP_HEADLESS=1 zumbra-nes
+sudo apt remove zumbra-nes
+```
+
+## AppImage
+
+Instale ou disponibilize `appimagetool` em `PATH`, `tools/appimagetool` ou `tools/appimagetool-x86_64.AppImage`, então execute novamente o script de empacotamento e valide o arquivo gerado em modo headless e visual.
+
+
+## Regressão de inicialização desktop
+
+O gate Z22 usa `fixtures/synthetic/z22-playable-loop.nes`, uma ROM sintética com loop 6502 válido e vetores definidos. O smoke desktop executa `runFrame`, não apenas os clocks de PPU/APU. Iniciar sem argumento abre o seletor de ROM e não executa automaticamente fixtures de teste.

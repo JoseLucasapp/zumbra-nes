@@ -1,0 +1,16 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/persistence/store.zum" as store;
+import "../src/testing/assert.zum" as test;
+var db << store.memory();
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+store.recordRom(db, cart["info"], 10u64);
+var recent << store.recentRoms(db, 5);
+test.assertInt(sizeOf(recent), 1, "one recent ROM");
+test.assertString(store.mostRecentPath(db), "fixtures/synthetic/nrom-128-horizontal.nes", "recent path");
+var session << store.beginSession(db, cart["info"].digest, 10u64);
+store.finishSession(db, session, cart["info"].digest, 20u64, 10, 600u64);
+var updated << store.recentRoms(db, 1);
+test.assertInt(updated[0]["play_seconds"], 10, "play time accumulated");
+test.assertInt(updated[0]["sessions"], 1, "session counted");
+store.close(db);
+show("store_library_test: ok");

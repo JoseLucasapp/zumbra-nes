@@ -1,0 +1,218 @@
+import "../stdlib/database.zum" as database;
+import "../stdlib/data.zum" as data;
+import "../frontend/settings.zum" as settings;
+fct migrations() {
+    var coreSql << "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); ";
+    coreSql << coreSql + "CREATE TABLE IF NOT EXISTS rom_library (digest TEXT PRIMARY KEY, path TEXT NOT NULL, title TEXT NOT NULL, mapper INTEGER NOT NULL, last_opened INTEGER NOT NULL, play_seconds INTEGER NOT NULL DEFAULT 0, sessions INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL); ";
+    coreSql << coreSql + "CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_digest TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, seconds INTEGER NOT NULL DEFAULT 0, frames INTEGER NOT NULL DEFAULT 0);";
+    var achievementSql << "CREATE TABLE IF NOT EXISTS achievement_definitions (game_digest TEXT NOT NULL, achievement_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, rule_type TEXT NOT NULL, address INTEGER NOT NULL DEFAULT 0, target INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(game_digest, achievement_id)); ";
+    achievementSql << achievementSql + "CREATE TABLE IF NOT EXISTS achievement_progress (game_digest TEXT NOT NULL, achievement_id TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, unlocked INTEGER NOT NULL DEFAULT 0, unlocked_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(game_digest, achievement_id));";
+    var indexSql << "CREATE INDEX IF NOT EXISTS rom_library_recent_idx ON rom_library(last_opened DESC); ";
+    indexSql << indexSql + "CREATE INDEX IF NOT EXISTS play_sessions_rom_idx ON play_sessions(rom_digest, started_at DESC); ";
+    indexSql << indexSql + "CREATE INDEX IF NOT EXISTS achievement_progress_game_idx ON achievement_progress(game_digest, unlocked, achievement_id);";
+    [{
+        "version": 1, "name": "z22_core", "sql": coreSql
+    }, {
+        "version": 2, "name": "z22_achievements", "sql": achievementSql
+    }, {
+        "version": 3, "name": "z22_indexes", "sql": indexSql
+    }];
+}
+
+/// Opens the local store and applies all Z22 migrations.
+pub fct open(path) {
+    var db << database.open(path);
+    database.migrate(db, migrations());
+    db;
+}
+pub fct memory() {
+    var db << database.memory();
+    database.migrate(db, migrations());
+    db;
+}
+pub fct close(db) {
+    database.close(db);
+}
+pub fct integrity(db) {
+    database.integrity(db);
+}
+pub fct schemaVersion(db) {
+    database.schemaVersion(db);
+}
+pub fct saveSetting(db, key, value) {
+    database.exec(db, "INSERT INTO settings(key, value) VALUES (:key, :value) ON CONFLICT(key) DO UPDATE SET value = excluded.value", {
+        "key": key, "value": value
+    });
+}
+pub fct setting(db, key, fallback) {
+    var rows << database.query(db, "SELECT value FROM settings WHERE key = :key", {
+        "key": key
+    });
+    if (sizeOf(rows) == 0) {
+        return fallback;
+    }
+    rows[0]["value"];
+}
+pub fct saveSettings(db, value) {
+    var values << settings.asDictionary(value);
+    saveSetting(db, "scale", values["scale"]);
+    saveSetting(db, "vsync", values["vsync"]);
+    saveSetting(db, "fullscreen", values["fullscreen"]);
+    saveSetting(db, "volume", values["volume"]);
+    saveSetting(db, "muted", values["muted"]);
+    saveSetting(db, "showFps", values["showFps"]);
+    saveSetting(db, "unlimited", values["unlimited"]);
+    saveSetting(db, "p1A", values["p1A"]);
+    saveSetting(db, "p1B", values["p1B"]);
+    saveSetting(db, "p1Select", values["p1Select"]);
+    saveSetting(db, "p1Start", values["p1Start"]);
+    saveSetting(db, "p1Up", values["p1Up"]);
+    saveSetting(db, "p1Down", values["p1Down"]);
+    saveSetting(db, "p1Left", values["p1Left"]);
+    saveSetting(db, "p1Right", values["p1Right"]);
+    saveSetting(db, "p2A", values["p2A"]);
+    saveSetting(db, "p2B", values["p2B"]);
+    saveSetting(db, "p2Select", values["p2Select"]);
+    saveSetting(db, "p2Start", values["p2Start"]);
+    saveSetting(db, "p2Up", values["p2Up"]);
+    saveSetting(db, "p2Down", values["p2Down"]);
+    saveSetting(db, "p2Left", values["p2Left"]);
+    saveSetting(db, "p2Right", values["p2Right"]);
+    true;
+}
+fct intSetting(db, key, fallback) {
+    toInt(setting(db, key, fallback));
+}
+fct boolSetting(db, key, fallback) {
+    var value << setting(db, key, fallback);
+    value == "true" or value == "1";
+}
+pub fct loadSettings(db) {
+    var value << settings.defaults();
+    value.scale << intSetting(db, "scale", value.scale);
+    value.vsync << boolSetting(db, "vsync", value.vsync);
+    value.fullscreen << boolSetting(db, "fullscreen", value.fullscreen);
+    value.volume << intSetting(db, "volume", value.volume);
+    value.muted << boolSetting(db, "muted", value.muted);
+    value.showFps << boolSetting(db, "showFps", value.showFps);
+    value.unlimited << boolSetting(db, "unlimited", value.unlimited);
+    value.p1A << intSetting(db, "p1A", value.p1A);
+    value.p1B << intSetting(db, "p1B", value.p1B);
+    value.p1Select << intSetting(db, "p1Select", value.p1Select);
+    value.p1Start << intSetting(db, "p1Start", value.p1Start);
+    value.p1Up << intSetting(db, "p1Up", value.p1Up);
+    value.p1Down << intSetting(db, "p1Down", value.p1Down);
+    value.p1Left << intSetting(db, "p1Left", value.p1Left);
+    value.p1Right << intSetting(db, "p1Right", value.p1Right);
+    value.p2A << intSetting(db, "p2A", value.p2A);
+    value.p2B << intSetting(db, "p2B", value.p2B);
+    value.p2Select << intSetting(db, "p2Select", value.p2Select);
+    value.p2Start << intSetting(db, "p2Start", value.p2Start);
+    value.p2Up << intSetting(db, "p2Up", value.p2Up);
+    value.p2Down << intSetting(db, "p2Down", value.p2Down);
+    value.p2Left << intSetting(db, "p2Left", value.p2Left);
+    value.p2Right << intSetting(db, "p2Right", value.p2Right);
+    value;
+}
+pub fct recordRom(db, info, openedAt) {
+    database.exec(db, "INSERT INTO rom_library(digest, path, title, mapper, last_opened, created_at) VALUES (:digest, :path, :title, :mapper, :opened, :opened) ON CONFLICT(digest) DO UPDATE SET path = excluded.path, title = excluded.title, mapper = excluded.mapper, last_opened = excluded.last_opened", {
+        "digest": info.digest, "path": info.sourcePath, "title": info.sourcePath, "mapper": info.header.mapper, "opened": openedAt
+    });
+}
+pub fct recentRoms(db, limit) {
+    database.query(db, "SELECT digest, path, title, mapper, last_opened, play_seconds, sessions FROM rom_library ORDER BY last_opened DESC LIMIT :limit", {
+        "limit": limit
+    });
+}
+pub fct mostRecentPath(db) {
+    var rows << recentRoms(db, 1);
+    if (sizeOf(rows) == 0) {
+        return "";
+    }
+    rows[0]["path"];
+}
+pub fct beginSession(db, digest, startedAt) {
+    var result << database.exec(db, "INSERT INTO play_sessions(rom_digest, started_at) VALUES (:digest, :started)", {
+        "digest": digest, "started": startedAt
+    });
+    result["lastInsertId"];
+}
+pub fct finishSession(db, sessionId, digest, endedAt, seconds, frames) {
+    database.exec(db, "UPDATE play_sessions SET ended_at = :ended, seconds = :seconds, frames = :frames WHERE id = :id", {
+        "ended": endedAt, "seconds": seconds, "frames": frames, "id": sessionId
+    });
+    database.exec(db, "UPDATE rom_library SET play_seconds = play_seconds + :seconds, sessions = sessions + 1, last_opened = :ended WHERE digest = :digest", {
+        "seconds": seconds, "ended": endedAt, "digest": digest
+    });
+    true;
+}
+pub fct seedAchievements(db, digest, definitions) {
+    var index << 0;
+    while (index < sizeOf(definitions)) {
+        var item << definitions[index];
+        var definitionSql << "INSERT INTO achievement_definitions(game_digest, achievement_id, title, description, rule_type, address, target) VALUES (:digest, :id, :title, :description, :type, :address, :target) ";
+        definitionSql << definitionSql + "ON CONFLICT(game_digest, achievement_id) DO UPDATE SET title = excluded.title, description = excluded.description, rule_type = excluded.rule_type, address = excluded.address, target = excluded.target";
+        database.exec(db, definitionSql, {
+            "digest": digest, "id": item["id"], "title": item["title"], "description": item["description"], "type": item["type"], "address": item["address"], "target": item["target"]
+        });
+        database.exec(db, "INSERT OR IGNORE INTO achievement_progress(game_digest, achievement_id) VALUES (:digest, :id)", {
+            "digest": digest, "id": item["id"]
+        });
+        index << index + 1;
+    }
+    true;
+}
+pub fct achievementRows(db, digest) {
+    database.query(db, "SELECT d.achievement_id AS id, d.title, d.description, d.rule_type AS type, d.address, d.target, p.progress, p.unlocked, p.unlocked_at FROM achievement_definitions d JOIN achievement_progress p ON p.game_digest = d.game_digest AND p.achievement_id = d.achievement_id WHERE d.game_digest = :digest ORDER BY d.achievement_id", {
+        "digest": digest
+    });
+}
+pub fct updateAchievement(db, digest, id, progress, unlocked, unlockedAt) {
+    database.exec(db, "UPDATE achievement_progress SET progress = :progress, unlocked = CASE WHEN unlocked = 1 THEN 1 ELSE :unlocked END, unlocked_at = CASE WHEN unlocked_at > 0 THEN unlocked_at ELSE :unlockedAt END WHERE game_digest = :digest AND achievement_id = :id", {
+        "progress": progress, "unlocked": unlocked, "unlockedAt": unlockedAt, "digest": digest, "id": id
+    });
+}
+pub fct snapshot(db) {
+    {
+        "settings": database.query(db, "SELECT key, value FROM settings ORDER BY key", {
+        }), "roms": database.query(db, "SELECT * FROM rom_library ORDER BY last_opened DESC", {
+        }), "achievements": database.query(db, "SELECT * FROM achievement_progress ORDER BY game_digest, achievement_id", {
+        })
+    };
+}
+pub fct exportJson(db, path) {
+    data.writeJson(path, snapshot(db), true);
+}
+pub fct readImport(path) {
+    data.readJson(path);
+}
+
+/// Imports an exported snapshot into the current database.
+pub fct importSnapshot(db, snapshot) {
+    var settingRows << snapshot["settings"];
+    var index << 0;
+    while (index < sizeOf(settingRows)) {
+        saveSetting(db, settingRows[index]["key"], settingRows[index]["value"]);
+        index << index + 1;
+    }
+    var romRows << snapshot["roms"];
+    index << 0;
+    while (index < sizeOf(romRows)) {
+        var row << romRows[index];
+        var importRomSql << "INSERT INTO rom_library(digest, path, title, mapper, last_opened, play_seconds, sessions, created_at) VALUES (:digest, :path, :title, :mapper, :last_opened, :play_seconds, :sessions, :created_at) ";
+        importRomSql << importRomSql + "ON CONFLICT(digest) DO UPDATE SET path = excluded.path, title = excluded.title, mapper = excluded.mapper, last_opened = excluded.last_opened, play_seconds = excluded.play_seconds, sessions = excluded.sessions";
+        database.exec(db, importRomSql, row);
+        index << index + 1;
+    }
+    var achievementRowsValue << snapshot["achievements"];
+    index << 0;
+    while (index < sizeOf(achievementRowsValue)) {
+        var progress << achievementRowsValue[index];
+        database.exec(db, "INSERT INTO achievement_progress(game_digest, achievement_id, progress, unlocked, unlocked_at) VALUES (:game_digest, :achievement_id, :progress, :unlocked, :unlocked_at) ON CONFLICT(game_digest, achievement_id) DO UPDATE SET progress = excluded.progress, unlocked = excluded.unlocked, unlocked_at = excluded.unlocked_at", progress);
+        index << index + 1;
+    }
+    true;
+}
+pub fct importJson(db, path) {
+    importSnapshot(db, readImport(path));
+}

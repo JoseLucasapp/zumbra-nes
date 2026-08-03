@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Zumbra NES
+Comment=Local-first NES/Famicom emulator
+Exec=zumbra-nes %f
+Icon=dev.zumbra.nes
+Terminal=false
+Categories=Game;Emulator;
+MimeType=application/x-nes-rom;
+StartupNotify=true

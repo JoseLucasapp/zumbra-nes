@@ -1,0 +1,13 @@
+/// Project-local JSON façade backed by Zumbra's serialization builtins.
+pub fct readJson(path) {
+    jsonReadFile(path);
+}
+pub fct writeJson(path, value, pretty) {
+    jsonWriteFile(path, value, pretty);
+}
+pub fct readJsonResult(path) {
+    jsonReadResult(path);
+}
+pub fct writeJsonResult(path, value, pretty) {
+    jsonWriteResult(path, value, pretty);
+}

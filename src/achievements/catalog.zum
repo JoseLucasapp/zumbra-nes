@@ -1,0 +1,14 @@
+/// Default offline achievement set attached to every locally indexed ROM.
+pub fct defaults() {
+    [{
+        "id": "first-frame", "title": "Primeiro frame", "description": "Execute o primeiro frame completo.", "type": "frame_count", "address": 0, "target": 1
+    }, {
+        "id": "hundred-frames", "title": "Aquecimento", "description": "Execute 100 frames em uma sessão.", "type": "frame_count", "address": 0, "target": 100
+    }, {
+        "id": "first-input", "title": "Controle conectado", "description": "Pressione qualquer botão do primeiro controle.", "type": "controller_mask", "address": 0, "target": 1
+    }, {
+        "id": "hundred-thousand-instructions", "title": "6502 em movimento", "description": "Execute 100.000 instruções da CPU.", "type": "instruction_count", "address": 0, "target": 100000
+    }, {
+        "id": "one-minute", "title": "Um minuto", "description": "Jogue por 60 segundos em uma sessão.", "type": "session_seconds", "address": 0, "target": 60
+    }];
+}

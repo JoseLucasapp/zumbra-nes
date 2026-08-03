@@ -1,5 +1,6 @@
-import "frontend/headless.zum" as headless;
+import "frontend/playable_headless.zum" as playable;
 fct main() {
-    headless.runFile("fixtures/synthetic/nrom-128-horizontal.nes");
+    var report << playable.runFile("fixtures/synthetic/z22-playable-loop.nes");
+    playable.printReport(report);
 }
 main();

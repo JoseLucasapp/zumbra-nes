@@ -1,0 +1,32 @@
+import "constants.zum" as constants;
+import "apu.zum" as apu;
+/// Cursor used by a frontend while draining the APU ring buffer.
+pub struct AudioCursor {
+    absolute: u64;
+}
+pub fct createCursor() {
+    AudioCursor(0u64);
+}
+
+/// Copies all samples produced since the cursor, capped to one ring-buffer span.
+pub fct drain(state, cursor) {
+    var total << apu.sampleCount(state);
+    var start << cursor.absolute;
+    if (total < start) {
+        start << total;
+    }
+    var available << total - start;
+    if (available > u64(constants.AUDIO_BUFFER_BYTES)) {
+        start << total - u64(constants.AUDIO_BUFFER_BYTES);
+        available << u64(constants.AUDIO_BUFFER_BYTES);
+    }
+    var count << toInt(available);
+    var output << bytes(count);
+    var index << 0;
+    while (index < count) {
+        output[index] << u8(apu.sampleAt(state, toInt(start + u64(index))));
+        index << index + 1;
+    }
+    cursor.absolute << total;
+    output;
+}

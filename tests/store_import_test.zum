@@ -1,0 +1,15 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/persistence/store.zum" as store;
+import "../src/testing/assert.zum" as test;
+var source << store.memory();
+store.saveSetting(source, "volume", 65);
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+store.recordRom(source, cart["info"], 50u64);
+var snapshot << store.snapshot(source);
+var destination << store.memory();
+store.importSnapshot(destination, snapshot);
+test.assertString(store.setting(destination, "volume", "0"), "65", "imported setting");
+test.assertInt(sizeOf(store.recentRoms(destination, 10)), 1, "imported library");
+store.close(source);
+store.close(destination);
+show("store_import_test: ok");

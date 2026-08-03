@@ -1,55 +1,104 @@
-# Arquitetura Z21
+# Arquitetura Z22
 
-## Fluxo principal
+## Visão geral
 
 ```text
-ROM → Cartridge → Mapper 0 → Bus
-                         ├─ CPU 2A03
-                         ├─ PPU 2C02 → framebuffer 256×240
-                         ├─ APU → PCM ring buffer
-                         ├─ Controller 1/2
-                         └─ OAM DMA / DMC fetch
-                                  ↓
+ROM iNES/NES 2.0
+        │
+        ▼
+Cartridge → Mapper 0/NROM → Bus
+                            ├─ CPU Ricoh 2A03
+                            ├─ PPU Ricoh 2C02 → framebuffer 256×240
+                            ├─ APU → ring buffer PCM
+                            ├─ Controller 1/2
+                            └─ OAM DMA / DMC fetch
+                                      │
+                                      ▼
                               Console scheduler
+                                      │
+                         ┌────────────┴────────────┐
+                         ▼                         ▼
+                 Frontend headless          Frontend desktop
+                 VM/C11 parity              Zumbra runtime + SDL3 + SQLite
 ```
 
-## Módulos de núcleo
+## Núcleo de emulação
 
-- `header.zum`: iNES/NES 2.0;
-- `cartridge.zum`: PRG, CHR, trainer e metadata;
-- `mapper.zum`: Mapper 0/NROM;
-- `bus.zum`: mapa CPU e roteamento PPU/APU/controles/DMA;
-- `cpu6502.zum`: 151 opcodes oficiais;
-- `ppu.zum`: memória, registradores, render, timing e NMI;
-- `apu.zum`: canais, frame sequencer, IRQ e PCM;
-- `controller.zum`: dois controles serializados;
-- `console.zum`: scheduler integrado;
-- `clock.zum`: relógio genérico preservado para testes históricos;
-- `devices.zum`: contratos observáveis.
+- `src/core/header.zum`: leitura e validação iNES e identificação NES 2.0;
+- `src/core/cartridge.zum`: PRG, CHR, trainer e metadados;
+- `src/core/mapper.zum`: Mapper 0, NROM-128 e NROM-256;
+- `src/core/bus.zum`: mapa CPU, PPU, APU, controles, DMA e cartridge;
+- `src/core/cpu6502.zum`: 151 opcodes oficiais, interrupções e ciclos;
+- `src/core/ppu.zum`: registradores, VRAM, OAM, render, VBlank e NMI;
+- `src/core/apu.zum`: pulse 1/2, triangle, noise, DMC, IRQ e PCM;
+- `src/core/controller.zum`: dois controles NES serializados;
+- `src/core/console.zum`: scheduler CPU/PPU/APU, DMA, DMC e interrupções;
+- `src/core/palette.zum`: conversão dos índices PPU para RGBA;
+- `src/core/audio_output.zum`: drenagem incremental do ring buffer da APU.
 
 ## Scheduler
 
-`console.stepInstruction` executa uma instrução da CPU e avança um ciclo APU e três dots PPU para cada ciclo retornado. Depois da instrução:
+Cada ciclo retornado pela CPU avança um ciclo da APU e três dots da PPU. O scheduler também:
 
-- uma escrita em `$4014` dispara a cópia de 256 bytes para OAM e adiciona 513/514 ciclos;
-- uma solicitação DMC busca um byte pelo CPU bus e adiciona quatro ciclos de stall;
-- PPU NMI e APU IRQ são atualizadas nas fronteiras do scheduler.
+- aplica OAM DMA de 256 bytes e stall de 513/514 ciclos;
+- atende buscas DMC pelo bus e aplica quatro ciclos de stall;
+- propaga NMI da PPU e IRQ da APU para a CPU;
+- permite execução por instrução, quantidade de ciclos ou frame completo.
 
-## PPU
+## Frontend desktop
 
-A PPU mantém estado de registradores, loopy registers `v/t/x/w`, scanline/dot, OAM, VRAM, palette e framebuffer. O render headless resolve background e sprites por pixel e produz índices de paleta estáveis.
+`src/frontend/desktop.zum` é o loop de aplicação e `src/frontend/native_bridge.zum` é agora uma fachada **100% Zumbra** sobre o runtime oficial 0.14.3. O repositório não contém `.c`, `.h` nem `extern "C"`.
 
-## APU
+As APIs oficiais usadas são:
 
-A APU mantém os quatro geradores tradicionais mais DMC, executa quarter/half-frame clocks, gera IRQs e grava amostras unsigned de 8 bits em um ring buffer determinístico.
+- `desktopApp`, `desktopWindow` e `desktopPoll`;
+- `desktopWindowPresentRGBA` para o framebuffer;
+- `desktopWindowSetVSync`;
+- `desktopKeyDown` e `desktopGamepadButton`;
+- `desktopAudioQueue` e `desktopAudioQueued`;
+- `desktopPickFile`, `desktopNotify` e `desktopPaths`;
+- `processArgs`, `unixTimeSeconds` e `createFile`.
 
-## Fronteiras da Z21
+SDL3 e o backend C11 continuam existindo dentro do compilador/runtime da linguagem, como detalhe de implementação. Nenhuma ponte C é distribuída ou mantida pelo projeto do emulador.
 
-A Z21 é headless. Permanecem para Z22:
+## Fluxo de frame
 
-- janela SDL e apresentação do framebuffer;
-- áudio em dispositivo real;
-- teclado/gamepad real;
-- seleção visual de ROM;
-- save states;
-- conquistas locais em SQLite.
+1. o frontend coleta teclado e gamepads;
+2. os masks dos dois controles são enviados ao console;
+3. o scheduler executa um frame;
+4. a PPU fornece 61.440 índices de paleta;
+5. `palette.rgba` produz 245.760 bytes RGBA;
+6. SDL3 atualiza e apresenta a textura;
+7. novas amostras da APU são drenadas e enfileiradas;
+8. conquistas são avaliadas e persistidas;
+9. FPS, sessão e estado da janela são atualizados.
+
+## Persistência
+
+`src/persistence/store.zum` usa SQLite como fonte de verdade. As migrações criam:
+
+- `settings`;
+- `rom_library`;
+- `play_sessions`;
+- `achievement_definitions`;
+- `achievement_progress`.
+
+A ROM é identificada pelo SHA-256, não apenas pelo caminho. JSON é usado exclusivamente para exportação, importação e depuração.
+
+## Conquistas
+
+`src/achievements/engine.zum` avalia regras de frame, instruções, tempo, controle e memória. O desbloqueio é idempotente e vinculado ao digest da ROM.
+
+## Empacotamento
+
+`zumbra-app.toml` descreve o aplicativo desktop. O pipeline Linux produz:
+
+- binário C11;
+- AppDir;
+- pacote `.deb`;
+- AppImage quando `appimagetool` está disponível;
+- checksums SHA-256.
+
+## Limites atuais
+
+A interface jogável aceita apenas Mapper 0/NROM. Não são distribuídas ROMs comerciais. Save states, mappers adicionais, depuração avançada e validação extensa com homebrew/test ROMs ficam para a Z23.

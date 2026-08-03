@@ -1,0 +1,30 @@
+[app]
+name = "Zumbra NES"
+version = "0.4.0"
+identifier = "dev.zumbra.nes"
+entry = "src/desktop_main.zum"
+icon = "assets/zumbra-nes.png"
+icon_linux = "assets/zumbra-nes.png"
+
+[build]
+output = "dist/zumbra-nes"
+compiler = "auto"
+release = true
+
+[package]
+description = "A local-first NES/Famicom emulator written in Zumbra"
+publisher = "José Lucas Gonçalves Freitas"
+homepage = "https://github.com/JoseLucasapp/zumbra-nes"
+license = "Apache-2.0"
+category = "Game"
+copyright = "Copyright 2026 José Lucas Gonçalves Freitas"
+
+[linux]
+dependencies = ["libc6", "libsqlite3-0", "libsdl3-0"]
+recommends = ["zenity"]
+
+[assets]
+include = ["assets/**", "fixtures/synthetic/**", "docs/**"]
+exclude = ["**/*.tmp"]
+max_file_bytes = 16_777_216
+max_total_bytes = 67_108_864

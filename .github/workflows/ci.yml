@@ -1,4 +1,4 @@
-name: Z21 NES hardware
+name: Z22 playable emulator
 
 on:
   push:
@@ -8,30 +8,42 @@ permissions:
   contents: read
 
 jobs:
-  linux:
+  linux-amd64:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install native dependencies
+      - name: Install native and packaging dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential clang \
-            libsqlite3-dev libssl-dev libpq-dev libhiredis-dev
+            build-essential clang dpkg-dev \
+            libsqlite3-dev libssl-dev libpq-dev libhiredis-dev \
+            python3
 
-      - name: Install Zumbra 0.14.2
+      - name: Install Zumbra 0.14.3
         run: |
           curl -L --fail \
             --retry 5 \
             --retry-delay 10 \
             --retry-all-errors \
             -o /tmp/zumbra.tar.gz \
-            https://github.com/JoseLucasapp/Zumbra-lang/releases/download/v0.14.2/zumbra-0.14.2-linux-amd64.tar.gz
+            https://github.com/JoseLucasapp/Zumbra-lang/releases/download/v0.14.3/zumbra-0.14.3-linux-amd64.tar.gz
           mkdir -p "$HOME/.local/bin" /tmp/zumbra
           tar -xzf /tmp/zumbra.tar.gz --strip-components=1 -C /tmp/zumbra
           install -m 755 /tmp/zumbra/zumbra "$HOME/.local/bin/zumbra"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run Z21 gate
-        run: scripts/test-z21-hardware.sh
+      - name: Run Z22 gate
+        run: scripts/test-z22-playable.sh
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: zumbra-nes-0.4.0-linux-amd64
+          path: |
+            dist/*.deb
+            dist/*.AppDir/**
+            dist/*SHA256SUMS*.txt
+            dist/*package-report.json
+          if-no-files-found: error

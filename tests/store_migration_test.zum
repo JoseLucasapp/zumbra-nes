@@ -1,0 +1,8 @@
+import "../src/persistence/store.zum" as store;
+import "../src/testing/assert.zum" as test;
+var db << store.memory();
+test.assertInt(store.schemaVersion(db), 3, "Z22 schema version");
+store.saveSetting(db, "volume", 55);
+test.assertString(store.setting(db, "volume", "0"), "55", "setting round trip");
+store.close(db);
+show("store_migration_test: ok");

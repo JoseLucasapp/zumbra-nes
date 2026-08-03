@@ -1,0 +1,22 @@
+import "../src/core/apu.zum" as apu;
+import "../src/core/audio_output.zum" as output;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+var cursor << output.createCursor();
+var index << 0;
+while (index < 80) {
+    apu.tick(state);
+    index << index + 1;
+}
+var first << output.drain(state, cursor);
+test.assertInt(sizeOf(first), 2, "first audio drain");
+var empty << output.drain(state, cursor);
+test.assertInt(sizeOf(empty), 0, "cursor prevents duplicate samples");
+index << 0;
+while (index < 40) {
+    apu.tick(state);
+    index << index + 1;
+}
+var next << output.drain(state, cursor);
+test.assertInt(sizeOf(next), 1, "incremental audio drain");
+show("audio_output_test: ok");
