@@ -1,0 +1,49 @@
+import "../core/bus.zum" as bus;
+import "../core/cartridge.zum" as cartridge;
+import "../core/clock.zum" as clock;
+/// Stable diagnostic report produced without opening a window.
+pub struct DiagnosticReport {
+    sourcePath: string;
+    format: string;
+    mapper: u16;
+    prgBytes: int;
+    chrBytes: int;
+    digest: string;
+    resetVector: u16;
+    cpuCycles: u64;
+    ppuCycles: u64;
+}
+
+/// Runs deterministic cartridge and bus diagnostics.
+pub fct run(cart) {
+    var info << cart["info"];
+    var systemBus << bus.create(cart);
+    var scheduler << clock.create();
+    scheduler.stepCpu(10u64);
+    var resetLow << bus.read(systemBus, 0xFFFC);
+    var resetHigh << bus.read(systemBus, 0xFFFD);
+    var resetVector << u16(resetLow) bor(u16(resetHigh) shl 8);
+    DiagnosticReport(info.sourcePath, info.header.format, info.header.mapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]), info.digest, resetVector, scheduler.cpuCycles, scheduler.ppuCycles);
+}
+
+/// Prints the headless report in a human-readable form.
+pub fct printReport(report) {
+    show("Zumbra NES Z19 foundation");
+    show(report.sourcePath);
+    show(report.format);
+    show(report.mapper);
+    show(report.prgBytes);
+    show(report.chrBytes);
+    show(report.digest);
+    show(report.resetVector);
+    show(report.cpuCycles);
+    show(report.ppuCycles);
+}
+
+/// Loads a ROM and executes the diagnostic frontend.
+pub fct runFile(path) {
+    var cart << cartridge.load(path);
+    var report << run(cart);
+    printReport(report);
+    report;
+}

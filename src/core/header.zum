@@ -1,0 +1,108 @@
+import "constants.zum" as constants;
+/// Parsed iNES/NES 2.0 cartridge header.
+pub struct RomHeader {
+    format: string;
+    mapper: u16;
+    submapper: u8;
+    prgRomBytes: int;
+    chrRomBytes: int;
+    prgRamBytes: int;
+    chrRamBytes: int;
+    mirroring: string;
+    battery: bool;
+    trainer: bool;
+    fourScreen: bool;
+    consoleType: u8;
+    timingMode: u8;
+    rawFlags6: u8;
+    rawFlags7: u8;
+}
+
+/// Result used to inspect untrusted headers without aborting execution.
+pub struct HeaderInspection {
+    ok: bool;
+    message: string;
+    header: RomHeader;
+}
+fct emptyHeader() {
+    RomHeader("invalid", 0u16, 0u8, 0, 0, 0, 0, "horizontal", false, false, false, 0u8, 0u8, 0u8, 0u8);
+}
+fct decodeRamShift(shift) {
+    if (shift == 0u8) {
+        return 0;
+    }
+    var value << 64;
+    var index << 0u8;
+    while (index < shift) {
+        value << value * 2;
+        index << u8(index + 1u8);
+    }
+    value;
+}
+fct linearNes2Banks(low, highNibble) {
+    toInt(low) +(toInt(highNibble) * 256);
+}
+
+/// Inspects a binary buffer and returns a structured validation result.
+pub fct inspect(data) {
+    if (sizeOf(data) < constants.HEADER_BYTES) {
+        return HeaderInspection(false, "ROM header is shorter than 16 bytes", emptyHeader());
+    }
+    if (data[0] != 0x4Eu8 or data[1] != 0x45u8 or data[2] != 0x53u8 or data[3] != 0x1Au8) {
+        return HeaderInspection(false, "invalid NES magic; expected 4E 45 53 1A", emptyHeader());
+    }
+    var flags6 << u8(data[6]);
+    var flags7 << u8(data[7]);
+    var isNes2 <<(flags7 band 0x0Cu8) == 0x08u8;
+    var mapper <<(u16(flags6) shr 4) bor(u16(flags7) band 0x00F0u16);
+    var submapper << 0u8;
+    var prgBanks << toInt(data[4]);
+    var chrBanks << toInt(data[5]);
+    var prgRamBytes << constants.PRG_RAM_BYTES;
+    var chrRamBytes << 0;
+    var format << "iNES 1.0";
+    var timingMode << 0u8;
+    if (isNes2) {
+        format << "NES 2.0";
+        mapper << mapper bor(u16(data[8] band 0x0Fu8) shl 8);
+        submapper << u8(data[8] shr 4);
+        var prgHigh << u8(data[9] band 0x0Fu8);
+        var chrHigh << u8(data[9] shr 4);
+        if (prgHigh == 0x0Fu8 or chrHigh == 0x0Fu8) {
+            return HeaderInspection(false, "NES 2.0 exponent/multiplier ROM sizes are reserved for Z20", emptyHeader());
+        }
+        prgBanks << linearNes2Banks(data[4], prgHigh);
+        chrBanks << linearNes2Banks(data[5], chrHigh);
+        prgRamBytes << decodeRamShift(u8(data[10] band 0x0Fu8)) + decodeRamShift(u8(data[10] shr 4));
+        chrRamBytes << decodeRamShift(u8(data[11] band 0x0Fu8)) + decodeRamShift(u8(data[11] shr 4));
+        timingMode << u8(data[12] band 0x03u8);
+    } else {
+        var inesRamBanks << toInt(data[8]);
+        if (inesRamBanks > 0) {
+            prgRamBytes << inesRamBanks * constants.PRG_RAM_BYTES;
+        }
+    }
+    var fourScreen <<(flags6 band 0x08u8) != 0u8;
+    var mirroring << "horizontal";
+    if (fourScreen) {
+        mirroring << "four-screen";
+    } else {
+        if ((flags6 band 0x01u8) != 0u8) {
+            mirroring << "vertical";
+        }
+    }
+    if (chrBanks == 0 and chrRamBytes == 0) {
+        chrRamBytes << constants.CHR_RAM_BYTES;
+    }
+    var parsed << RomHeader(format, mapper, submapper, prgBanks * constants.PRG_BANK_BYTES, chrBanks * constants.CHR_BANK_BYTES, prgRamBytes, chrRamBytes, mirroring,(flags6 band 0x02u8) != 0u8,(flags6 band 0x04u8) != 0u8, fourScreen, u8(flags7 band 0x03u8), timingMode, flags6, flags7);
+    HeaderInspection(true, "ok", parsed);
+}
+
+/// Parses a trusted header and aborts with a clear message when invalid.
+pub fct parse(data) {
+    var result << inspect(data);
+    if (!result.ok) {
+        panic(result.message);
+    }
+    result.header;
+}

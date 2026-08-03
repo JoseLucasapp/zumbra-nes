@@ -1,0 +1,61 @@
+/// Result of translating a CPU or PPU address through a mapper.
+pub struct Mapping {
+    mapped: bool;
+    offset: int;
+    writable: bool;
+}
+
+/// Runtime mapper contract. Z19 supports only Mapper 0/NROM.
+pub struct MapperDescriptor {
+    id: u16;
+    name: string;
+    prgBanks: int;
+    chrBanks: int;
+}
+
+/// Returns whether the mapper is implemented in the current emulator version.
+pub fct supports(mapperId) {
+    mapperId == 0u16;
+}
+
+/// Creates the mapper descriptor or aborts for unsupported cartridges.
+pub fct create(mapperId, prgBytes, chrBytes) {
+    if (!supports(mapperId)) {
+        panic("unsupported mapper in Z19; only Mapper 0/NROM is available");
+    }
+    MapperDescriptor(mapperId, "NROM", prgBytes / 16384, chrBytes / 8192);
+}
+
+/// Maps CPU reads in the PRG ROM window. Addresses are represented as int in Z19.
+pub fct cpuRead(mapperId, address, prgBytes) {
+    if (!supports(mapperId) or address < 0x8000) {
+        return Mapping(false,-1, false);
+    }
+    if (prgBytes == 16384) {
+        return Mapping(true, address band 0x3FFF, false);
+    }
+    if (prgBytes == 32768) {
+        return Mapping(true, address band 0x7FFF, false);
+    }
+    Mapping(false,-1, false);
+}
+
+/// NROM PRG is read-only.
+pub fct cpuWrite(mapperId, address, prgBytes) {
+    var mapped << cpuRead(mapperId, address, prgBytes);
+    Mapping(mapped.mapped, mapped.offset, false);
+}
+
+/// Maps PPU pattern-table reads and CHR RAM writes.
+pub fct ppuRead(mapperId, address, chrBytes) {
+    if (!supports(mapperId) or address < 0 or address >= 0x2000 or chrBytes <= 0) {
+        return Mapping(false,-1, false);
+    }
+    Mapping(true, address, false);
+}
+
+/// CHR is writable only when the cartridge uses CHR RAM.
+pub fct ppuWrite(mapperId, address, chrBytes, chrIsRam) {
+    var mapped << ppuRead(mapperId, address, chrBytes);
+    Mapping(mapped.mapped, mapped.offset, mapped.mapped and chrIsRam);
+}

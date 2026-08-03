@@ -1,0 +1,12 @@
+/// Converts cartridge metadata to stable JSON without serializing ROM bytes.
+pub fct toJson(cart) {
+    var info << cart["info"];
+    jsonStringify({
+        "sourcePath": info.sourcePath, "digest": info.digest, "format": info.header.format, "mapper": info.header.mapper, "submapper": info.header.submapper, "prgRomBytes": info.header.prgRomBytes, "chrRomBytes": info.header.chrRomBytes, "chrIsRam": info.chrIsRam, "mirroring": info.header.mirroring, "battery": info.header.battery, "trainer": info.header.trainer
+    });
+}
+
+/// Writes metadata only; ROM contents are never persisted by this function.
+pub fct save(path, cart) {
+    createFile(path, toJson(cart));
+}

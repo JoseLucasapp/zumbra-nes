@@ -1,0 +1,16 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var systemBus << bus.create(cart);
+bus.write(systemBus, 0x0002, 0x42u8);
+test.assertU8(bus.read(systemBus, 0x0802), 0x42u8, "CPU RAM mirror");
+bus.write(systemBus, 0x2001, 0x17u8);
+test.assertU8(bus.read(systemBus, 0x2009), 0x17u8, "PPU register mirror");
+bus.write(systemBus, 0x6000, 0x99u8);
+test.assertU8(bus.read(systemBus, 0x6000), 0x99u8, "PRG RAM");
+test.assertU8(bus.read(systemBus, 0x8000), 0xA9u8, "PRG ROM lower bank");
+test.assertU8(bus.read(systemBus, 0xC000), 0xA9u8, "NROM-128 PRG mirror");
+test.assertU8(bus.read(systemBus, 0xFFFC), 0x00u8, "reset vector low");
+test.assertU8(bus.read(systemBus, 0xFFFD), 0x80u8, "reset vector high");
+show("bus_test: ok");

@@ -1,0 +1,11 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/testing/assert.zum" as test;
+var romCart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var romBus << bus.create(romCart);
+test.assertBool(!bus.ppuWrite(romBus, 0x0001, 0x77u8), "CHR ROM remains read-only");
+var ramCart << cartridge.load("fixtures/synthetic/nrom-256-chr-ram.nes");
+var ramBus << bus.create(ramCart);
+test.assertBool(bus.ppuWrite(ramBus, 0x0001, 0x77u8), "CHR RAM accepts writes");
+test.assertU8(bus.ppuRead(ramBus, 0x0001), 0x77u8, "CHR RAM round trip");
+show("chr_bus_test: ok");

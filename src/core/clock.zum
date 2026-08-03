@@ -1,0 +1,46 @@
+import "constants.zum" as constants;
+/// Deterministic master clock shared by future CPU, PPU and APU implementations.
+pub struct Clock {
+    masterCycles: u64;
+    cpuCycles: u64;
+    ppuCycles: u64;
+    frames: u64;
+    running: bool;
+    fct tick() {
+        if (!self.running) {
+            return false;
+        }
+        self.masterCycles << u64(self.masterCycles + 1u64);
+        self.ppuCycles << u64(self.ppuCycles + 1u64);
+        if ((self.masterCycles % 3u64) == 0u64) {
+            self.cpuCycles << u64(self.cpuCycles + 1u64);
+        }
+        if ((self.ppuCycles % constants.NTSC_PPU_CYCLES_PER_FRAME) == 0u64) {
+            self.frames << u64(self.frames + 1u64);
+        }
+        true;
+    }
+    fct stepMaster(count) {
+        var index << 0u64;
+        while (index < count) {
+            self.tick();
+            index << u64(index + 1u64);
+        }
+        self.masterCycles;
+    }
+    fct stepCpu(count) {
+        self.stepMaster(u64(count * 3u64));
+        self.cpuCycles;
+    }
+    fct stop() {
+        self.running << false;
+    }
+    fct start() {
+        self.running << true;
+    }
+}
+
+/// Creates a clock at cycle zero.
+pub fct create() {
+    Clock(0u64, 0u64, 0u64, 0u64, true);
+}

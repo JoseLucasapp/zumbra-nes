@@ -1,0 +1,11 @@
+import "../src/core/header.zum" as header;
+import "../src/testing/assert.zum" as test;
+var data << readBytes("fixtures/synthetic/nes2-linear-header.bin");
+var parsed << header.parse(data);
+test.assertString(parsed.format, "NES 2.0", "format");
+test.assertU16(parsed.mapper, 0u16, "mapper");
+test.assertU8(parsed.submapper, 2u8, "submapper");
+test.assertInt(parsed.prgRomBytes, 16384, "PRG size");
+test.assertInt(parsed.chrRomBytes, 8192, "CHR size");
+test.assertU8(parsed.timingMode, 0u8, "timing");
+show("nes2_header_test: ok");

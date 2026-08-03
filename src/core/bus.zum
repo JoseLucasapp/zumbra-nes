@@ -1,0 +1,86 @@
+import "constants.zum" as constants;
+import "mapper.zum" as mapper;
+/// Builds a zeroed CPU bus dictionary for a validated cartridge package.
+pub fct create(cart) {
+    var info << cart["info"];
+    mapper.create(info.header.mapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]));
+    {
+        "ram": bytes(constants.CPU_RAM_BYTES), "ppuRegisters": bytes(constants.PPU_REGISTER_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(constants.PRG_RAM_BYTES), "cart": cart, "openBus": 0u8
+    };
+}
+
+/// Reads one CPU-visible byte. Addresses are integers in the range 0..65535.
+pub fct read(state, address) {
+    var value << state["openBus"];
+    if (address <= 0x1FFF) {
+        value << state["ram"][address band 0x07FF];
+    } else {
+        if (address <= 0x3FFF) {
+            value << state["ppuRegisters"][address band 0x0007];
+        } else {
+            if (address <= 0x401F) {
+                value << state["apuIo"][address - 0x4000];
+            } else {
+                if (address >= 0x6000 and address <= 0x7FFF) {
+                    value << state["prgRam"][address - 0x6000];
+                } else {
+                    if (address >= 0x8000 and address <= 0xFFFF) {
+                        var cart << state["cart"];
+                        var info << cart["info"];
+                        var mapping << mapper.cpuRead(info.header.mapper, address, sizeOf(cart["prgRom"]));
+                        if (mapping.mapped) {
+                            value << cart["prgRom"][mapping.offset];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    state["openBus"] << value;
+    value;
+}
+
+/// Writes one CPU-visible byte. PRG ROM writes are ignored by Mapper 0.
+pub fct write(state, address, value) {
+    state["openBus"] << value;
+    if (address <= 0x1FFF) {
+        state["ram"][address band 0x07FF] << value;
+        return true;
+    }
+    if (address <= 0x3FFF) {
+        state["ppuRegisters"][address band 0x0007] << value;
+        return true;
+    }
+    if (address <= 0x401F) {
+        state["apuIo"][address - 0x4000] << value;
+        return true;
+    }
+    if (address >= 0x6000 and address <= 0x7FFF) {
+        state["prgRam"][address - 0x6000] << value;
+        return true;
+    }
+    false;
+}
+
+/// Reads one PPU pattern-table byte.
+pub fct ppuRead(state, address) {
+    var cart << state["cart"];
+    var info << cart["info"];
+    var mapping << mapper.ppuRead(info.header.mapper, address, sizeOf(cart["chrMemory"]));
+    if (!mapping.mapped) {
+        return 0u8;
+    }
+    cart["chrMemory"][mapping.offset];
+}
+
+/// Writes one PPU pattern-table byte when the cartridge uses CHR RAM.
+pub fct ppuWrite(state, address, value) {
+    var cart << state["cart"];
+    var info << cart["info"];
+    var mapping << mapper.ppuWrite(info.header.mapper, address, sizeOf(cart["chrMemory"]), info.chrIsRam);
+    if (!mapping.writable) {
+        return false;
+    }
+    cart["chrMemory"][mapping.offset] << value;
+    true;
+}

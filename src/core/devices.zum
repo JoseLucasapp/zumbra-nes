@@ -1,0 +1,39 @@
+/// Contract consumed by the Z20 CPU implementation.
+pub struct CpuPort {
+    resetPending: bool;
+    nmiPending: bool;
+    irqPending: bool;
+    halted: bool;
+}
+
+/// Contract consumed by the Z21 PPU implementation.
+pub struct PpuPort {
+    scanline: int;
+    dot: int;
+    frameComplete: bool;
+}
+
+/// Contract consumed by the Z21 APU implementation.
+pub struct ApuPort {
+    sampleClock: u64;
+    frameCounter: u8;
+}
+
+/// Contract consumed by the Z21 controller implementation.
+pub struct ControllerPort {
+    buttons: u8;
+    latched: u8;
+    strobe: bool;
+}
+pub fct createCpuPort() {
+    CpuPort(true, false, false, false);
+}
+pub fct createPpuPort() {
+    PpuPort(-1, 0, false);
+}
+pub fct createApuPort() {
+    ApuPort(0u64, 0u8);
+}
+pub fct createControllerPort() {
+    ControllerPort(0u8, 0u8, false);
+}

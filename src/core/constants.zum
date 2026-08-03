@@ -1,0 +1,20 @@
+/// Size of an iNES or NES 2.0 header.
+pub const HEADER_BYTES << 16;
+/// Optional trainer size.
+pub const TRAINER_BYTES << 512;
+/// PRG ROM bank size.
+pub const PRG_BANK_BYTES << 16384;
+/// CHR ROM bank size.
+pub const CHR_BANK_BYTES << 8192;
+/// Default CHR RAM size for cartridges without CHR ROM.
+pub const CHR_RAM_BYTES << 8192;
+/// NROM PRG RAM window size.
+pub const PRG_RAM_BYTES << 8192;
+/// Internal CPU RAM size before mirroring.
+pub const CPU_RAM_BYTES << 2048;
+/// Number of PPU registers before mirroring.
+pub const PPU_REGISTER_BYTES << 8;
+/// APU and I/O register window.
+pub const APU_IO_BYTES << 32;
+/// PPU master cycles per NTSC frame.
+pub const NTSC_PPU_CYCLES_PER_FRAME << 89342u64;

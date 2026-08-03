@@ -1,0 +1,12 @@
+/// UI-neutral state that a desktop frontend will render in Z21/Z22.
+pub struct DesktopFrontendState {
+    title: string;
+    romLoaded: bool;
+    paused: bool;
+    status: string;
+}
+
+/// Creates the initial desktop frontend contract without initializing SDL.
+pub fct createState() {
+    DesktopFrontendState("Zumbra NES", false, true, "Z19 foundation ready");
+}

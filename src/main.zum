@@ -1,0 +1,5 @@
+import "frontend/headless.zum" as headless;
+fct main() {
+    headless.runFile("fixtures/synthetic/nrom-128-horizontal.nes");
+}
+main();

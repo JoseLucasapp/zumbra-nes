@@ -1,0 +1,9 @@
+import "../src/core/header.zum" as header;
+import "../src/testing/assert.zum" as test;
+var invalid << readBytes("fixtures/synthetic/invalid-magic.bin");
+var invalidResult << header.inspect(invalid);
+test.assertBool(!invalidResult.ok, "invalid magic rejected");
+var shortData << readBytes("fixtures/synthetic/truncated.bin");
+var shortResult << header.inspect(shortData);
+test.assertBool(!shortResult.ok, "short header rejected");
+show("invalid_header_test: ok");

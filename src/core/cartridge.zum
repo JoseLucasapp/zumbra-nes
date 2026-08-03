@@ -1,0 +1,75 @@
+import "constants.zum" as constants;
+import "header.zum" as header;
+/// Immutable metadata describing one loaded cartridge image.
+pub struct Cartridge {
+    header: header.RomHeader;
+    sourcePath: string;
+    digest: string;
+    chrIsRam: bool;
+    imageBytes: int;
+    trainerBytes: int;
+}
+
+/// Non-fatal validation result for a complete ROM image.
+pub struct ImageInspection {
+    ok: bool;
+    message: string;
+    expectedBytes: int;
+    actualBytes: int;
+}
+fct copyRegion(data, start, length) {
+    var output << bytes(length);
+    if (length > 0) {
+        copyBytes(output, 0, data, start, length);
+    }
+    output;
+}
+
+/// Validates header, trainer and ROM payload boundaries.
+pub fct inspectImage(data) {
+    var headerResult << header.inspect(data);
+    if (!headerResult.ok) {
+        return ImageInspection(false, headerResult.message, constants.HEADER_BYTES, sizeOf(data));
+    }
+    var payloadStart << constants.HEADER_BYTES;
+    if (headerResult.header.trainer) {
+        payloadStart << payloadStart + constants.TRAINER_BYTES;
+    }
+    var expected << payloadStart + headerResult.header.prgRomBytes + headerResult.header.chrRomBytes;
+    if (sizeOf(data) < expected) {
+        return ImageInspection(false, "ROM image is truncated", expected, sizeOf(data));
+    }
+    ImageInspection(true, "ok", expected, sizeOf(data));
+}
+
+/// Creates a cartridge package from an in-memory ROM image.
+/// The returned dictionary contains `info`, `prgRom`, `chrMemory` and `trainerData`.
+pub fct fromBytes(data, sourcePath) {
+    var imageResult << inspectImage(data);
+    if (!imageResult.ok) {
+        panic(imageResult.message);
+    }
+    var parsed << header.parse(data);
+    var cursor << constants.HEADER_BYTES;
+    var trainerData << bytes(0);
+    if (parsed.trainer) {
+        trainerData << copyRegion(data, cursor, constants.TRAINER_BYTES);
+        cursor << cursor + constants.TRAINER_BYTES;
+    }
+    var prgRom << copyRegion(data, cursor, parsed.prgRomBytes);
+    cursor << cursor + parsed.prgRomBytes;
+    var chrIsRam << parsed.chrRomBytes == 0;
+    var chrMemory << bytes(parsed.chrRamBytes);
+    if (!chrIsRam) {
+        chrMemory << copyRegion(data, cursor, parsed.chrRomBytes);
+    }
+    var info << Cartridge(parsed, sourcePath, sha256(data), chrIsRam, sizeOf(data), sizeOf(trainerData));
+    {
+        "info": info, "prgRom": prgRom, "chrMemory": chrMemory, "trainerData": trainerData
+    };
+}
+
+/// Loads and validates a cartridge from disk.
+pub fct load(path) {
+    fromBytes(readBytes(path), path);
+}

@@ -1,0 +1,10 @@
+[project]
+name = "Zumbra NES"
+version = "0.1.0"
+kind = "cli"
+entry = "src/main.zum"
+
+[tooling]
+source_dirs = ["src"]
+test_dirs = ["tests"]
+docs_output = "docs/api.md"

@@ -1,0 +1,21 @@
+# Critérios de conclusão da Z19
+
+- [x] projeto separado do compilador Zumbra;
+- [x] versão inicial `0.1.0`;
+- [x] leitor binário e validação de limites;
+- [x] parser iNES 1.0;
+- [x] identificação NES 2.0;
+- [x] estrutura `Cartridge`;
+- [x] contrato de mapper;
+- [x] Mapper 0/NROM;
+- [x] barramento e mapa de memória da CPU;
+- [x] contratos CPU/PPU/APU/controle;
+- [x] relógio determinístico;
+- [x] frontend headless;
+- [x] persistência de metadados;
+- [x] fixtures sintéticas;
+- [x] testes automatizados;
+- [x] documentação de arquitetura;
+- [x] gate único da Z19;
+- [ ] validação no ambiente do usuário com Zumbra 0.14.0;
+- [ ] criação e publicação do repositório remoto `zumbra-nes`.

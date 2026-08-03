@@ -1,0 +1,30 @@
+pub fct assertBool(condition, label) {
+    if (!condition) {
+        panic("assertion failed: " + label);
+    }
+}
+pub fct assertInt(actual, expected, label) {
+    if (actual != expected) {
+        panic("integer assertion failed: " + label);
+    }
+}
+pub fct assertU8(actual, expected, label) {
+    if (actual != expected) {
+        panic("u8 assertion failed: " + label);
+    }
+}
+pub fct assertU16(actual, expected, label) {
+    if (actual != expected) {
+        panic("u16 assertion failed: " + label);
+    }
+}
+pub fct assertU64(actual, expected, label) {
+    if (actual != expected) {
+        panic("u64 assertion failed: " + label);
+    }
+}
+pub fct assertString(actual, expected, label) {
+    if (actual != expected) {
+        panic("string assertion failed: " + label);
+    }
+}

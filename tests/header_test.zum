@@ -1,0 +1,12 @@
+import "../src/core/header.zum" as header;
+import "../src/testing/assert.zum" as test;
+var data << readBytes("fixtures/synthetic/nrom-128-horizontal.nes");
+var parsed << header.parse(data);
+test.assertString(parsed.format, "iNES 1.0", "format");
+test.assertU16(parsed.mapper, 0u16, "mapper");
+test.assertInt(parsed.prgRomBytes, 16384, "PRG size");
+test.assertInt(parsed.chrRomBytes, 8192, "CHR size");
+test.assertString(parsed.mirroring, "horizontal", "mirroring");
+test.assertBool(!parsed.battery, "battery disabled");
+test.assertBool(!parsed.trainer, "trainer disabled");
+show("header_test: ok");

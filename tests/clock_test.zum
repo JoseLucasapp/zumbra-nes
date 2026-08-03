@@ -1,0 +1,11 @@
+import "../src/core/clock.zum" as clock;
+import "../src/testing/assert.zum" as test;
+var scheduler << clock.create();
+scheduler.stepCpu(10u64);
+test.assertU64(scheduler.masterCycles, 30u64, "master cycles");
+test.assertU64(scheduler.cpuCycles, 10u64, "CPU cycles");
+test.assertU64(scheduler.ppuCycles, 30u64, "PPU cycles");
+test.assertU64(scheduler.frames, 0u64, "no frame yet");
+scheduler.stop();
+test.assertBool(!scheduler.tick(), "stopped clock does not tick");
+show("clock_test: ok");

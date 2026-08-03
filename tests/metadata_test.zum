@@ -1,0 +1,10 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/persistence/metadata.zum" as metadata;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var encoded << metadata.toJson(cart);
+test.assertBool(sizeOf(encoded) > 64, "metadata JSON generated");
+metadata.save("build/test-metadata.json", cart);
+var saved << readBytes("build/test-metadata.json");
+test.assertBool(sizeOf(saved) > 64, "metadata JSON saved");
+show("metadata_test: ok");

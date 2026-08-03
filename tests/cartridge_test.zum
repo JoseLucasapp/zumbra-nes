@@ -1,0 +1,16 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+test.assertInt(sizeOf(cart["prgRom"]), 16384, "PRG copied");
+test.assertInt(sizeOf(cart["chrMemory"]), 8192, "CHR copied");
+test.assertBool(!cart["info"].chrIsRam, "CHR ROM");
+test.assertInt(sizeOf(cart["trainerData"]), 0, "no trainer");
+test.assertInt(sizeOf(cart["info"].digest), 64, "SHA-256 length");
+var trainerCart << cartridge.load("fixtures/synthetic/nrom-trainer.nes");
+test.assertInt(sizeOf(trainerCart["trainerData"]), 512, "trainer copied");
+test.assertU8(trainerCart["trainerData"][0], 0x5Au8, "trainer starts at correct offset");
+test.assertU8(trainerCart["prgRom"][0], 0xA9u8, "PRG starts after trainer");
+var ramCart << cartridge.load("fixtures/synthetic/nrom-256-chr-ram.nes");
+test.assertBool(ramCart["info"].chrIsRam, "CHR RAM detected");
+test.assertInt(sizeOf(ramCart["chrMemory"]), 8192, "default CHR RAM");
+show("cartridge_test: ok");
