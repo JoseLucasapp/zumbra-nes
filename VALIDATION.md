@@ -1,49 +1,73 @@
-# Validation report — Z19 foundation 0.1.0
+# Validation report — Z20 CPU 6502 0.2.0
 
 ## Status
 
-A implementação técnica da Z19 está concluída para Zumbra 0.14.2. O gate oficial exige a mesma saída na VM e no executável C11 nativo.
+A Z20 implementa a CPU Ricoh 2A03/NMOS 6502 completa no escopo dos 151 opcodes oficiais e integra a execução ao bus da Z19.
 
-## Validações já comprovadas no ambiente do usuário
+O critério oficial exige que todo o projeto passe pela Zumbra 0.14.2 e que a saída headless seja idêntica na VM e no executável C11.
 
-- hashes das seis fixtures sintéticas;
-- formatter em 22 arquivos `.zum`;
-- linter sem erros ou avisos bloqueantes;
-- `zumbra project info`;
-- `zumbra project check`;
-- dez testes executáveis;
-- documentação de 56 símbolos;
-- execução headless pela VM;
-- higiene do repositório.
+## Cobertura funcional
 
-## Correção de linguagem necessária para o fechamento
+- 151/151 opcodes oficiais presentes na tabela e no decoder;
+- 13 modos de endereçamento/variações oficiais;
+- reset, IRQ, NMI e BRK;
+- stack, flags e vetores;
+- page crossing de loads, ALU, compares e branches;
+- branch tomado/não tomado;
+- bug de wrap do JMP indireto;
+- semântica binária do Ricoh 2A03 para ADC/SBC;
+- execução de programa sintético com loop;
+- integração CPU/bus/clock/headless.
 
-A Zumbra 0.14.2 adiciona suporte a `panic` no backend C11. A Z19 mantém validações defensivas e helpers de assert sem remover caminhos de erro para contornar o compilador.
+## Testes do projeto
+
+A Z20 adiciona 13 testes de CPU aos 10 testes da Z19, totalizando 23 arquivos:
+
+```text
+cpu_reset_test.zum
+cpu_addressing_test.zum
+cpu_arithmetic_test.zum
+cpu_decimal_mode_test.zum
+cpu_shift_logic_test.zum
+cpu_branch_cycle_test.zum
+cpu_stack_control_test.zum
+cpu_interrupt_test.zum
+cpu_transfer_flags_test.zum
+cpu_compare_memory_test.zum
+cpu_program_test.zum
+cpu_opcode_coverage_test.zum
+cpu_cycle_penalty_test.zum
+```
+
+`cpu_opcode_coverage_test.zum` percorre todos os 151 opcodes oficiais e verifica que cada um permanece suportado com seus ciclos-base.
 
 ## Gate oficial
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z19-foundation.sh
+EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z20-cpu.sh
 ```
 
 O gate executa:
 
 1. SHA-256 das fixtures;
-2. formatter;
-3. linter;
-4. informações e análise do projeto;
-5. dez testes;
-6. geração da documentação;
-7. execução pela VM;
-8. build C11 nativo;
-9. execução do binário nativo;
-10. comparação exata entre as saídas VM e nativa;
-11. higiene do repositório.
+2. tabela e decoder com os 151 opcodes oficiais;
+3. formatter em `src` e `tests`;
+4. linter sem warnings;
+5. `project info` e versão 0.2.0;
+6. análise semântica do projeto;
+7. 23 testes;
+8. geração da API;
+9. execução pela VM;
+10. validação do relatório Z20;
+11. build C11 nativo;
+12. execução do binário nativo;
+13. comparação exata VM/native;
+14. higiene do repositório.
 
 ## Verificação rápida
 
 ```bash
-Z19_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z19-foundation.sh
+Z20_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z20-cpu.sh
 ```
 
 Esse modo não substitui o gate completo.
@@ -51,8 +75,8 @@ Esse modo não substitui o gate completo.
 ## Critérios de aprovação
 
 ```text
-Z19 repository hygiene checks passed.
-Z19 foundation gate passed.
+Zumbra NES repository hygiene checks passed.
+Z20 CPU 6502 gate passed.
 ```
 
 Também devem existir:
@@ -63,7 +87,7 @@ build/vm-smoke.txt
 build/native-smoke.txt
 ```
 
-E este comando deve retornar sucesso:
+E o comando abaixo não deve imprimir diferenças:
 
 ```bash
 diff -u build/vm-smoke.txt build/native-smoke.txt

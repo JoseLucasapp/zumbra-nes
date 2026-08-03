@@ -1,0 +1,15 @@
+import "../src/core/cpu6502.zum" as cpu6502;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+var machine << fixture.createMachine(0x8123,[0xEAu8]);
+var processor << machine["cpu"];
+test.assertInt(processor.a, 0, "reset A");
+test.assertInt(processor.x, 0, "reset X");
+test.assertInt(processor.y, 0, "reset Y");
+test.assertInt(processor.sp, 0xFD, "reset stack pointer");
+test.assertInt(processor.pc, 0x8123, "reset vector");
+test.assertInt(processor.cycles, 7, "reset cycles");
+test.assertBool(processor.getFlag(cpu6502.FLAG_INTERRUPT), "interrupt disable after reset");
+test.assertBool(processor.getFlag(cpu6502.FLAG_UNUSED), "unused bit after reset");
+test.assertBool(!processor.halted, "CPU starts running");
+show("cpu_reset_test: ok");

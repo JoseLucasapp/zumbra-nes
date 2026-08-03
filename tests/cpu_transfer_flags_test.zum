@@ -1,0 +1,21 @@
+import "../src/core/cpu6502.zum" as cpu6502;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+var machine << fixture.createMachine(0x8000,[0xA9u8, 0x7Fu8, 0xAAu8, 0xE8u8, 0x8Au8, 0xA8u8, 0xC8u8, 0x98u8, 0x9Au8, 0xBAu8, 0x18u8, 0x38u8, 0x58u8, 0x78u8, 0xB8u8, 0xD8u8, 0xF8u8]);
+var processor << machine["cpu"];
+var systemBus << machine["bus"];
+var count << 0;
+while (count < 16) {
+    processor.step(systemBus);
+    count << count + 1;
+}
+test.assertInt(processor.a, 0x81, "transfer accumulator");
+test.assertInt(processor.x, 0x80, "transfer X");
+test.assertInt(processor.y, 0x81, "transfer Y");
+test.assertInt(processor.sp, 0x80, "TXS");
+test.assertBool(processor.getFlag(cpu6502.FLAG_CARRY), "SEC");
+test.assertBool(processor.getFlag(cpu6502.FLAG_INTERRUPT), "SEI");
+test.assertBool(!processor.getFlag(cpu6502.FLAG_OVERFLOW), "CLV");
+test.assertBool(processor.getFlag(cpu6502.FLAG_DECIMAL), "SED");
+test.assertBool(processor.getFlag(cpu6502.FLAG_NEGATIVE), "transfer negative");
+show("cpu_transfer_flags_test: ok");

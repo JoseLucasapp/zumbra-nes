@@ -1,0 +1,53 @@
+import "../core/bus.zum" as bus;
+import "../core/cartridge.zum" as cartridge;
+import "../core/cpu6502.zum" as cpu6502;
+/// Returns the physical PRG offset for an NROM CPU address.
+pub fct prgOffset(cart, address) {
+    var prgBytes << sizeOf(cart["prgRom"]);
+    if (address < 0x8000 or address > 0xFFFF) {
+        panic("CPU fixture address is outside PRG ROM");
+    }
+    if (prgBytes == 16384) {
+        return(address - 0x8000) band 0x3FFF;
+    }
+    if (prgBytes == 32768) {
+        return(address - 0x8000) band 0x7FFF;
+    }
+    panic("CPU fixture requires NROM-128 or NROM-256");
+}
+
+/// Mutates the synthetic in-memory PRG image used only by tests and diagnostics.
+pub fct setByte(cart, address, value) {
+    cart["prgRom"][prgOffset(cart, address)] << u8(value band 0xFF);
+}
+pub fct setWord(cart, address, value) {
+    setByte(cart, address, value band 0xFF);
+    setByte(cart, address + 1,(value shr 8) band 0xFF);
+}
+pub fct installProgram(cart, start, program) {
+    var address << start;
+    for value in program {
+        setByte(cart, address, toInt(value));
+        address <<(address + 1) band 0xFFFF;
+    }
+}
+
+/// Creates a fresh Mapper 0 machine with reset/NMI/IRQ vectors initialized.
+pub fct createMachine(start, program) {
+    var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+    installProgram(cart, start, program);
+    setWord(cart, 0xFFFA, start);
+    setWord(cart, 0xFFFC, start);
+    setWord(cart, 0xFFFE, start);
+    var systemBus << bus.create(cart);
+    var processor << cpu6502.create(systemBus);
+    {
+        "cart": cart, "bus": systemBus, "cpu": processor
+    };
+}
+pub fct writeByte(systemBus, address, value) {
+    bus.write(systemBus, address, u8(value band 0xFF));
+}
+pub fct readByte(systemBus, address) {
+    toInt(bus.read(systemBus, address));
+}

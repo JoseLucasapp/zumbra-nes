@@ -1,0 +1,1741 @@
+import "bus.zum" as bus;
+/// Carry flag.
+pub const FLAG_CARRY << 0x01;
+/// Zero flag.
+pub const FLAG_ZERO << 0x02;
+/// Interrupt-disable flag.
+pub const FLAG_INTERRUPT << 0x04;
+/// Decimal flag. The NES 2A03 stores it but ADC/SBC remain binary.
+pub const FLAG_DECIMAL << 0x08;
+/// Break marker used only in values pushed to the stack.
+pub const FLAG_BREAK << 0x10;
+/// Unused status bit, kept set by the CPU core.
+pub const FLAG_UNUSED << 0x20;
+/// Overflow flag.
+pub const FLAG_OVERFLOW << 0x40;
+/// Negative flag.
+pub const FLAG_NEGATIVE << 0x80;
+pub const VECTOR_NMI << 0xFFFA;
+pub const VECTOR_RESET << 0xFFFC;
+pub const VECTOR_IRQ << 0xFFFE;
+pub const STACK_BASE << 0x0100;
+pub const OFFICIAL_OPCODE_COUNT << 151;
+/// Address calculation result used by indexed modes.
+pub struct AddressResult {
+    address: int;
+    pageCrossed: bool;
+}
+
+/// Stable metadata for one opcode in the official NMOS 6502 table.
+pub struct OpcodeInfo {
+    opcode: int;
+    mnemonic: string;
+    mode: string;
+    bytes: int;
+    cycles: int;
+    pageCrossPenalty: bool;
+    official: bool;
+}
+
+/// Returns metadata for an official opcode or an explicit illegal marker.
+pub fct opcodeInfo(opcode) {
+    match (opcode) {
+        case 0x00 {
+            OpcodeInfo(opcode, "BRK", "implied", 1, 7, false, true);
+        }
+        case 0x01 {
+            OpcodeInfo(opcode, "ORA", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0x05 {
+            OpcodeInfo(opcode, "ORA", "zero-page", 2, 3, false, true);
+        }
+        case 0x06 {
+            OpcodeInfo(opcode, "ASL", "zero-page", 2, 5, false, true);
+        }
+        case 0x08 {
+            OpcodeInfo(opcode, "PHP", "implied", 1, 3, false, true);
+        }
+        case 0x09 {
+            OpcodeInfo(opcode, "ORA", "immediate", 2, 2, false, true);
+        }
+        case 0x0A {
+            OpcodeInfo(opcode, "ASL", "accumulator", 1, 2, false, true);
+        }
+        case 0x0D {
+            OpcodeInfo(opcode, "ORA", "absolute", 3, 4, false, true);
+        }
+        case 0x0E {
+            OpcodeInfo(opcode, "ASL", "absolute", 3, 6, false, true);
+        }
+        case 0x10 {
+            OpcodeInfo(opcode, "BPL", "relative", 2, 2, true, true);
+        }
+        case 0x11 {
+            OpcodeInfo(opcode, "ORA", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0x15 {
+            OpcodeInfo(opcode, "ORA", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x16 {
+            OpcodeInfo(opcode, "ASL", "zero-page-x", 2, 6, false, true);
+        }
+        case 0x18 {
+            OpcodeInfo(opcode, "CLC", "implied", 1, 2, false, true);
+        }
+        case 0x19 {
+            OpcodeInfo(opcode, "ORA", "absolute-y", 3, 4, true, true);
+        }
+        case 0x1D {
+            OpcodeInfo(opcode, "ORA", "absolute-x", 3, 4, true, true);
+        }
+        case 0x1E {
+            OpcodeInfo(opcode, "ASL", "absolute-x", 3, 7, false, true);
+        }
+        case 0x20 {
+            OpcodeInfo(opcode, "JSR", "absolute", 3, 6, false, true);
+        }
+        case 0x21 {
+            OpcodeInfo(opcode, "AND", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0x24 {
+            OpcodeInfo(opcode, "BIT", "zero-page", 2, 3, false, true);
+        }
+        case 0x25 {
+            OpcodeInfo(opcode, "AND", "zero-page", 2, 3, false, true);
+        }
+        case 0x26 {
+            OpcodeInfo(opcode, "ROL", "zero-page", 2, 5, false, true);
+        }
+        case 0x28 {
+            OpcodeInfo(opcode, "PLP", "implied", 1, 4, false, true);
+        }
+        case 0x29 {
+            OpcodeInfo(opcode, "AND", "immediate", 2, 2, false, true);
+        }
+        case 0x2A {
+            OpcodeInfo(opcode, "ROL", "accumulator", 1, 2, false, true);
+        }
+        case 0x2C {
+            OpcodeInfo(opcode, "BIT", "absolute", 3, 4, false, true);
+        }
+        case 0x2D {
+            OpcodeInfo(opcode, "AND", "absolute", 3, 4, false, true);
+        }
+        case 0x2E {
+            OpcodeInfo(opcode, "ROL", "absolute", 3, 6, false, true);
+        }
+        case 0x30 {
+            OpcodeInfo(opcode, "BMI", "relative", 2, 2, true, true);
+        }
+        case 0x31 {
+            OpcodeInfo(opcode, "AND", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0x35 {
+            OpcodeInfo(opcode, "AND", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x36 {
+            OpcodeInfo(opcode, "ROL", "zero-page-x", 2, 6, false, true);
+        }
+        case 0x38 {
+            OpcodeInfo(opcode, "SEC", "implied", 1, 2, false, true);
+        }
+        case 0x39 {
+            OpcodeInfo(opcode, "AND", "absolute-y", 3, 4, true, true);
+        }
+        case 0x3D {
+            OpcodeInfo(opcode, "AND", "absolute-x", 3, 4, true, true);
+        }
+        case 0x3E {
+            OpcodeInfo(opcode, "ROL", "absolute-x", 3, 7, false, true);
+        }
+        case 0x40 {
+            OpcodeInfo(opcode, "RTI", "implied", 1, 6, false, true);
+        }
+        case 0x41 {
+            OpcodeInfo(opcode, "EOR", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0x45 {
+            OpcodeInfo(opcode, "EOR", "zero-page", 2, 3, false, true);
+        }
+        case 0x46 {
+            OpcodeInfo(opcode, "LSR", "zero-page", 2, 5, false, true);
+        }
+        case 0x48 {
+            OpcodeInfo(opcode, "PHA", "implied", 1, 3, false, true);
+        }
+        case 0x49 {
+            OpcodeInfo(opcode, "EOR", "immediate", 2, 2, false, true);
+        }
+        case 0x4A {
+            OpcodeInfo(opcode, "LSR", "accumulator", 1, 2, false, true);
+        }
+        case 0x4C {
+            OpcodeInfo(opcode, "JMP", "absolute", 3, 3, false, true);
+        }
+        case 0x4D {
+            OpcodeInfo(opcode, "EOR", "absolute", 3, 4, false, true);
+        }
+        case 0x4E {
+            OpcodeInfo(opcode, "LSR", "absolute", 3, 6, false, true);
+        }
+        case 0x50 {
+            OpcodeInfo(opcode, "BVC", "relative", 2, 2, true, true);
+        }
+        case 0x51 {
+            OpcodeInfo(opcode, "EOR", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0x55 {
+            OpcodeInfo(opcode, "EOR", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x56 {
+            OpcodeInfo(opcode, "LSR", "zero-page-x", 2, 6, false, true);
+        }
+        case 0x58 {
+            OpcodeInfo(opcode, "CLI", "implied", 1, 2, false, true);
+        }
+        case 0x59 {
+            OpcodeInfo(opcode, "EOR", "absolute-y", 3, 4, true, true);
+        }
+        case 0x5D {
+            OpcodeInfo(opcode, "EOR", "absolute-x", 3, 4, true, true);
+        }
+        case 0x5E {
+            OpcodeInfo(opcode, "LSR", "absolute-x", 3, 7, false, true);
+        }
+        case 0x60 {
+            OpcodeInfo(opcode, "RTS", "implied", 1, 6, false, true);
+        }
+        case 0x61 {
+            OpcodeInfo(opcode, "ADC", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0x65 {
+            OpcodeInfo(opcode, "ADC", "zero-page", 2, 3, false, true);
+        }
+        case 0x66 {
+            OpcodeInfo(opcode, "ROR", "zero-page", 2, 5, false, true);
+        }
+        case 0x68 {
+            OpcodeInfo(opcode, "PLA", "implied", 1, 4, false, true);
+        }
+        case 0x69 {
+            OpcodeInfo(opcode, "ADC", "immediate", 2, 2, false, true);
+        }
+        case 0x6A {
+            OpcodeInfo(opcode, "ROR", "accumulator", 1, 2, false, true);
+        }
+        case 0x6C {
+            OpcodeInfo(opcode, "JMP", "indirect", 3, 5, false, true);
+        }
+        case 0x6D {
+            OpcodeInfo(opcode, "ADC", "absolute", 3, 4, false, true);
+        }
+        case 0x6E {
+            OpcodeInfo(opcode, "ROR", "absolute", 3, 6, false, true);
+        }
+        case 0x70 {
+            OpcodeInfo(opcode, "BVS", "relative", 2, 2, true, true);
+        }
+        case 0x71 {
+            OpcodeInfo(opcode, "ADC", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0x75 {
+            OpcodeInfo(opcode, "ADC", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x76 {
+            OpcodeInfo(opcode, "ROR", "zero-page-x", 2, 6, false, true);
+        }
+        case 0x78 {
+            OpcodeInfo(opcode, "SEI", "implied", 1, 2, false, true);
+        }
+        case 0x79 {
+            OpcodeInfo(opcode, "ADC", "absolute-y", 3, 4, true, true);
+        }
+        case 0x7D {
+            OpcodeInfo(opcode, "ADC", "absolute-x", 3, 4, true, true);
+        }
+        case 0x7E {
+            OpcodeInfo(opcode, "ROR", "absolute-x", 3, 7, false, true);
+        }
+        case 0x81 {
+            OpcodeInfo(opcode, "STA", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0x84 {
+            OpcodeInfo(opcode, "STY", "zero-page", 2, 3, false, true);
+        }
+        case 0x85 {
+            OpcodeInfo(opcode, "STA", "zero-page", 2, 3, false, true);
+        }
+        case 0x86 {
+            OpcodeInfo(opcode, "STX", "zero-page", 2, 3, false, true);
+        }
+        case 0x88 {
+            OpcodeInfo(opcode, "DEY", "implied", 1, 2, false, true);
+        }
+        case 0x8A {
+            OpcodeInfo(opcode, "TXA", "implied", 1, 2, false, true);
+        }
+        case 0x8C {
+            OpcodeInfo(opcode, "STY", "absolute", 3, 4, false, true);
+        }
+        case 0x8D {
+            OpcodeInfo(opcode, "STA", "absolute", 3, 4, false, true);
+        }
+        case 0x8E {
+            OpcodeInfo(opcode, "STX", "absolute", 3, 4, false, true);
+        }
+        case 0x90 {
+            OpcodeInfo(opcode, "BCC", "relative", 2, 2, true, true);
+        }
+        case 0x91 {
+            OpcodeInfo(opcode, "STA", "indirect-indexed", 2, 6, false, true);
+        }
+        case 0x94 {
+            OpcodeInfo(opcode, "STY", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x95 {
+            OpcodeInfo(opcode, "STA", "zero-page-x", 2, 4, false, true);
+        }
+        case 0x96 {
+            OpcodeInfo(opcode, "STX", "zero-page-y", 2, 4, false, true);
+        }
+        case 0x98 {
+            OpcodeInfo(opcode, "TYA", "implied", 1, 2, false, true);
+        }
+        case 0x99 {
+            OpcodeInfo(opcode, "STA", "absolute-y", 3, 5, false, true);
+        }
+        case 0x9A {
+            OpcodeInfo(opcode, "TXS", "implied", 1, 2, false, true);
+        }
+        case 0x9D {
+            OpcodeInfo(opcode, "STA", "absolute-x", 3, 5, false, true);
+        }
+        case 0xA0 {
+            OpcodeInfo(opcode, "LDY", "immediate", 2, 2, false, true);
+        }
+        case 0xA1 {
+            OpcodeInfo(opcode, "LDA", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0xA2 {
+            OpcodeInfo(opcode, "LDX", "immediate", 2, 2, false, true);
+        }
+        case 0xA4 {
+            OpcodeInfo(opcode, "LDY", "zero-page", 2, 3, false, true);
+        }
+        case 0xA5 {
+            OpcodeInfo(opcode, "LDA", "zero-page", 2, 3, false, true);
+        }
+        case 0xA6 {
+            OpcodeInfo(opcode, "LDX", "zero-page", 2, 3, false, true);
+        }
+        case 0xA8 {
+            OpcodeInfo(opcode, "TAY", "implied", 1, 2, false, true);
+        }
+        case 0xA9 {
+            OpcodeInfo(opcode, "LDA", "immediate", 2, 2, false, true);
+        }
+        case 0xAA {
+            OpcodeInfo(opcode, "TAX", "implied", 1, 2, false, true);
+        }
+        case 0xAC {
+            OpcodeInfo(opcode, "LDY", "absolute", 3, 4, false, true);
+        }
+        case 0xAD {
+            OpcodeInfo(opcode, "LDA", "absolute", 3, 4, false, true);
+        }
+        case 0xAE {
+            OpcodeInfo(opcode, "LDX", "absolute", 3, 4, false, true);
+        }
+        case 0xB0 {
+            OpcodeInfo(opcode, "BCS", "relative", 2, 2, true, true);
+        }
+        case 0xB1 {
+            OpcodeInfo(opcode, "LDA", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0xB4 {
+            OpcodeInfo(opcode, "LDY", "zero-page-x", 2, 4, false, true);
+        }
+        case 0xB5 {
+            OpcodeInfo(opcode, "LDA", "zero-page-x", 2, 4, false, true);
+        }
+        case 0xB6 {
+            OpcodeInfo(opcode, "LDX", "zero-page-y", 2, 4, false, true);
+        }
+        case 0xB8 {
+            OpcodeInfo(opcode, "CLV", "implied", 1, 2, false, true);
+        }
+        case 0xB9 {
+            OpcodeInfo(opcode, "LDA", "absolute-y", 3, 4, true, true);
+        }
+        case 0xBA {
+            OpcodeInfo(opcode, "TSX", "implied", 1, 2, false, true);
+        }
+        case 0xBC {
+            OpcodeInfo(opcode, "LDY", "absolute-x", 3, 4, true, true);
+        }
+        case 0xBD {
+            OpcodeInfo(opcode, "LDA", "absolute-x", 3, 4, true, true);
+        }
+        case 0xBE {
+            OpcodeInfo(opcode, "LDX", "absolute-y", 3, 4, true, true);
+        }
+        case 0xC0 {
+            OpcodeInfo(opcode, "CPY", "immediate", 2, 2, false, true);
+        }
+        case 0xC1 {
+            OpcodeInfo(opcode, "CMP", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0xC4 {
+            OpcodeInfo(opcode, "CPY", "zero-page", 2, 3, false, true);
+        }
+        case 0xC5 {
+            OpcodeInfo(opcode, "CMP", "zero-page", 2, 3, false, true);
+        }
+        case 0xC6 {
+            OpcodeInfo(opcode, "DEC", "zero-page", 2, 5, false, true);
+        }
+        case 0xC8 {
+            OpcodeInfo(opcode, "INY", "implied", 1, 2, false, true);
+        }
+        case 0xC9 {
+            OpcodeInfo(opcode, "CMP", "immediate", 2, 2, false, true);
+        }
+        case 0xCA {
+            OpcodeInfo(opcode, "DEX", "implied", 1, 2, false, true);
+        }
+        case 0xCC {
+            OpcodeInfo(opcode, "CPY", "absolute", 3, 4, false, true);
+        }
+        case 0xCD {
+            OpcodeInfo(opcode, "CMP", "absolute", 3, 4, false, true);
+        }
+        case 0xCE {
+            OpcodeInfo(opcode, "DEC", "absolute", 3, 6, false, true);
+        }
+        case 0xD0 {
+            OpcodeInfo(opcode, "BNE", "relative", 2, 2, true, true);
+        }
+        case 0xD1 {
+            OpcodeInfo(opcode, "CMP", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0xD5 {
+            OpcodeInfo(opcode, "CMP", "zero-page-x", 2, 4, false, true);
+        }
+        case 0xD6 {
+            OpcodeInfo(opcode, "DEC", "zero-page-x", 2, 6, false, true);
+        }
+        case 0xD8 {
+            OpcodeInfo(opcode, "CLD", "implied", 1, 2, false, true);
+        }
+        case 0xD9 {
+            OpcodeInfo(opcode, "CMP", "absolute-y", 3, 4, true, true);
+        }
+        case 0xDD {
+            OpcodeInfo(opcode, "CMP", "absolute-x", 3, 4, true, true);
+        }
+        case 0xDE {
+            OpcodeInfo(opcode, "DEC", "absolute-x", 3, 7, false, true);
+        }
+        case 0xE0 {
+            OpcodeInfo(opcode, "CPX", "immediate", 2, 2, false, true);
+        }
+        case 0xE1 {
+            OpcodeInfo(opcode, "SBC", "indexed-indirect", 2, 6, false, true);
+        }
+        case 0xE4 {
+            OpcodeInfo(opcode, "CPX", "zero-page", 2, 3, false, true);
+        }
+        case 0xE5 {
+            OpcodeInfo(opcode, "SBC", "zero-page", 2, 3, false, true);
+        }
+        case 0xE6 {
+            OpcodeInfo(opcode, "INC", "zero-page", 2, 5, false, true);
+        }
+        case 0xE8 {
+            OpcodeInfo(opcode, "INX", "implied", 1, 2, false, true);
+        }
+        case 0xE9 {
+            OpcodeInfo(opcode, "SBC", "immediate", 2, 2, false, true);
+        }
+        case 0xEA {
+            OpcodeInfo(opcode, "NOP", "implied", 1, 2, false, true);
+        }
+        case 0xEC {
+            OpcodeInfo(opcode, "CPX", "absolute", 3, 4, false, true);
+        }
+        case 0xED {
+            OpcodeInfo(opcode, "SBC", "absolute", 3, 4, false, true);
+        }
+        case 0xEE {
+            OpcodeInfo(opcode, "INC", "absolute", 3, 6, false, true);
+        }
+        case 0xF0 {
+            OpcodeInfo(opcode, "BEQ", "relative", 2, 2, true, true);
+        }
+        case 0xF1 {
+            OpcodeInfo(opcode, "SBC", "indirect-indexed", 2, 5, true, true);
+        }
+        case 0xF5 {
+            OpcodeInfo(opcode, "SBC", "zero-page-x", 2, 4, false, true);
+        }
+        case 0xF6 {
+            OpcodeInfo(opcode, "INC", "zero-page-x", 2, 6, false, true);
+        }
+        case 0xF8 {
+            OpcodeInfo(opcode, "SED", "implied", 1, 2, false, true);
+        }
+        case 0xF9 {
+            OpcodeInfo(opcode, "SBC", "absolute-y", 3, 4, true, true);
+        }
+        case 0xFD {
+            OpcodeInfo(opcode, "SBC", "absolute-x", 3, 4, true, true);
+        }
+        case 0xFE {
+            OpcodeInfo(opcode, "INC", "absolute-x", 3, 7, false, true);
+        } else {
+            OpcodeInfo(opcode, "???", "illegal", 1, 0, false, false);
+        }
+    };
+}
+pub fct isOfficialOpcode(opcode) {
+    opcodeInfo(opcode).official;
+}
+pub fct officialOpcodeCount() {
+    OFFICIAL_OPCODE_COUNT;
+}
+
+/// Complete Ricoh 2A03 CPU state. Decimal arithmetic is intentionally disabled.
+pub struct Cpu6502 {
+    a: int;
+    x: int;
+    y: int;
+    sp: int;
+    pc: int;
+    status: int;
+    cycles: int;
+    instructions: int;
+    lastOpcode: int;
+    halted: bool;
+    irqLine: bool;
+    nmiPending: bool;
+    fct getFlag(mask) {
+        (self.status band mask) != 0;
+    }
+    fct setFlag(mask, enabled) {
+        if (enabled) {
+            self.status <<(self.status bor mask) band 0xFF;
+        } else {
+            self.status << self.status band(mask bxor 0xFF) band 0xFF;
+        }
+        self.status <<(self.status bor FLAG_UNUSED) band 0xFF;
+    }
+    fct setZeroNegative(value) {
+        self.setFlag(FLAG_ZERO, value == 0);
+        self.setFlag(FLAG_NEGATIVE,(value band 0x80) != 0);
+    }
+    fct read(systemBus, address) {
+        toInt(bus.read(systemBus, address band 0xFFFF));
+    }
+    fct write(systemBus, address, value) {
+        bus.write(systemBus, address band 0xFFFF, u8(value band 0xFF));
+    }
+    fct fetchByte(systemBus) {
+        var value << self.read(systemBus, self.pc);
+        self.pc <<(self.pc + 1) band 0xFFFF;
+        value;
+    }
+    fct fetchWord(systemBus) {
+        var low << self.fetchByte(systemBus);
+        var high << self.fetchByte(systemBus);
+        low bor(high shl 8);
+    }
+    fct readWord(systemBus, address) {
+        var low << self.read(systemBus, address);
+        var high << self.read(systemBus,(address + 1) band 0xFFFF);
+        low bor(high shl 8);
+    }
+    fct readWordBug(systemBus, address) {
+        var low << self.read(systemBus, address);
+        var highAddress <<(address + 1) band 0xFFFF;
+        if ((address band 0x00FF) == 0x00FF) {
+            highAddress << address band 0xFF00;
+        }
+        var high << self.read(systemBus, highAddress);
+        low bor(high shl 8);
+    }
+    fct pushByte(systemBus, value) {
+        self.write(systemBus, STACK_BASE + self.sp, value);
+        self.sp <<(self.sp - 1) band 0xFF;
+    }
+    fct popByte(systemBus) {
+        self.sp <<(self.sp + 1) band 0xFF;
+        self.read(systemBus, STACK_BASE + self.sp);
+    }
+    fct pushWord(systemBus, value) {
+        self.pushByte(systemBus,(value shr 8) band 0xFF);
+        self.pushByte(systemBus, value band 0xFF);
+    }
+    fct popWord(systemBus) {
+        var low << self.popByte(systemBus);
+        var high << self.popByte(systemBus);
+        low bor(high shl 8);
+    }
+    fct addressZeroPage(systemBus) {
+        AddressResult(self.fetchByte(systemBus), false);
+    }
+    fct addressZeroPageX(systemBus) {
+        AddressResult((self.fetchByte(systemBus) + self.x) band 0xFF, false);
+    }
+    fct addressZeroPageY(systemBus) {
+        AddressResult((self.fetchByte(systemBus) + self.y) band 0xFF, false);
+    }
+    fct addressAbsolute(systemBus) {
+        AddressResult(self.fetchWord(systemBus), false);
+    }
+    fct addressAbsoluteX(systemBus) {
+        var base << self.fetchWord(systemBus);
+        var address <<(base + self.x) band 0xFFFF;
+        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+    }
+    fct addressAbsoluteY(systemBus) {
+        var base << self.fetchWord(systemBus);
+        var address <<(base + self.y) band 0xFFFF;
+        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+    }
+    fct addressIndexedIndirect(systemBus) {
+        var pointer <<(self.fetchByte(systemBus) + self.x) band 0xFF;
+        var low << self.read(systemBus, pointer);
+        var high << self.read(systemBus,(pointer + 1) band 0xFF);
+        AddressResult(low bor(high shl 8), false);
+    }
+    fct addressIndirectIndexed(systemBus) {
+        var pointer << self.fetchByte(systemBus);
+        var low << self.read(systemBus, pointer);
+        var high << self.read(systemBus,(pointer + 1) band 0xFF);
+        var base << low bor(high shl 8);
+        var address <<(base + self.y) band 0xFFFF;
+        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+    }
+    fct branch(systemBus, condition) {
+        var offset << self.fetchByte(systemBus);
+        if (!condition) {
+            return 2;
+        }
+        var previous << self.pc;
+        if (offset < 0x80) {
+            self.pc <<(self.pc + offset) band 0xFFFF;
+        } else {
+            self.pc <<(self.pc -(256 - offset)) band 0xFFFF;
+        }
+        if ((previous band 0xFF00) !=(self.pc band 0xFF00)) {
+            return 4;
+        }
+        3;
+    }
+    fct adc(value) {
+        var carryIn << 0;
+        if (self.getFlag(FLAG_CARRY)) {
+            carryIn << 1;
+        }
+        var previous << self.a;
+        var sum << previous + value + carryIn;
+        var result << sum band 0xFF;
+        self.setFlag(FLAG_CARRY, sum > 255);
+        self.setFlag(FLAG_OVERFLOW,(((previous bxor value) bxor 0xFF) band(previous bxor result) band 0x80) != 0);
+        self.a << result;
+        self.setZeroNegative(self.a);
+    }
+    fct sbc(value) {
+        self.adc(value bxor 0xFF);
+    }
+    fct compare(registerValue, value) {
+        var result <<(registerValue - value) band 0xFF;
+        self.setFlag(FLAG_CARRY, registerValue >= value);
+        self.setZeroNegative(result);
+    }
+    fct bit(value) {
+        self.setFlag(FLAG_ZERO,(self.a band value) == 0);
+        self.setFlag(FLAG_OVERFLOW,(value band 0x40) != 0);
+        self.setFlag(FLAG_NEGATIVE,(value band 0x80) != 0);
+    }
+    fct asl(value) {
+        self.setFlag(FLAG_CARRY,(value band 0x80) != 0);
+        var result <<(value shl 1) band 0xFF;
+        self.setZeroNegative(result);
+        result;
+    }
+    fct lsr(value) {
+        self.setFlag(FLAG_CARRY,(value band 0x01) != 0);
+        var result <<(value shr 1) band 0xFF;
+        self.setZeroNegative(result);
+        result;
+    }
+    fct rol(value) {
+        var carryIn << 0;
+        if (self.getFlag(FLAG_CARRY)) {
+            carryIn << 1;
+        }
+        self.setFlag(FLAG_CARRY,(value band 0x80) != 0);
+        var result <<((value shl 1) bor carryIn) band 0xFF;
+        self.setZeroNegative(result);
+        result;
+    }
+    fct ror(value) {
+        var carryIn << 0;
+        if (self.getFlag(FLAG_CARRY)) {
+            carryIn << 0x80;
+        }
+        self.setFlag(FLAG_CARRY,(value band 0x01) != 0);
+        var result <<((value shr 1) bor carryIn) band 0xFF;
+        self.setZeroNegative(result);
+        result;
+    }
+    fct serviceInterrupt(systemBus, vector) {
+        self.pushWord(systemBus, self.pc);
+        self.pushByte(systemBus,(self.status band(FLAG_BREAK bxor 0xFF)) bor FLAG_UNUSED);
+        self.setFlag(FLAG_INTERRUPT, true);
+        self.pc << self.readWord(systemBus, vector);
+        self.cycles << self.cycles + 7;
+        7;
+    }
+    fct reset(systemBus) {
+        self.a << 0;
+        self.x << 0;
+        self.y << 0;
+        self.sp << 0xFD;
+        self.status << FLAG_INTERRUPT bor FLAG_UNUSED;
+        self.pc << self.readWord(systemBus, VECTOR_RESET);
+        self.cycles << 7;
+        self.instructions << 0;
+        self.lastOpcode << 0;
+        self.halted << false;
+        self.irqLine << false;
+        self.nmiPending << false;
+        7;
+    }
+    fct requestNmi() {
+        self.nmiPending << true;
+    }
+    fct requestIrq() {
+        self.irqLine << true;
+    }
+    fct clearIrq() {
+        self.irqLine << false;
+    }
+    fct step(systemBus) {
+        if (self.halted) {
+            return 0;
+        }
+        if (self.nmiPending) {
+            self.nmiPending << false;
+            return self.serviceInterrupt(systemBus, VECTOR_NMI);
+        }
+        if (self.irqLine and!self.getFlag(FLAG_INTERRUPT)) {
+            return self.serviceInterrupt(systemBus, VECTOR_IRQ);
+        }
+        var opcode << self.fetchByte(systemBus);
+        self.lastOpcode << opcode;
+        var used << match (opcode) {
+            case 0x00 {
+                self.pc <<(self.pc + 1) band 0xFFFF;
+                self.pushWord(systemBus, self.pc);
+                self.pushByte(systemBus, self.status bor FLAG_BREAK bor FLAG_UNUSED);
+                self.setFlag(FLAG_INTERRUPT, true);
+                self.pc << self.readWord(systemBus, VECTOR_IRQ);
+                7;
+            }
+            case 0x01 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                6;
+            }
+            case 0x05 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                3;
+            }
+            case 0x06 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.asl(value);
+                self.write(systemBus, target.address, value);
+                5;
+            }
+            case 0x08 {
+                self.pushByte(systemBus, self.status bor FLAG_BREAK bor FLAG_UNUSED);
+                3;
+            }
+            case 0x09 {
+                var value << self.fetchByte(systemBus);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0x0A {
+                self.a << self.asl(self.a);
+                2;
+            }
+            case 0x0D {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x0E {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.asl(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x10 {
+                self.branch(systemBus,!self.getFlag(FLAG_NEGATIVE));
+            }
+            case 0x11 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x15 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x16 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.asl(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x18 {
+                self.setFlag(FLAG_CARRY, false);
+                2;
+            }
+            case 0x19 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x1D {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x1E {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.asl(value);
+                self.write(systemBus, target.address, value);
+                7;
+            }
+            case 0x20 {
+                var target << self.fetchWord(systemBus);
+                self.pushWord(systemBus,(self.pc - 1) band 0xFFFF);
+                self.pc << target;
+                6;
+            }
+            case 0x21 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                6;
+            }
+            case 0x24 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.bit(value);
+                3;
+            }
+            case 0x25 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                3;
+            }
+            case 0x26 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.rol(value);
+                self.write(systemBus, target.address, value);
+                5;
+            }
+            case 0x28 {
+                self.status <<(self.popByte(systemBus) band(FLAG_BREAK bxor 0xFF)) bor FLAG_UNUSED;
+                4;
+            }
+            case 0x29 {
+                var value << self.fetchByte(systemBus);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0x2A {
+                self.a << self.rol(self.a);
+                2;
+            }
+            case 0x2C {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.bit(value);
+                4;
+            }
+            case 0x2D {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x2E {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.rol(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x30 {
+                self.branch(systemBus, self.getFlag(FLAG_NEGATIVE));
+            }
+            case 0x31 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x35 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x36 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.rol(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x38 {
+                self.setFlag(FLAG_CARRY, true);
+                2;
+            }
+            case 0x39 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x3D {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a band value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x3E {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.rol(value);
+                self.write(systemBus, target.address, value);
+                7;
+            }
+            case 0x40 {
+                self.status <<(self.popByte(systemBus) band(FLAG_BREAK bxor 0xFF)) bor FLAG_UNUSED;
+                self.pc << self.popWord(systemBus);
+                6;
+            }
+            case 0x41 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                6;
+            }
+            case 0x45 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                3;
+            }
+            case 0x46 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.lsr(value);
+                self.write(systemBus, target.address, value);
+                5;
+            }
+            case 0x48 {
+                self.pushByte(systemBus, self.a);
+                3;
+            }
+            case 0x49 {
+                var value << self.fetchByte(systemBus);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0x4A {
+                self.a << self.lsr(self.a);
+                2;
+            }
+            case 0x4C {
+                self.pc << self.fetchWord(systemBus);
+                3;
+            }
+            case 0x4D {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x4E {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.lsr(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x50 {
+                self.branch(systemBus,!self.getFlag(FLAG_OVERFLOW));
+            }
+            case 0x51 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x55 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x56 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.lsr(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x58 {
+                self.setFlag(FLAG_INTERRUPT, false);
+                2;
+            }
+            case 0x59 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x5D {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << self.a bxor value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x5E {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.lsr(value);
+                self.write(systemBus, target.address, value);
+                7;
+            }
+            case 0x60 {
+                self.pc <<(self.popWord(systemBus) + 1) band 0xFFFF;
+                6;
+            }
+            case 0x61 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                6;
+            }
+            case 0x65 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                3;
+            }
+            case 0x66 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.ror(value);
+                self.write(systemBus, target.address, value);
+                5;
+            }
+            case 0x68 {
+                self.a << self.popByte(systemBus);
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0x69 {
+                var value << self.fetchByte(systemBus);
+                self.adc(value);
+                2;
+            }
+            case 0x6A {
+                self.a << self.ror(self.a);
+                2;
+            }
+            case 0x6C {
+                var pointer << self.fetchWord(systemBus);
+                self.pc << self.readWordBug(systemBus, pointer);
+                5;
+            }
+            case 0x6D {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                4;
+            }
+            case 0x6E {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.ror(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x70 {
+                self.branch(systemBus, self.getFlag(FLAG_OVERFLOW));
+            }
+            case 0x71 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x75 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                4;
+            }
+            case 0x76 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.ror(value);
+                self.write(systemBus, target.address, value);
+                6;
+            }
+            case 0x78 {
+                self.setFlag(FLAG_INTERRUPT, true);
+                2;
+            }
+            case 0x79 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x7D {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.adc(value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0x7E {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value << self.ror(value);
+                self.write(systemBus, target.address, value);
+                7;
+            }
+            case 0x81 {
+                var target << self.addressIndexedIndirect(systemBus);
+                self.write(systemBus, target.address, self.a);
+                6;
+            }
+            case 0x84 {
+                var target << self.addressZeroPage(systemBus);
+                self.write(systemBus, target.address, self.y);
+                3;
+            }
+            case 0x85 {
+                var target << self.addressZeroPage(systemBus);
+                self.write(systemBus, target.address, self.a);
+                3;
+            }
+            case 0x86 {
+                var target << self.addressZeroPage(systemBus);
+                self.write(systemBus, target.address, self.x);
+                3;
+            }
+            case 0x88 {
+                self.y <<(self.y - 1) band 0xFF;
+                self.setZeroNegative(self.y);
+                2;
+            }
+            case 0x8A {
+                self.a << self.x;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0x8C {
+                var target << self.addressAbsolute(systemBus);
+                self.write(systemBus, target.address, self.y);
+                4;
+            }
+            case 0x8D {
+                var target << self.addressAbsolute(systemBus);
+                self.write(systemBus, target.address, self.a);
+                4;
+            }
+            case 0x8E {
+                var target << self.addressAbsolute(systemBus);
+                self.write(systemBus, target.address, self.x);
+                4;
+            }
+            case 0x90 {
+                self.branch(systemBus,!self.getFlag(FLAG_CARRY));
+            }
+            case 0x91 {
+                var target << self.addressIndirectIndexed(systemBus);
+                self.write(systemBus, target.address, self.a);
+                6;
+            }
+            case 0x94 {
+                var target << self.addressZeroPageX(systemBus);
+                self.write(systemBus, target.address, self.y);
+                4;
+            }
+            case 0x95 {
+                var target << self.addressZeroPageX(systemBus);
+                self.write(systemBus, target.address, self.a);
+                4;
+            }
+            case 0x96 {
+                var target << self.addressZeroPageY(systemBus);
+                self.write(systemBus, target.address, self.x);
+                4;
+            }
+            case 0x98 {
+                self.a << self.y;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0x99 {
+                var target << self.addressAbsoluteY(systemBus);
+                self.write(systemBus, target.address, self.a);
+                5;
+            }
+            case 0x9A {
+                self.sp << self.x;
+                2;
+            }
+            case 0x9D {
+                var target << self.addressAbsoluteX(systemBus);
+                self.write(systemBus, target.address, self.a);
+                5;
+            }
+            case 0xA0 {
+                var value << self.fetchByte(systemBus);
+                self.y << value;
+                self.setZeroNegative(self.y);
+                2;
+            }
+            case 0xA1 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                6;
+            }
+            case 0xA2 {
+                var value << self.fetchByte(systemBus);
+                self.x << value;
+                self.setZeroNegative(self.x);
+                2;
+            }
+            case 0xA4 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.y << value;
+                self.setZeroNegative(self.y);
+                3;
+            }
+            case 0xA5 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                3;
+            }
+            case 0xA6 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.x << value;
+                self.setZeroNegative(self.x);
+                3;
+            }
+            case 0xA8 {
+                self.y << self.a;
+                self.setZeroNegative(self.y);
+                2;
+            }
+            case 0xA9 {
+                var value << self.fetchByte(systemBus);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                2;
+            }
+            case 0xAA {
+                self.x << self.a;
+                self.setZeroNegative(self.x);
+                2;
+            }
+            case 0xAC {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.y << value;
+                self.setZeroNegative(self.y);
+                4;
+            }
+            case 0xAD {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0xAE {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.x << value;
+                self.setZeroNegative(self.x);
+                4;
+            }
+            case 0xB0 {
+                self.branch(systemBus, self.getFlag(FLAG_CARRY));
+            }
+            case 0xB1 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xB4 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.y << value;
+                self.setZeroNegative(self.y);
+                4;
+            }
+            case 0xB5 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                4;
+            }
+            case 0xB6 {
+                var target << self.addressZeroPageY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.x << value;
+                self.setZeroNegative(self.x);
+                4;
+            }
+            case 0xB8 {
+                self.setFlag(FLAG_OVERFLOW, false);
+                2;
+            }
+            case 0xB9 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xBA {
+                self.x << self.sp;
+                self.setZeroNegative(self.x);
+                2;
+            }
+            case 0xBC {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.y << value;
+                self.setZeroNegative(self.y);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xBD {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.a << value;
+                self.setZeroNegative(self.a);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xBE {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.x << value;
+                self.setZeroNegative(self.x);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xC0 {
+                var value << self.fetchByte(systemBus);
+                self.compare(self.y, value);
+                2;
+            }
+            case 0xC1 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                6;
+            }
+            case 0xC4 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.y, value);
+                3;
+            }
+            case 0xC5 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                3;
+            }
+            case 0xC6 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value - 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                5;
+            }
+            case 0xC8 {
+                self.y <<(self.y + 1) band 0xFF;
+                self.setZeroNegative(self.y);
+                2;
+            }
+            case 0xC9 {
+                var value << self.fetchByte(systemBus);
+                self.compare(self.a, value);
+                2;
+            }
+            case 0xCA {
+                self.x <<(self.x - 1) band 0xFF;
+                self.setZeroNegative(self.x);
+                2;
+            }
+            case 0xCC {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.y, value);
+                4;
+            }
+            case 0xCD {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                4;
+            }
+            case 0xCE {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value - 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                6;
+            }
+            case 0xD0 {
+                self.branch(systemBus,!self.getFlag(FLAG_ZERO));
+            }
+            case 0xD1 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xD5 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                4;
+            }
+            case 0xD6 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value - 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                6;
+            }
+            case 0xD8 {
+                self.setFlag(FLAG_DECIMAL, false);
+                2;
+            }
+            case 0xD9 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xDD {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.a, value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xDE {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value - 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                7;
+            }
+            case 0xE0 {
+                var value << self.fetchByte(systemBus);
+                self.compare(self.x, value);
+                2;
+            }
+            case 0xE1 {
+                var target << self.addressIndexedIndirect(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                6;
+            }
+            case 0xE4 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.x, value);
+                3;
+            }
+            case 0xE5 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                3;
+            }
+            case 0xE6 {
+                var target << self.addressZeroPage(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value + 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                5;
+            }
+            case 0xE8 {
+                self.x <<(self.x + 1) band 0xFF;
+                self.setZeroNegative(self.x);
+                2;
+            }
+            case 0xE9 {
+                var value << self.fetchByte(systemBus);
+                self.sbc(value);
+                2;
+            }
+            case 0xEA {
+                2;
+            }
+            case 0xEC {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.compare(self.x, value);
+                4;
+            }
+            case 0xED {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                4;
+            }
+            case 0xEE {
+                var target << self.addressAbsolute(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value + 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                6;
+            }
+            case 0xF0 {
+                self.branch(systemBus, self.getFlag(FLAG_ZERO));
+            }
+            case 0xF1 {
+                var target << self.addressIndirectIndexed(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                var resultCycles << 5;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xF5 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                4;
+            }
+            case 0xF6 {
+                var target << self.addressZeroPageX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value + 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                6;
+            }
+            case 0xF8 {
+                self.setFlag(FLAG_DECIMAL, true);
+                2;
+            }
+            case 0xF9 {
+                var target << self.addressAbsoluteY(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xFD {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                self.sbc(value);
+                var resultCycles << 4;
+                if (target.pageCrossed) {
+                    resultCycles << resultCycles + 1;
+                }
+                resultCycles;
+            }
+            case 0xFE {
+                var target << self.addressAbsoluteX(systemBus);
+                var value << self.read(systemBus, target.address);
+                value <<(value + 1) band 0xFF;
+                self.write(systemBus, target.address, value);
+                self.setZeroNegative(value);
+                7;
+            } else {
+                self.halted << true;
+                panic("illegal or unsupported 6502 opcode: " + toString(opcode));
+            }
+        };
+        self.cycles << self.cycles + used;
+        self.instructions << self.instructions + 1;
+        used;
+    }
+}
+
+/// Creates and resets a CPU against the supplied Z19 bus.
+pub fct create(systemBus) {
+    var processor << Cpu6502(0, 0, 0, 0xFD, 0, FLAG_INTERRUPT bor FLAG_UNUSED, 0, 0, 0, false, false, false);
+    processor.reset(systemBus);
+    processor;
+}
+
+/// Executes at most `instructionLimit` instructions and returns the number run.
+pub fct run(processor, systemBus, instructionLimit) {
+    var executed << 0;
+    while (executed < instructionLimit and!processor.halted) {
+        processor.step(systemBus);
+        executed << executed + 1;
+    }
+    executed;
+}

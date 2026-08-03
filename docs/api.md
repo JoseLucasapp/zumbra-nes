@@ -255,6 +255,246 @@ pub const NTSC_PPU_CYCLES_PER_FRAME
 
 PPU master cycles per NTSC frame.
 
+## `/home/joselucasapp/Downloads/zumbra-nes/src/core/cpu6502.zum`
+
+### FLAG_CARRY
+
+```zumbra
+pub const FLAG_CARRY
+```
+
+Carry flag.
+
+### FLAG_ZERO
+
+```zumbra
+pub const FLAG_ZERO
+```
+
+Zero flag.
+
+### FLAG_INTERRUPT
+
+```zumbra
+pub const FLAG_INTERRUPT
+```
+
+Interrupt-disable flag.
+
+### FLAG_DECIMAL
+
+```zumbra
+pub const FLAG_DECIMAL
+```
+
+Decimal flag. The NES 2A03 stores it but ADC/SBC remain binary.
+
+### FLAG_BREAK
+
+```zumbra
+pub const FLAG_BREAK
+```
+
+Break marker used only in values pushed to the stack.
+
+### FLAG_UNUSED
+
+```zumbra
+pub const FLAG_UNUSED
+```
+
+Unused status bit, kept set by the CPU core.
+
+### FLAG_OVERFLOW
+
+```zumbra
+pub const FLAG_OVERFLOW
+```
+
+Overflow flag.
+
+### FLAG_NEGATIVE
+
+```zumbra
+pub const FLAG_NEGATIVE
+```
+
+Negative flag.
+
+### VECTOR_NMI
+
+```zumbra
+pub const VECTOR_NMI
+```
+
+### VECTOR_RESET
+
+```zumbra
+pub const VECTOR_RESET
+```
+
+### VECTOR_IRQ
+
+```zumbra
+pub const VECTOR_IRQ
+```
+
+### STACK_BASE
+
+```zumbra
+pub const STACK_BASE
+```
+
+### OFFICIAL_OPCODE_COUNT
+
+```zumbra
+pub const OFFICIAL_OPCODE_COUNT
+```
+
+### AddressResult
+
+```zumbra
+pub struct AddressResult
+```
+
+Address calculation result used by indexed modes.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `address` | field | `int` |
+| `pageCrossed` | field | `bool` |
+
+### OpcodeInfo
+
+```zumbra
+pub struct OpcodeInfo
+```
+
+Stable metadata for one opcode in the official NMOS 6502 table.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `opcode` | field | `int` |
+| `mnemonic` | field | `string` |
+| `mode` | field | `string` |
+| `bytes` | field | `int` |
+| `cycles` | field | `int` |
+| `pageCrossPenalty` | field | `bool` |
+| `official` | field | `bool` |
+
+### opcodeInfo
+
+```zumbra
+pub fct opcodeInfo(opcode)
+```
+
+Returns metadata for an official opcode or an explicit illegal marker.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `opcode` | parameter | `` |
+
+### isOfficialOpcode
+
+```zumbra
+pub fct isOfficialOpcode(opcode)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `opcode` | parameter | `` |
+
+### officialOpcodeCount
+
+```zumbra
+pub fct officialOpcodeCount()
+```
+
+### Cpu6502
+
+```zumbra
+pub struct Cpu6502
+```
+
+Complete Ricoh 2A03 CPU state. Decimal arithmetic is intentionally disabled.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `a` | field | `int` |
+| `x` | field | `int` |
+| `y` | field | `int` |
+| `sp` | field | `int` |
+| `pc` | field | `int` |
+| `status` | field | `int` |
+| `cycles` | field | `int` |
+| `instructions` | field | `int` |
+| `lastOpcode` | field | `int` |
+| `halted` | field | `bool` |
+| `irqLine` | field | `bool` |
+| `nmiPending` | field | `bool` |
+| `getFlag` | method | `fct getFlag(self, mask)` |
+| `setFlag` | method | `fct setFlag(self, mask, enabled)` |
+| `setZeroNegative` | method | `fct setZeroNegative(self, value)` |
+| `read` | method | `fct read(self, systemBus, address)` |
+| `write` | method | `fct write(self, systemBus, address, value)` |
+| `fetchByte` | method | `fct fetchByte(self, systemBus)` |
+| `fetchWord` | method | `fct fetchWord(self, systemBus)` |
+| `readWord` | method | `fct readWord(self, systemBus, address)` |
+| `readWordBug` | method | `fct readWordBug(self, systemBus, address)` |
+| `pushByte` | method | `fct pushByte(self, systemBus, value)` |
+| `popByte` | method | `fct popByte(self, systemBus)` |
+| `pushWord` | method | `fct pushWord(self, systemBus, value)` |
+| `popWord` | method | `fct popWord(self, systemBus)` |
+| `addressZeroPage` | method | `fct addressZeroPage(self, systemBus)` |
+| `addressZeroPageX` | method | `fct addressZeroPageX(self, systemBus)` |
+| `addressZeroPageY` | method | `fct addressZeroPageY(self, systemBus)` |
+| `addressAbsolute` | method | `fct addressAbsolute(self, systemBus)` |
+| `addressAbsoluteX` | method | `fct addressAbsoluteX(self, systemBus)` |
+| `addressAbsoluteY` | method | `fct addressAbsoluteY(self, systemBus)` |
+| `addressIndexedIndirect` | method | `fct addressIndexedIndirect(self, systemBus)` |
+| `addressIndirectIndexed` | method | `fct addressIndirectIndexed(self, systemBus)` |
+| `branch` | method | `fct branch(self, systemBus, condition)` |
+| `adc` | method | `fct adc(self, value)` |
+| `sbc` | method | `fct sbc(self, value)` |
+| `compare` | method | `fct compare(self, registerValue, value)` |
+| `bit` | method | `fct bit(self, value)` |
+| `asl` | method | `fct asl(self, value)` |
+| `lsr` | method | `fct lsr(self, value)` |
+| `rol` | method | `fct rol(self, value)` |
+| `ror` | method | `fct ror(self, value)` |
+| `serviceInterrupt` | method | `fct serviceInterrupt(self, systemBus, vector)` |
+| `reset` | method | `fct reset(self, systemBus)` |
+| `requestNmi` | method | `fct requestNmi(self)` |
+| `requestIrq` | method | `fct requestIrq(self)` |
+| `clearIrq` | method | `fct clearIrq(self)` |
+| `step` | method | `fct step(self, systemBus)` |
+
+### create
+
+```zumbra
+pub fct create(systemBus)
+```
+
+Creates and resets a CPU against the supplied Z19 bus.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `systemBus` | parameter | `` |
+
+### run
+
+```zumbra
+pub fct run(processor, systemBus, instructionLimit)
+```
+
+Executes at most `instructionLimit` instructions and returns the number run.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `processor` | parameter | `` |
+| `systemBus` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
 ## `/home/joselucasapp/Downloads/zumbra-nes/src/core/devices.zum`
 
 ### CpuPort
@@ -263,7 +503,7 @@ PPU master cycles per NTSC frame.
 pub struct CpuPort
 ```
 
-Contract consumed by the Z20 CPU implementation.
+External interrupt and lifecycle contract shared with the Z20 CPU core.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -561,7 +801,15 @@ Stable diagnostic report produced without opening a window.
 | `chrBytes` | field | `int` |
 | `digest` | field | `string` |
 | `resetVector` | field | `u16` |
-| `cpuCycles` | field | `u64` |
+| `cpuA` | field | `int` |
+| `cpuX` | field | `int` |
+| `cpuY` | field | `int` |
+| `cpuSp` | field | `int` |
+| `cpuPc` | field | `int` |
+| `cpuStatus` | field | `int` |
+| `cpuInstructions` | field | `int` |
+| `cpuCoreCycles` | field | `int` |
+| `cpuClockCycles` | field | `u64` |
 | `ppuCycles` | field | `u64` |
 
 ### run
@@ -570,7 +818,7 @@ Stable diagnostic report produced without opening a window.
 pub fct run(cart)
 ```
 
-Runs deterministic cartridge and bus diagnostics.
+Runs deterministic cartridge, bus, CPU and clock diagnostics.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -582,7 +830,7 @@ Runs deterministic cartridge and bus diagnostics.
 pub fct printReport(report)
 ```
 
-Prints the headless report in a human-readable form.
+Prints the headless report in a stable VM/native format.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -594,7 +842,7 @@ Prints the headless report in a human-readable form.
 pub fct runFile(path)
 ```
 
-Loads a ROM and executes the diagnostic frontend.
+Loads a ROM and executes the deterministic headless frontend.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -699,4 +947,93 @@ pub fct assertString(actual, expected, label)
 | `actual` | parameter | `` |
 | `expected` | parameter | `` |
 | `label` | parameter | `` |
+
+## `/home/joselucasapp/Downloads/zumbra-nes/src/testing/cpu_fixture.zum`
+
+### prgOffset
+
+```zumbra
+pub fct prgOffset(cart, address)
+```
+
+Returns the physical PRG offset for an NROM CPU address.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `cart` | parameter | `` |
+| `address` | parameter | `` |
+
+### setByte
+
+```zumbra
+pub fct setByte(cart, address, value)
+```
+
+Mutates the synthetic in-memory PRG image used only by tests and diagnostics.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `cart` | parameter | `` |
+| `address` | parameter | `` |
+| `value` | parameter | `` |
+
+### setWord
+
+```zumbra
+pub fct setWord(cart, address, value)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `cart` | parameter | `` |
+| `address` | parameter | `` |
+| `value` | parameter | `` |
+
+### installProgram
+
+```zumbra
+pub fct installProgram(cart, start, program)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `cart` | parameter | `` |
+| `start` | parameter | `` |
+| `program` | parameter | `` |
+
+### createMachine
+
+```zumbra
+pub fct createMachine(start, program)
+```
+
+Creates a fresh Mapper 0 machine with reset/NMI/IRQ vectors initialized.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `start` | parameter | `` |
+| `program` | parameter | `` |
+
+### writeByte
+
+```zumbra
+pub fct writeByte(systemBus, address, value)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `systemBus` | parameter | `` |
+| `address` | parameter | `` |
+| `value` | parameter | `` |
+
+### readByte
+
+```zumbra
+pub fct readByte(systemBus, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `systemBus` | parameter | `` |
+| `address` | parameter | `` |
 

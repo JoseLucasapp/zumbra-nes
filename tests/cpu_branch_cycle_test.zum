@@ -1,0 +1,18 @@
+import "../src/core/cpu6502.zum" as cpu6502;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+var machine << fixture.createMachine(0x80FD,[0xF0u8, 0x02u8]);
+var processor << machine["cpu"];
+var systemBus << machine["bus"];
+processor.setFlag(cpu6502.FLAG_ZERO, true);
+var crossedCycles << processor.step(systemBus);
+test.assertInt(crossedCycles, 4, "taken branch page-cross cycles");
+test.assertInt(processor.pc, 0x8101, "taken branch target");
+var other << fixture.createMachine(0x8000,[0xF0u8, 0x7Fu8]);
+var otherCpu << other["cpu"];
+var otherBus << other["bus"];
+otherCpu.setFlag(cpu6502.FLAG_ZERO, false);
+var notTakenCycles << otherCpu.step(otherBus);
+test.assertInt(notTakenCycles, 2, "not-taken branch cycles");
+test.assertInt(otherCpu.pc, 0x8002, "not-taken branch PC");
+show("cpu_branch_cycle_test: ok");

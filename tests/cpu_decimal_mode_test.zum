@@ -1,0 +1,13 @@
+import "../src/core/cpu6502.zum" as cpu6502;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+var machine << fixture.createMachine(0x8000,[0xF8u8, 0xA9u8, 0x09u8, 0x18u8, 0x69u8, 0x01u8]);
+var processor << machine["cpu"];
+var systemBus << machine["bus"];
+processor.step(systemBus);
+test.assertBool(processor.getFlag(cpu6502.FLAG_DECIMAL), "SED stores decimal flag");
+processor.step(systemBus);
+processor.step(systemBus);
+processor.step(systemBus);
+test.assertInt(processor.a, 0x0A, "2A03 ignores BCD arithmetic");
+show("cpu_decimal_mode_test: ok");

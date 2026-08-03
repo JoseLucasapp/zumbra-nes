@@ -1,0 +1,91 @@
+import "../src/core/cpu6502.zum" as cpu6502;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+fct forceBranchNotTaken(processor, opcode) {
+    if (opcode == 0x10) {
+        processor.setFlag(cpu6502.FLAG_NEGATIVE, true);
+    }
+    if (opcode == 0x30) {
+        processor.setFlag(cpu6502.FLAG_NEGATIVE, false);
+    }
+    if (opcode == 0x50) {
+        processor.setFlag(cpu6502.FLAG_OVERFLOW, true);
+    }
+    if (opcode == 0x70) {
+        processor.setFlag(cpu6502.FLAG_OVERFLOW, false);
+    }
+    if (opcode == 0x90) {
+        processor.setFlag(cpu6502.FLAG_CARRY, true);
+    }
+    if (opcode == 0xB0) {
+        processor.setFlag(cpu6502.FLAG_CARRY, false);
+    }
+    if (opcode == 0xD0) {
+        processor.setFlag(cpu6502.FLAG_ZERO, true);
+    }
+    if (opcode == 0xF0) {
+        processor.setFlag(cpu6502.FLAG_ZERO, false);
+    }
+}
+fct smokeOpcode(opcode) {
+    var info << cpu6502.opcodeInfo(opcode);
+    var operand1 << 0;
+    var operand2 << 0;
+    if (info.mode == "immediate") {
+        operand1 << 1;
+    }
+    if (info.mode == "zero-page" or info.mode == "zero-page-x" or info.mode == "zero-page-y") {
+        operand1 << 0x10;
+    }
+    if (info.mode == "absolute" or info.mode == "absolute-x" or info.mode == "absolute-y") {
+        operand1 << 0x00;
+        operand2 << 0x60;
+    }
+    if (info.mode == "indexed-indirect" or info.mode == "indirect-indexed") {
+        operand1 << 0x20;
+    }
+    if (info.mode == "indirect") {
+        operand1 << 0x00;
+        operand2 << 0x60;
+    }
+    var machine << fixture.createMachine(0x8000,[u8(opcode), u8(operand1), u8(operand2)]);
+    var processor << machine["cpu"];
+    var systemBus << machine["bus"];
+    fixture.writeByte(systemBus, 0x10, 0x01);
+    fixture.writeByte(systemBus, 0x20, 0x00);
+    fixture.writeByte(systemBus, 0x21, 0x60);
+    fixture.writeByte(systemBus, 0x6000, 0x03);
+    fixture.writeByte(systemBus, 0x6001, 0x80);
+    forceBranchNotTaken(processor, opcode);
+    if (opcode == 0x60) {
+        processor.sp << 0xFB;
+        fixture.writeByte(systemBus, 0x01FC, 0x02);
+        fixture.writeByte(systemBus, 0x01FD, 0x80);
+    }
+    if (opcode == 0x40) {
+        processor.sp << 0xFA;
+        fixture.writeByte(systemBus, 0x01FB, 0x24);
+        fixture.writeByte(systemBus, 0x01FC, 0x03);
+        fixture.writeByte(systemBus, 0x01FD, 0x80);
+    }
+    if (opcode == 0x68 or opcode == 0x28) {
+        processor.sp << 0xFC;
+        fixture.writeByte(systemBus, 0x01FD, 0x24);
+    }
+    var used << processor.step(systemBus);
+    test.assertInt(used, info.cycles, "official opcode base cycles");
+    test.assertBool(!processor.halted, "official opcode stays supported");
+}
+var count << 0;
+for opcode in 0 .. 255 {
+    if (cpu6502.isOfficialOpcode(opcode)) {
+        smokeOpcode(opcode);
+        count << count + 1;
+    }
+}
+test.assertInt(count, 151, "official opcode list count");
+test.assertInt(cpu6502.officialOpcodeCount(), 151, "official opcode API count");
+test.assertBool(!cpu6502.isOfficialOpcode(0x02), "illegal opcode rejected by metadata");
+test.assertString(cpu6502.opcodeInfo(0xA9).mnemonic, "LDA", "opcode mnemonic");
+test.assertString(cpu6502.opcodeInfo(0x6C).mode, "indirect", "opcode addressing mode");
+show("cpu_opcode_coverage_test: ok");

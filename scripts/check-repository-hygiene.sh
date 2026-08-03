@@ -35,4 +35,4 @@ if [[ -d .git ]]; then
     fi
 fi
 
-echo "Z19 repository hygiene checks passed."
+echo "Zumbra NES repository hygiene checks passed."

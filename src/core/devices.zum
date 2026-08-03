@@ -1,4 +1,4 @@
-/// Contract consumed by the Z20 CPU implementation.
+/// External interrupt and lifecycle contract shared with the Z20 CPU core.
 pub struct CpuPort {
     resetPending: bool;
     nmiPending: bool;
