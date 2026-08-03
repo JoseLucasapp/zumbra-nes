@@ -18,7 +18,7 @@ As fixtures são geradas por `scripts/generate-synthetic-fixtures.py`. Elas não
 ## Gate
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.0 scripts/test-z19-foundation.sh
+EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
 ```
 
 O gate valida hashes, formatação, lint, pipeline, testes, documentação, execução interpretada, compilação nativa e higiene.

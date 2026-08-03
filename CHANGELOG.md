@@ -1,3 +1,7 @@
+## Unreleased
+
+- Atualiza a versão mínima da CLI para Zumbra 0.14.1, que corrige a negação de booleanos derivados de comparações de inteiros de largura fixa encontrada por `header_test.zum`.
+
 # Changelog
 
 ## 0.1.0 — Z19

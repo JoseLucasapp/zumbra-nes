@@ -21,18 +21,18 @@
 
 ## Not executable in the delivery environment
 
-The complete `scripts/test-z19-foundation.sh` gate requires the published Zumbra 0.14.0 CLI and its native build dependencies. The delivery environment did not contain that binary and could not download external dependencies.
+The complete `scripts/test-z19-foundation.sh` gate requires the published Zumbra 0.14.1 CLI and its native build dependencies. The delivery environment did not contain that binary and could not download external dependencies.
 
 Run on the target development machine:
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.0 scripts/test-z19-foundation.sh
+EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
 ```
 
 For a first interpreted-only validation:
 
 ```bash
-Z19_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.0 scripts/test-z19-foundation.sh
+Z19_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
 ```
 
 ## Approval criteria

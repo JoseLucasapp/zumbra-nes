@@ -1,6 +1,6 @@
 # Zumbra NES
 
-Fundação de um emulador NES/Famicom escrita em **Zumbra 0.14.0**.
+Fundação de um emulador NES/Famicom escrita em **Zumbra 0.14.1**.
 
 A versão `0.1.0` corresponde ao marco **Z19**. Ela implementa a infraestrutura de cartucho e memória necessária para a CPU 6502 que será desenvolvida no Z20, sem incluir ROMs comerciais.
 
@@ -24,7 +24,7 @@ A versão `0.1.0` corresponde ao marco **Z19**. Ela implementa a infraestrutura 
 
 ## Requisitos
 
-- Zumbra `0.14.0` disponível no `PATH`;
+- Zumbra `0.14.1` disponível no `PATH`;
 - Linux para o gate nativo completo desta primeira versão;
 - `clang` ou `gcc` e dependências nativas exigidas pelo backend Zumbra.
 

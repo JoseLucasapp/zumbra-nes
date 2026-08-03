@@ -20,11 +20,11 @@ jobs:
             build-essential clang \
             libsqlite3-dev libssl-dev libpq-dev libhiredis-dev
 
-      - name: Install Zumbra 0.14.0
+      - name: Install Zumbra 0.14.1
         run: |
           curl -L --fail \
             -o /tmp/zumbra.tar.gz \
-            https://github.com/JoseLucasapp/Zumbra-lang/releases/download/v0.14.0/zumbra-0.14.0-linux-amd64.tar.gz
+            https://github.com/JoseLucasapp/Zumbra-lang/releases/download/v0.14.1/zumbra-0.14.1-linux-amd64.tar.gz
           mkdir -p "$HOME/.local/bin" /tmp/zumbra
           tar -xzf /tmp/zumbra.tar.gz --strip-components=1 -C /tmp/zumbra
           install -m 755 /tmp/zumbra/zumbra "$HOME/.local/bin/zumbra"

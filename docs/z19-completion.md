@@ -17,5 +17,5 @@
 - [x] testes automatizados;
 - [x] documentação de arquitetura;
 - [x] gate único da Z19;
-- [ ] validação no ambiente do usuário com Zumbra 0.14.0;
+- [ ] validação no ambiente do usuário com Zumbra 0.14.1;
 - [ ] criação e publicação do repositório remoto `zumbra-nes`.

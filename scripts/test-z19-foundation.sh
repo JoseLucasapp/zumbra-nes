@@ -5,7 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 zumbra_bin="${ZUMBRA_BIN:-zumbra}"
-expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.0}"
+expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.1}"
 
 if ! command -v "$zumbra_bin" >/dev/null 2>&1; then
     echo "Zumbra CLI not found: $zumbra_bin" >&2
