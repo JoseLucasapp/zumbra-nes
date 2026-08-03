@@ -1,0 +1,14 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4010, 0x8Fu8);
+apu.cpuWrite(state, 0x4012, 0x00u8);
+apu.cpuWrite(state, 0x4013, 0x00u8);
+apu.cpuWrite(state, 0x4015, 0x10u8);
+test.assertBool(apu.dmcNeedsByte(state), "DMC requests sample byte");
+test.assertInt(apu.dmcAddress(state), 0xC000, "DMC sample base");
+test.assertBool(apu.supplyDmcByte(state, 0xFF), "DMC accepts sample byte");
+test.assertInt(state["dmc"].bytesRemaining, 0, "DMC sample length consumed");
+test.assertBool(state["dmc"].irq, "DMC IRQ at sample end");
+test.assertBool(apu.irqLine(state), "DMC drives APU IRQ");
+show("apu_dmc_test: ok");

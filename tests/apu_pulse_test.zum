@@ -1,0 +1,17 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4015, 0x01u8);
+apu.cpuWrite(state, 0x4000, 0x9Fu8);
+apu.cpuWrite(state, 0x4002, 0x20u8);
+apu.cpuWrite(state, 0x4003, 0x08u8);
+state["pulse1"].sequence << 1;
+test.assertInt(state["pulse1"].output(), 15, "constant-volume pulse output");
+var previous << state["pulse1"].sequence;
+var index << 0;
+while (index < 80) {
+    apu.tick(state);
+    index << index + 1;
+}
+test.assertBool(state["pulse1"].sequence != previous, "pulse timer advances duty sequencer");
+show("apu_pulse_test: ok");

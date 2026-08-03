@@ -1,93 +1,77 @@
-# Validation report — Z20 CPU 6502 0.2.0
+# Validation report — Z21 hardware 0.3.0
 
 ## Status
 
-A Z20 implementa a CPU Ricoh 2A03/NMOS 6502 completa no escopo dos 151 opcodes oficiais e integra a execução ao bus da Z19.
-
-O critério oficial exige que todo o projeto passe pela Zumbra 0.14.2 e que a saída headless seja idêntica na VM e no executável C11.
+A Z21 integra o hardware headless do NES sobre a CPU da Z20. A aprovação oficial exige Zumbra 0.14.2, 43 testes, build C11 e saída idêntica entre VM e nativo.
 
 ## Cobertura funcional
 
-- 151/151 opcodes oficiais presentes na tabela e no decoder;
-- 13 modos de endereçamento/variações oficiais;
-- reset, IRQ, NMI e BRK;
-- stack, flags e vetores;
-- page crossing de loads, ALU, compares e branches;
-- branch tomado/não tomado;
-- bug de wrap do JMP indireto;
-- semântica binária do Ricoh 2A03 para ADC/SBC;
-- execução de programa sintético com loop;
-- integração CPU/bus/clock/headless.
+### PPU
 
-## Testes do projeto
+- oito registradores CPU com espelhamento;
+- CHR ROM/RAM, nametables e palette mirrors;
+- mirroring horizontal, vertical e four-screen;
+- background e attribute tables;
+- sprites 8×8/8×16, flip, prioridade, sprite zero hit e overflow;
+- scroll, `v/t/x/w`, PPUDATA buffer e incremento 1/32;
+- scanlines, dots, VBlank, NMI e odd-frame skip;
+- framebuffer `256×240` e digest.
 
-A Z20 adiciona 13 testes de CPU aos 10 testes da Z19, totalizando 23 arquivos:
+### APU
 
-```text
-cpu_reset_test.zum
-cpu_addressing_test.zum
-cpu_arithmetic_test.zum
-cpu_decimal_mode_test.zum
-cpu_shift_logic_test.zum
-cpu_branch_cycle_test.zum
-cpu_stack_control_test.zum
-cpu_interrupt_test.zum
-cpu_transfer_flags_test.zum
-cpu_compare_memory_test.zum
-cpu_program_test.zum
-cpu_opcode_coverage_test.zum
-cpu_cycle_penalty_test.zum
-```
+- pulse 1/2, triangle, noise e DMC;
+- envelope, sweep, length/linear counters e LFSR;
+- frame sequencer 4/5-step e IRQ;
+- DMC address/length/loop/IRQ e fetch pelo bus;
+- mixer determinístico e PCM ring buffer.
 
-`cpu_opcode_coverage_test.zum` percorre todos os 151 opcodes oficiais e verifica que cada um permanece suportado com seus ciclos-base.
+### I/O e scheduler
+
+- dois controles serializados;
+- OAM DMA com 513/514 ciclos;
+- razão 3:1 PPU/CPU e 1:1 APU/CPU;
+- NMI da PPU e IRQ da APU conectadas à CPU;
+- paridade VM/native.
 
 ## Gate oficial
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z20-cpu.sh
+EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z21-hardware.sh
 ```
 
 O gate executa:
 
 1. SHA-256 das fixtures;
-2. tabela e decoder com os 151 opcodes oficiais;
-3. formatter em `src` e `tests`;
-4. linter sem warnings;
-5. `project info` e versão 0.2.0;
-6. análise semântica do projeto;
-7. 23 testes;
-8. geração da API;
-9. execução pela VM;
-10. validação do relatório Z20;
-11. build C11 nativo;
-12. execução do binário nativo;
-13. comparação exata VM/native;
-14. higiene do repositório.
-
-## Verificação rápida
-
-```bash
-Z20_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z20-cpu.sh
-```
-
-Esse modo não substitui o gate completo.
+2. tabela/decoder dos 151 opcodes;
+3. formatter e linter;
+4. `project info` e versão 0.3.0;
+5. análise semântica;
+6. 43 testes;
+7. documentação;
+8. execução pela VM;
+9. validação do relatório Z21;
+10. build C11;
+11. execução nativa;
+12. comparação VM/native;
+13. higiene.
 
 ## Critérios de aprovação
 
 ```text
 Zumbra NES repository hygiene checks passed.
-Z20 CPU 6502 gate passed.
+Z21 NES hardware gate passed.
 ```
 
 Também devem existir:
 
 ```text
 build/zumbra-nes
+build/vm-run-raw.txt
 build/vm-smoke.txt
 build/native-smoke.txt
 ```
 
-E o comando abaixo não deve imprimir diferenças:
+E não pode haver diferença em:
 
 ```bash
 diff -u build/vm-smoke.txt build/native-smoke.txt

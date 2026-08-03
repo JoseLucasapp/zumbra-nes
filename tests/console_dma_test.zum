@@ -1,0 +1,17 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var machine << console.create(cart);
+var index << 0;
+while (index < 256) {
+    bus.write(machine["bus"], 0x0200 + index, u8(index));
+    index << index + 1;
+}
+bus.write(machine["bus"], 0x4014, 0x02u8);
+console.stepInstruction(machine);
+test.assertU64(machine["core"].dmaCycles, 514u64, "DMA parity stall through console");
+test.assertInt(toInt(machine["bus"]["ppu"]["oam"][255]), 255, "console DMA copied OAM");
+test.assertU64(machine["core"].ppuCycles, u64(machine["core"].cpuCycles * 3u64), "DMA keeps PPU synchronized");
+show("console_dma_test: ok");

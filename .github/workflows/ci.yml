@@ -1,4 +1,4 @@
-name: Z20 CPU 6502
+name: Z21 NES hardware
 
 on:
   push:
@@ -33,5 +33,5 @@ jobs:
           install -m 755 /tmp/zumbra/zumbra "$HOME/.local/bin/zumbra"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run Z20 gate
-        run: scripts/test-z20-cpu.sh
+      - name: Run Z21 gate
+        run: scripts/test-z21-hardware.sh

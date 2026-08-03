@@ -1,0 +1,16 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4015, 0x01u8);
+apu.cpuWrite(state, 0x4000, 0x9Fu8);
+apu.cpuWrite(state, 0x4002, 0x20u8);
+apu.cpuWrite(state, 0x4003, 0x08u8);
+var index << 0;
+while (index < 4000) {
+    apu.tick(state);
+    index << index + 1;
+}
+test.assertU64(apu.sampleCount(state), 100u64, "40-cycle deterministic sample clock");
+test.assertBool(apu.sampleAt(state, 0) > 0, "PCM sample written");
+test.assertInt(sizeOf(apu.sampleDigest(state)), 64, "audio SHA-256 length");
+show("apu_audio_test: ok");

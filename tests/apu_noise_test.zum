@@ -1,0 +1,15 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4015, 0x08u8);
+apu.cpuWrite(state, 0x400C, 0x1Fu8);
+apu.cpuWrite(state, 0x400E, 0x00u8);
+apu.cpuWrite(state, 0x400F, 0x08u8);
+var index << 0;
+while (index < 32) {
+    apu.tick(state);
+    index << index + 1;
+}
+test.assertBool(state["noise"].shiftRegister != 1, "noise LFSR advances");
+test.assertBool(state["noise"].lengthCounter > 0, "noise length active");
+show("apu_noise_test: ok");

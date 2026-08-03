@@ -1,4 +1,4 @@
-/// External interrupt and lifecycle contract shared with the Z20 CPU core.
+/// External interrupt and lifecycle contract shared with the CPU core.
 pub struct CpuPort {
     resetPending: bool;
     nmiPending: bool;
@@ -6,34 +6,49 @@ pub struct CpuPort {
     halted: bool;
 }
 
-/// Contract consumed by the Z21 PPU implementation.
+/// Observable Ricoh 2C02 timing state.
 pub struct PpuPort {
     scanline: int;
     dot: int;
+    frame: u64;
     frameComplete: bool;
+    nmiPending: bool;
 }
 
-/// Contract consumed by the Z21 APU implementation.
+/// Observable APU timing, IRQ and sample state.
 pub struct ApuPort {
     sampleClock: u64;
-    frameCounter: u8;
+    frameCounter: int;
+    frameIrq: bool;
+    dmcIrq: bool;
 }
 
-/// Contract consumed by the Z21 controller implementation.
+/// Observable serial controller state.
 pub struct ControllerPort {
-    buttons: u8;
-    latched: u8;
+    buttons: int;
+    latched: int;
+    index: int;
     strobe: bool;
+}
+
+/// Observable OAM DMA transaction state.
+pub struct DmaPort {
+    pending: bool;
+    page: int;
+    cycles: int;
 }
 pub fct createCpuPort() {
     CpuPort(true, false, false, false);
 }
 pub fct createPpuPort() {
-    PpuPort(-1, 0, false);
+    PpuPort(-1, 0, 0u64, false, false);
 }
 pub fct createApuPort() {
-    ApuPort(0u64, 0u8);
+    ApuPort(0u64, 0, false, false);
 }
 pub fct createControllerPort() {
-    ControllerPort(0u8, 0u8, false);
+    ControllerPort(0, 0, 0, false);
+}
+pub fct createDmaPort() {
+    DmaPort(false, 0, 0);
 }

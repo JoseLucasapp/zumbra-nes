@@ -1,70 +1,77 @@
+import "../core/apu.zum" as apu;
 import "../core/bus.zum" as bus;
 import "../core/cartridge.zum" as cartridge;
-import "../core/clock.zum" as clock;
-import "../core/cpu6502.zum" as cpu6502;
-/// Stable diagnostic report produced without opening a window.
+import "../core/console.zum" as console;
+import "../core/controller.zum" as controller;
+import "../core/ppu.zum" as ppu;
+/// Stable Z21 report covering CPU, PPU, APU, controllers and scheduler state.
 pub struct DiagnosticReport {
     sourcePath: string;
     format: string;
     mapper: u16;
-    prgBytes: int;
-    chrBytes: int;
-    digest: string;
     resetVector: u16;
     cpuA: int;
-    cpuX: int;
-    cpuY: int;
-    cpuSp: int;
-    cpuPc: int;
-    cpuStatus: int;
     cpuInstructions: int;
-    cpuCoreCycles: int;
-    cpuClockCycles: u64;
+    cpuCycles: u64;
     ppuCycles: u64;
+    ppuFrame: u64;
+    ppuScanline: int;
+    ppuDot: int;
+    frameDigest: string;
+    audioSamples: u64;
+    audioDigest: string;
+    controllerA: int;
+    dmaCycles: u64;
+    dmcStallCycles: u64;
 }
 
-/// Runs deterministic cartridge, bus, CPU and clock diagnostics.
+/// Runs a deterministic full-hardware diagnostic without opening a window.
 pub fct run(cart) {
     var info << cart["info"];
-    var systemBus << bus.create(cart);
-    var processor << cpu6502.create(systemBus);
-    var scheduler << clock.create();
-    scheduler.stepCpu(7u64);
-    var executed << 0;
-    while (executed < 2) {
-        var used << processor.step(systemBus);
-        scheduler.stepCpu(u64(used));
-        executed << executed + 1;
-    }
+    var machine << console.create(cart);
+    console.stepInstruction(machine);
+    console.stepInstruction(machine);
+    var systemBus << machine["bus"];
+    bus.write(systemBus, 0x4015, 0x01u8);
+    bus.write(systemBus, 0x4000, 0x1Fu8);
+    bus.write(systemBus, 0x4002, 0x20u8);
+    bus.write(systemBus, 0x4003, 0x08u8);
+    console.setController(machine, 1, controller.BUTTON_A bor controller.BUTTON_START);
+    bus.write(systemBus, 0x4016, 1u8);
+    bus.write(systemBus, 0x4016, 0u8);
+    var controllerA << bus.read(systemBus, 0x4016) band 0x01;
+    console.runHardwareCycles(machine, 29780);
     var resetLow << bus.read(systemBus, 0xFFFC);
     var resetHigh << bus.read(systemBus, 0xFFFD);
     var resetVector << u16(resetLow) bor(u16(resetHigh) shl 8);
-    DiagnosticReport(info.sourcePath, info.header.format, info.header.mapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]), info.digest, resetVector, processor.a, processor.x, processor.y, processor.sp, processor.pc, processor.status, processor.instructions, processor.cycles, scheduler.cpuCycles, scheduler.ppuCycles);
+    var ppuCore << systemBus["ppu"]["core"];
+    var consoleCore << machine["core"];
+    DiagnosticReport(info.sourcePath, info.header.format, info.header.mapper, resetVector, machine["cpu"].a, machine["cpu"].instructions, consoleCore.cpuCycles, consoleCore.ppuCycles, ppuCore.frame, ppuCore.scanline, ppuCore.dot, ppu.frameDigest(systemBus["ppu"]), apu.sampleCount(systemBus["apu"]), apu.sampleDigest(systemBus["apu"]), controllerA, consoleCore.dmaCycles, consoleCore.dmcStallCycles);
 }
 
-/// Prints the headless report in a stable VM/native format.
+/// Prints the Z21 report in a deterministic VM/native format.
 pub fct printReport(report) {
-    show("Zumbra NES Z20 CPU 6502");
+    show("Zumbra NES Z21 hardware");
     show(report.sourcePath);
     show(report.format);
     show(report.mapper);
-    show(report.prgBytes);
-    show(report.chrBytes);
-    show(report.digest);
     show(report.resetVector);
     show(report.cpuA);
-    show(report.cpuX);
-    show(report.cpuY);
-    show(report.cpuSp);
-    show(report.cpuPc);
-    show(report.cpuStatus);
     show(report.cpuInstructions);
-    show(report.cpuCoreCycles);
-    show(report.cpuClockCycles);
+    show(report.cpuCycles);
     show(report.ppuCycles);
+    show(report.ppuFrame);
+    show(report.ppuScanline);
+    show(report.ppuDot);
+    show(report.frameDigest);
+    show(report.audioSamples);
+    show(report.audioDigest);
+    show(report.controllerA);
+    show(report.dmaCycles);
+    show(report.dmcStallCycles);
 }
 
-/// Loads a ROM and executes the deterministic headless frontend.
+/// Loads a ROM and runs the deterministic Z21 frontend.
 pub fct runFile(path) {
     var cart << cartridge.load(path);
     var report << run(cart);

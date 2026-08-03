@@ -1,0 +1,21 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/ppu.zum" as ppu;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var state << ppu.create(cart);
+var cycles << 0;
+while (state["core"].frame < 1u64) {
+    ppu.tick(state);
+    cycles << cycles + 1;
+}
+test.assertInt(cycles, 89342, "normal NTSC PPU frame cycles");
+test.assertBool(state["core"].frameComplete, "frame complete edge");
+ppu.cpuWrite(state, 1, 0x18);
+ppu.clearFrameComplete(state);
+cycles << 0;
+while (state["core"].frame < 2u64) {
+    ppu.tick(state);
+    cycles << cycles + 1;
+}
+test.assertInt(cycles, 89341, "odd rendered frame skips one dot");
+show("ppu_frame_test: ok");

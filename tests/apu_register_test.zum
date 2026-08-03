@@ -1,0 +1,16 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4015, 0x0Fu8);
+apu.cpuWrite(state, 0x4000, 0x1Fu8);
+apu.cpuWrite(state, 0x4002, 0x40u8);
+apu.cpuWrite(state, 0x4003, 0x08u8);
+test.assertBool(state["pulse1"].enabled, "pulse one enabled");
+test.assertBool(state["pulse1"].lengthCounter > 0, "pulse length loaded");
+test.assertBool((apu.cpuReadStatus(state) band 0x01) != 0, "status exposes pulse length");
+apu.cpuWrite(state, 0x4015, 0x00u8);
+test.assertInt(state["pulse1"].lengthCounter, 0, "disable clears length");
+apu.cpuWrite(state, 0x4017, 0xC0u8);
+test.assertBool(state["core"].fiveStep, "five-step frame mode");
+test.assertBool(state["core"].irqInhibit, "frame IRQ inhibited");
+show("apu_register_test: ok");

@@ -1,0 +1,21 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+var index << 0;
+while (index < 14915) {
+    apu.tick(state);
+    index << index + 1;
+}
+test.assertBool(apu.irqLine(state), "four-step frame IRQ");
+var status << apu.cpuReadStatus(state);
+test.assertBool((status band 0x40) != 0, "frame IRQ status bit");
+test.assertBool(!apu.irqLine(state), "status read clears frame IRQ");
+var inhibited << apu.create();
+apu.cpuWrite(inhibited, 0x4017, 0x40u8);
+index << 0;
+while (index < 14920) {
+    apu.tick(inhibited);
+    index << index + 1;
+}
+test.assertBool(!apu.irqLine(inhibited), "IRQ inhibit suppresses frame IRQ");
+show("apu_frame_irq_test: ok");

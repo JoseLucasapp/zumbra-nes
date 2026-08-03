@@ -1,0 +1,22 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/ppu.zum" as ppu;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-256-chr-ram.nes");
+var state << ppu.create(cart);
+var index << 0;
+while (index < 64) {
+    state["oam"][index * 4] << 0xF0u8;
+    index << index + 1;
+}
+index << 0;
+while (index < 9) {
+    state["oam"][index * 4] << 0u8;
+    state["oam"][(index * 4) + 3] << u8(index * 8);
+    index << index + 1;
+}
+state["core"].scanline << 1;
+state["core"].dot << 0;
+ppu.tick(state);
+test.assertInt(state["core"].spritesOnLine, 9, "sprite evaluation count");
+test.assertBool((state["core"].status band 0x20) != 0, "sprite overflow flag");
+show("ppu_sprite_overflow_test: ok");

@@ -2,9 +2,7 @@
 
 Emulador NES/Famicom em desenvolvimento, escrito em **Zumbra 0.14.2**.
 
-A versão `0.2.0` conclui o marco **Z20**: a CPU Ricoh 2A03/NMOS 6502 está implementada em nível de instrução, integrada ao barramento criado na Z19 e validada pela VM e pelo backend C11 nativo.
-
-A Z20 não inclui PPU, APU, controles reais ou janela jogável. Esses componentes pertencem aos próximos marcos.
+A versão `0.3.0` conclui o marco **Z21**: PPU, APU, controles, OAM DMA e o scheduler completo de CPU/PPU/APU foram integrados ao núcleo criado nas Z19 e Z20. O projeto permanece headless nesta versão; janela, teclado/gamepad real, conquistas e persistência do usuário pertencem à Z22.
 
 ## Implementado
 
@@ -13,27 +11,30 @@ A Z20 não inclui PPU, APU, controles reais ou janela jogável. Esses componente
 - parser iNES 1.0 e identificação básica de NES 2.0;
 - cartucho, trainer, PRG ROM/RAM e CHR ROM/RAM;
 - Mapper 0 com NROM-128 e NROM-256;
-- barramento, espelhamentos e vetores;
-- scheduler determinístico de CPU/PPU;
-- frontend headless, persistência e fixtures sintéticas.
+- barramento inicial, vetores e fixtures sintéticas.
 
 ### Z20 — CPU 6502
 
-- registradores `A`, `X`, `Y`, `SP`, `PC` e status;
-- flags `C`, `Z`, `I`, `D`, `B`, `U`, `V` e `N`;
-- reset pelos vetores do cartucho;
-- 151 opcodes oficiais do NMOS 6502;
-- todos os modos de endereçamento oficiais;
-- fetch, decode e execute;
-- aritmética, lógica, comparação, carga, armazenamento e transferências;
-- operações de stack e controle de fluxo;
-- `BRK`, `RTI`, `JSR`, `RTS`, `IRQ` e `NMI`;
-- penalidades de ciclo por page crossing e branches;
-- bug de wrap do `JMP ($xxFF)` reproduzido;
-- flag decimal preservada, com `ADC`/`SBC` binários como no Ricoh 2A03;
-- rejeição controlada de opcode ilegal;
-- metadados públicos da tabela de opcodes;
-- integração determinística com o clock da Z19;
+- CPU Ricoh 2A03/NMOS 6502;
+- 151 opcodes oficiais;
+- todos os modos oficiais de endereçamento;
+- stack, flags, reset, IRQ, NMI, BRK e ciclos agregados;
+- page crossing e bug do `JMP ($xxFF)`.
+
+### Z21 — hardware do NES
+
+- PPU Ricoh 2C02 com `PPUCTRL`, `PPUMASK`, `PPUSTATUS`, OAM, scroll, endereço e dados;
+- pattern tables, nametables, attribute tables, palette RAM e mirroring horizontal/vertical/four-screen;
+- framebuffer determinístico de `256×240` índices de paleta;
+- background, sprites 8×8/8×16, prioridade, flip, sprite zero hit e overflow;
+- scanlines, dots, VBlank, NMI e odd-frame cycle skip;
+- OAM DMA por `$4014`, com 513/514 ciclos de stall;
+- dois controles em `$4016/$4017`, strobe e leitura serial A/B/Select/Start/direções;
+- APU com pulse 1/2, triangle, noise e DMC;
+- envelopes, sweep, length counters, linear counter, LFSR, frame counter e IRQs;
+- buffer PCM determinístico e digest SHA-256;
+- scheduler central com razão `3 PPU : 1 CPU : 1 APU`;
+- propagação PPU NMI, APU IRQ, DMA e fetch do DMC;
 - paridade de saída entre VM e executável C11.
 
 ## Requisitos
@@ -41,9 +42,7 @@ A Z20 não inclui PPU, APU, controles reais ou janela jogável. Esses componente
 - Zumbra `0.14.2` no `PATH`;
 - Linux para o gate nativo oficial atual;
 - `clang` ou `gcc`;
-- dependências nativas exigidas pelo backend Zumbra.
-
-Confirme a versão:
+- dependências nativas exigidas pela distribuição da Zumbra.
 
 ```bash
 zumbra --version
@@ -57,41 +56,39 @@ Resultado esperado:
 
 ## Testes
 
-Verificação rápida:
-
 ```bash
 zumbra project check
 zumbra project test
 zumbra project run
 ```
 
-Gate oficial da Z20:
+Gate oficial da Z21:
 
 ```bash
-scripts/test-z20-cpu.sh
+scripts/test-z21-hardware.sh
 ```
 
-O gate executa formatter, linter, pipeline, 23 testes, documentação, VM, build nativo, execução nativa, comparação VM/native e higiene.
+O gate executa hashes das fixtures, verificação dos 151 opcodes, formatter, linter, pipeline, **43 testes**, documentação, VM, build C11, execução nativa, paridade VM/native e higiene.
 
-O script histórico `scripts/test-z19-foundation.sh` encaminha para o gate atual; a implementação original da Z19 permanece preservada na tag `v0.1.0`.
-
-Para diagnóstico sem o build C11, sem substituir a aprovação oficial:
+Para diagnóstico sem o build nativo, sem substituir a aprovação oficial:
 
 ```bash
-Z20_SKIP_NATIVE=1 scripts/test-z20-cpu.sh
+Z21_SKIP_NATIVE=1 scripts/test-z21-hardware.sh
 ```
+
+Os gates históricos encaminham para o gate atual. As árvores originais permanecem preservadas nas tags `v0.1.0` e `v0.2.0`.
 
 ## Saída headless
 
-O programa principal carrega uma fixture NROM sintética, reseta a CPU, executa `LDA #$01` e `NOP` e imprime um relatório estável. Entre os valores esperados estão:
+O programa principal carrega uma fixture NROM sintética, executa duas instruções da CPU, configura pulse e controle, avança um frame de hardware e imprime estado estável:
 
 ```text
-Zumbra NES Z20 CPU 6502
-A = 1
-PC = $8003
-instruções = 2
-ciclos CPU = 11
-ciclos PPU = 33
+Zumbra NES Z21 hardware
+CPU A = 1
+CPU instructions = 2
+PPU frame = 1
+controller A = 1
+frame/audio SHA-256
 ```
 
 ## ROMs
@@ -100,8 +97,9 @@ O repositório aceita somente ROMs sintéticas, homebrew com redistribuição pe
 
 ## Estado
 
-- Z19: concluída e publicada como `v0.1.0`;
-- Z20: CPU 6502 completa no escopo oficial e versão `0.2.0`;
-- próximo marco: Z21, com PPU, APU, controllers e sincronização de hardware.
+- Z19: publicada como `v0.1.0`;
+- Z20: publicada como `v0.2.0`;
+- Z21: hardware headless completo no escopo da versão `0.3.0`;
+- próximo marco: Z22, com frontend desktop jogável, input real, seleção de ROM e conquistas locais em SQLite.
 
-Detalhes técnicos estão em [`docs/cpu6502.md`](docs/cpu6502.md), e os critérios de conclusão em [`docs/z20-completion.md`](docs/z20-completion.md).
+Documentação técnica: [`docs/ppu.md`](docs/ppu.md), [`docs/apu.md`](docs/apu.md), [`docs/architecture.md`](docs/architecture.md) e [`docs/z21-completion.md`](docs/z21-completion.md).

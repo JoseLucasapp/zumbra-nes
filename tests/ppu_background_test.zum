@@ -1,0 +1,15 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/ppu.zum" as ppu;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-256-chr-ram.nes");
+var state << ppu.create(cart);
+ppu.write(state, 0x0000, 0x80);
+ppu.write(state, 0x2000, 0x00);
+ppu.write(state, 0x3F01, 0x21);
+ppu.cpuWrite(state, 1, 0x0A);
+state["core"].scanline << 0;
+state["core"].dot << 1;
+ppu.tick(state);
+test.assertInt(toInt(state["framebuffer"][0]), 0x21, "background pixel from pattern and palette");
+test.assertString(ppu.frameDigest(state), sha256(state["framebuffer"]), "frame digest");
+show("ppu_background_test: ok");

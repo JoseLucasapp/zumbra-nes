@@ -1,0 +1,17 @@
+import "../src/core/console.zum" as console;
+import "../src/core/ppu.zum" as ppu;
+import "../src/testing/assert.zum" as test;
+import "../src/testing/cpu_fixture.zum" as fixture;
+var cart << fixture.createMachine(0x8000,[0xEAu8])["cart"];
+fixture.installProgram(cart, 0x9000,[0xE8u8, 0x40u8]);
+fixture.setWord(cart, 0xFFFA, 0x9000);
+var machine << console.create(cart);
+var ppuState << machine["bus"]["ppu"];
+ppuState["core"].status << 0x80;
+ppu.cpuWrite(ppuState, 0, 0x80);
+var used << console.stepInstruction(machine);
+test.assertInt(used, 7, "console services PPU NMI");
+test.assertInt(machine["cpu"].pc, 0x9000, "NMI vector through console");
+console.stepInstruction(machine);
+test.assertInt(machine["cpu"].x, 1, "NMI handler executes");
+show("console_nmi_test: ok");

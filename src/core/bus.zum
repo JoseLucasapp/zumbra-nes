@@ -1,86 +1,155 @@
+import "apu.zum" as apu;
 import "constants.zum" as constants;
+import "controller.zum" as controller;
 import "mapper.zum" as mapper;
-/// Builds a zeroed CPU bus dictionary for a validated cartridge package.
+import "ppu.zum" as ppu;
+/// Builds the complete Z21 CPU bus around one validated cartridge.
 pub fct create(cart) {
     var info << cart["info"];
     mapper.create(info.header.mapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]));
     {
-        "ram": bytes(constants.CPU_RAM_BYTES), "ppuRegisters": bytes(constants.PPU_REGISTER_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(constants.PRG_RAM_BYTES), "cart": cart, "openBus": 0u8
+        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(constants.PRG_RAM_BYTES), "cart": cart, "ppu": ppu.create(cart), "apu": apu.create(), "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8
     };
 }
 
-/// Reads one CPU-visible byte. Addresses are integers in the range 0..65535.
+/// Reads one CPU-visible byte, including PPU, APU and controller side effects.
 pub fct read(state, address) {
-    var value << state["openBus"];
-    if (address <= 0x1FFF) {
-        value << state["ram"][address band 0x07FF];
+    var normalized << address band 0xFFFF;
+    var value << toInt(state["openBus"]);
+    if (normalized <= 0x1FFF) {
+        value << toInt(state["ram"][normalized band 0x07FF]);
     } else {
-        if (address <= 0x3FFF) {
-            value << state["ppuRegisters"][address band 0x0007];
+        if (normalized <= 0x3FFF) {
+            value << ppu.cpuRead(state["ppu"], normalized band 0x0007);
         } else {
-            if (address <= 0x401F) {
-                value << state["apuIo"][address - 0x4000];
+            if (normalized == 0x4015) {
+                value << apu.cpuReadStatus(state["apu"]);
             } else {
-                if (address >= 0x6000 and address <= 0x7FFF) {
-                    value << state["prgRam"][address - 0x6000];
+                if (normalized == 0x4016) {
+                    value <<(value band 0xE0) bor state["controller1"].read();
                 } else {
-                    if (address >= 0x8000 and address <= 0xFFFF) {
-                        var cart << state["cart"];
-                        var info << cart["info"];
-                        var mapping << mapper.cpuRead(info.header.mapper, address, sizeOf(cart["prgRom"]));
-                        if (mapping.mapped) {
-                            value << cart["prgRom"][mapping.offset];
+                    if (normalized == 0x4017) {
+                        value <<(value band 0xE0) bor state["controller2"].read();
+                    } else {
+                        if (normalized >= 0x4000 and normalized <= 0x401F) {
+                            value << toInt(state["apuIo"][normalized - 0x4000]);
+                        } else {
+                            if (normalized >= 0x6000 and normalized <= 0x7FFF) {
+                                value << toInt(state["prgRam"][normalized - 0x6000]);
+                            } else {
+                                if (normalized >= 0x8000) {
+                                    var cart << state["cart"];
+                                    var info << cart["info"];
+                                    var mapping << mapper.cpuRead(info.header.mapper, normalized, sizeOf(cart["prgRom"]));
+                                    if (mapping.mapped) {
+                                        value << toInt(cart["prgRom"][mapping.offset]);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-    state["openBus"] << value;
-    value;
+    state["openBus"] << u8(value band 0xFF);
+    value band 0xFF;
 }
 
-/// Writes one CPU-visible byte. PRG ROM writes are ignored by Mapper 0.
+/// Writes one CPU-visible byte and routes all Z21 hardware registers.
 pub fct write(state, address, value) {
-    state["openBus"] << value;
-    if (address <= 0x1FFF) {
-        state["ram"][address band 0x07FF] << value;
+    var normalized << address band 0xFFFF;
+    var byteValue << toInt(value) band 0xFF;
+    state["openBus"] << u8(byteValue);
+    if (normalized <= 0x1FFF) {
+        state["ram"][normalized band 0x07FF] << u8(byteValue);
         return true;
     }
-    if (address <= 0x3FFF) {
-        state["ppuRegisters"][address band 0x0007] << value;
+    if (normalized <= 0x3FFF) {
+        return ppu.cpuWrite(state["ppu"], normalized band 0x0007, byteValue);
+    }
+    if (normalized >= 0x4000 and normalized <= 0x4013) {
+        state["apuIo"][normalized - 0x4000] << u8(byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue);
+    }
+    if (normalized == 0x4014) {
+        state["apuIo"][0x14] << u8(byteValue);
+        state["dmaPage"] << byteValue;
+        state["dmaPending"] << true;
         return true;
     }
-    if (address <= 0x401F) {
-        state["apuIo"][address - 0x4000] << value;
+    if (normalized == 0x4015) {
+        state["apuIo"][0x15] << u8(byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue);
+    }
+    if (normalized == 0x4016) {
+        state["apuIo"][0x16] << u8(byteValue);
+        state["controller1"].writeStrobe(byteValue);
+        state["controller2"].writeStrobe(byteValue);
         return true;
     }
-    if (address >= 0x6000 and address <= 0x7FFF) {
-        state["prgRam"][address - 0x6000] << value;
+    if (normalized == 0x4017) {
+        state["apuIo"][0x17] << u8(byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue);
+    }
+    if (normalized >= 0x4018 and normalized <= 0x401F) {
+        state["apuIo"][normalized - 0x4000] << u8(byteValue);
+        return true;
+    }
+    if (normalized >= 0x6000 and normalized <= 0x7FFF) {
+        state["prgRam"][normalized - 0x6000] << u8(byteValue);
         return true;
     }
     false;
 }
 
-/// Reads one PPU pattern-table byte.
+/// Reads one PPU address through the attached PPU memory map.
 pub fct ppuRead(state, address) {
-    var cart << state["cart"];
-    var info << cart["info"];
-    var mapping << mapper.ppuRead(info.header.mapper, address, sizeOf(cart["chrMemory"]));
-    if (!mapping.mapped) {
-        return 0u8;
-    }
-    cart["chrMemory"][mapping.offset];
+    ppu.read(state["ppu"], address);
 }
 
-/// Writes one PPU pattern-table byte when the cartridge uses CHR RAM.
+/// Writes one PPU address through the attached PPU memory map.
 pub fct ppuWrite(state, address, value) {
-    var cart << state["cart"];
-    var info << cart["info"];
-    var mapping << mapper.ppuWrite(info.header.mapper, address, sizeOf(cart["chrMemory"]), info.chrIsRam);
-    if (!mapping.writable) {
-        return false;
+    ppu.write(state["ppu"], address, toInt(value));
+}
+
+/// Updates one controller's complete eight-button state.
+pub fct setController(state, port, buttons) {
+    if (port == 1) {
+        state["controller1"].setButtons(buttons);
+        return true;
     }
-    cart["chrMemory"][mapping.offset] << value;
-    true;
+    if (port == 2) {
+        state["controller2"].setButtons(buttons);
+        return true;
+    }
+    false;
+}
+
+/// Copies a full CPU page into PPU OAM and returns the 513/514-cycle CPU stall.
+pub fct performDma(state, cpuCycle) {
+    if (!state["dmaPending"]) {
+        return 0;
+    }
+    var base << state["dmaPage"] shl 8;
+    var index << 0;
+    while (index < 256) {
+        ppu.oamDmaWrite(state["ppu"], read(state, base + index));
+        index << index + 1;
+    }
+    state["dmaPending"] << false;
+    if ((cpuCycle band 0x01) == 0) {
+        return 513;
+    }
+    514;
+}
+
+/// Returns whether a sprite/background VBlank transition requested NMI.
+pub fct takePpuNmi(state) {
+    ppu.takeNmi(state["ppu"]);
+}
+
+/// Returns the combined APU IRQ line.
+pub fct apuIrq(state) {
+    apu.irqLine(state["apu"]);
 }

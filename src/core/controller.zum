@@ -1,0 +1,61 @@
+/// NES controller button bit for A.
+pub const BUTTON_A << 0x01;
+/// NES controller button bit for B.
+pub const BUTTON_B << 0x02;
+/// NES controller button bit for Select.
+pub const BUTTON_SELECT << 0x04;
+/// NES controller button bit for Start.
+pub const BUTTON_START << 0x08;
+/// NES controller button bit for Up.
+pub const BUTTON_UP << 0x10;
+/// NES controller button bit for Down.
+pub const BUTTON_DOWN << 0x20;
+/// NES controller button bit for Left.
+pub const BUTTON_LEFT << 0x40;
+/// NES controller button bit for Right.
+pub const BUTTON_RIGHT << 0x80;
+/// Serial controller state exposed through CPU addresses $4016 and $4017.
+pub struct Controller {
+    buttons: int;
+    latched: int;
+    index: int;
+    strobe: bool;
+    fct setButtons(value) {
+        self.buttons << toInt(value) band 0xFF;
+        if (self.strobe) {
+            self.latched << self.buttons;
+            self.index << 0;
+        }
+    }
+    fct writeStrobe(value) {
+        var next <<(toInt(value) band 0x01) != 0;
+        if (next) {
+            self.latched << self.buttons;
+            self.index << 0;
+        } else {
+            if (self.strobe) {
+                self.latched << self.buttons;
+                self.index << 0;
+            }
+        }
+        self.strobe << next;
+    }
+    fct read() {
+        if (self.strobe) {
+            self.latched << self.buttons;
+            self.index << 0;
+            return self.latched band 0x01;
+        }
+        if (self.index >= 8) {
+            return 1;
+        }
+        var value <<(self.latched shr self.index) band 0x01;
+        self.index << self.index + 1;
+        value;
+    }
+}
+
+/// Creates a released controller with no buttons pressed.
+pub fct create() {
+    Controller(0, 0, 0, false);
+}

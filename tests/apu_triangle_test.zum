@@ -1,0 +1,16 @@
+import "../src/core/apu.zum" as apu;
+import "../src/testing/assert.zum" as test;
+var state << apu.create();
+apu.cpuWrite(state, 0x4015, 0x04u8);
+apu.cpuWrite(state, 0x4008, 0x85u8);
+apu.cpuWrite(state, 0x400A, 0x02u8);
+apu.cpuWrite(state, 0x400B, 0x08u8);
+var index << 0;
+while (index < 3730) {
+    apu.tick(state);
+    index << index + 1;
+}
+test.assertInt(state["triangle"].linearCounter, 5, "triangle linear reload");
+test.assertBool(state["triangle"].sequence > 0, "triangle sequencer advances");
+test.assertBool(state["triangle"].output() >= 0, "triangle output available");
+show("apu_triangle_test: ok");

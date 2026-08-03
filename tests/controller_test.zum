@@ -1,0 +1,15 @@
+import "../src/core/controller.zum" as controller;
+import "../src/testing/assert.zum" as test;
+var pad << controller.create();
+pad.setButtons(controller.BUTTON_A bor controller.BUTTON_START bor controller.BUTTON_RIGHT);
+pad.writeStrobe(1);
+test.assertInt(pad.read(), 1, "strobe continuously exposes A");
+pad.writeStrobe(0);
+var expected <<[1, 0, 0, 1, 0, 0, 0, 1];
+var index << 0;
+while (index < 8) {
+    test.assertInt(pad.read(), expected[index], "controller serial order");
+    index << index + 1;
+}
+test.assertInt(pad.read(), 1, "controller returns one after eight buttons");
+show("controller_test: ok");

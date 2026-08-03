@@ -1,0 +1,415 @@
+import "constants.zum" as constants;
+import "mapper.zum" as mapper;
+/// One decoded pixel before final background/sprite priority selection.
+pub struct Pixel {
+    color: int;
+    opaque: bool;
+    behindBackground: bool;
+    spriteZero: bool;
+}
+
+/// CPU-visible and timing state for the Ricoh 2C02 PPU.
+pub struct PpuCore {
+    control: int;
+    mask: int;
+    status: int;
+    oamAddress: int;
+    v: int;
+    t: int;
+    fineX: int;
+    writeToggle: bool;
+    readBuffer: int;
+    openBus: int;
+    scrollX: int;
+    scrollY: int;
+    scanline: int;
+    dot: int;
+    cycles: u64;
+    frame: u64;
+    frameComplete: bool;
+    nmiLine: bool;
+    nmiPending: bool;
+    oddFrame: bool;
+    spritesOnLine: int;
+}
+fct renderingEnabled(core) {
+    (core.mask band 0x18) != 0;
+}
+fct updateNmi(core) {
+    var next <<((core.status band 0x80) != 0) and((core.control band 0x80) != 0);
+    if (next and!core.nmiLine) {
+        core.nmiPending << true;
+    }
+    core.nmiLine << next;
+}
+fct paletteOffset(address) {
+    var offset <<(address - 0x3F00) band 0x1F;
+    if (offset == 0x10 or offset == 0x14 or offset == 0x18 or offset == 0x1C) {
+        offset << offset - 0x10;
+    }
+    offset;
+}
+fct nametableOffset(state, address) {
+    var normalized <<(address - 0x2000) band 0x0FFF;
+    var table << normalized / 0x0400;
+    var within << normalized band 0x03FF;
+    var cart << state["cart"];
+    var info << cart["info"];
+    if (info.header.fourScreen) {
+        return(table * 0x0400) + within;
+    }
+    if (info.header.mirroring == "vertical") {
+        return((table band 0x01) * 0x0400) + within;
+    }
+    return((table shr 1) * 0x0400) + within;
+}
+
+/// Creates a power-on PPU package with VRAM, palette, OAM and framebuffer.
+pub fct create(cart) {
+    var info << cart["info"];
+    var vramBytes << constants.NAMETABLE_BYTES;
+    if (info.header.fourScreen) {
+        vramBytes << constants.FOUR_SCREEN_NAMETABLE_BYTES;
+    }
+    {
+        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES)
+    };
+}
+
+/// Reads the complete PPU address space after mirroring.
+pub fct read(state, address) {
+    var normalized << address band 0x3FFF;
+    if (normalized < 0x2000) {
+        var cart << state["cart"];
+        var info << cart["info"];
+        var mapping << mapper.ppuRead(info.header.mapper, normalized, sizeOf(cart["chrMemory"]));
+        if (mapping.mapped) {
+            return toInt(cart["chrMemory"][mapping.offset]);
+        }
+        return 0;
+    }
+    if (normalized < 0x3F00) {
+        return toInt(state["vram"][nametableOffset(state, normalized)]);
+    }
+    toInt(state["palette"][paletteOffset(normalized)]) band 0x3F;
+}
+
+/// Writes CHR RAM, nametable RAM or palette RAM after mirroring.
+pub fct write(state, address, value) {
+    var normalized << address band 0x3FFF;
+    var byteValue << u8(value band 0xFF);
+    if (normalized < 0x2000) {
+        var cart << state["cart"];
+        var info << cart["info"];
+        var mapping << mapper.ppuWrite(info.header.mapper, normalized, sizeOf(cart["chrMemory"]), info.chrIsRam);
+        if (!mapping.writable) {
+            return false;
+        }
+        cart["chrMemory"][mapping.offset] << byteValue;
+        return true;
+    }
+    if (normalized < 0x3F00) {
+        state["vram"][nametableOffset(state, normalized)] << byteValue;
+        return true;
+    }
+    state["palette"][paletteOffset(normalized)] << u8(value band 0x3F);
+    true;
+}
+fct incrementV(core) {
+    if ((core.control band 0x04) != 0) {
+        core.v <<(core.v + 32) band 0x7FFF;
+    } else {
+        core.v <<(core.v + 1) band 0x7FFF;
+    }
+}
+
+/// Reads one of the eight CPU-visible PPU registers.
+pub fct cpuRead(state, register) {
+    var core << state["core"];
+    var index << register band 0x07;
+    var value << core.openBus;
+    if (index == 2) {
+        value <<(core.status band 0xE0) bor(core.openBus band 0x1F);
+        core.status << core.status band 0x7F;
+        core.writeToggle << false;
+        updateNmi(core);
+    } else {
+        if (index == 4) {
+            value << toInt(state["oam"][core.oamAddress]);
+        } else {
+            if (index == 7) {
+                var address << core.v band 0x3FFF;
+                var memoryValue << read(state, address);
+                if (address >= 0x3F00) {
+                    value << memoryValue;
+                    core.readBuffer << read(state,(address - 0x1000) band 0x3FFF);
+                } else {
+                    value << core.readBuffer;
+                    core.readBuffer << memoryValue;
+                }
+                incrementV(core);
+            }
+        }
+    }
+    core.openBus << value band 0xFF;
+    value band 0xFF;
+}
+
+/// Writes one of the eight CPU-visible PPU registers.
+pub fct cpuWrite(state, register, value) {
+    var core << state["core"];
+    var index << register band 0x07;
+    var byteValue << toInt(value) band 0xFF;
+    core.openBus << byteValue;
+    if (index == 0) {
+        core.control << byteValue;
+        core.t <<(core.t band 0x73FF) bor((byteValue band 0x03) shl 10);
+        updateNmi(core);
+        return true;
+    }
+    if (index == 1) {
+        core.mask << byteValue;
+        return true;
+    }
+    if (index == 3) {
+        core.oamAddress << byteValue;
+        return true;
+    }
+    if (index == 4) {
+        state["oam"][core.oamAddress] << u8(byteValue);
+        core.oamAddress <<(core.oamAddress + 1) band 0xFF;
+        return true;
+    }
+    if (index == 5) {
+        if (!core.writeToggle) {
+            core.fineX << byteValue band 0x07;
+            core.t <<(core.t band 0x7FE0) bor(byteValue shr 3);
+            core.scrollX << byteValue;
+            core.writeToggle << true;
+        } else {
+            core.t <<(core.t band 0x0C1F) bor((byteValue band 0x07) shl 12) bor((byteValue band 0xF8) shl 2);
+            core.scrollY << byteValue;
+            core.writeToggle << false;
+        }
+        return true;
+    }
+    if (index == 6) {
+        if (!core.writeToggle) {
+            core.t <<(core.t band 0x00FF) bor((byteValue band 0x3F) shl 8);
+            core.writeToggle << true;
+        } else {
+            core.t <<(core.t band 0x7F00) bor byteValue;
+            core.v << core.t;
+            core.writeToggle << false;
+        }
+        return true;
+    }
+    if (index == 7) {
+        write(state, core.v, byteValue);
+        incrementV(core);
+        return true;
+    }
+    true;
+}
+fct backgroundPixel(state, x, y) {
+    var core << state["core"];
+    if ((core.mask band 0x08) == 0) {
+        return Pixel(read(state, 0x3F00), false, false, false);
+    }
+    if (x < 8 and(core.mask band 0x02) == 0) {
+        return Pixel(read(state, 0x3F00), false, false, false);
+    }
+    var baseX <<(core.control band 0x01) * 256;
+    var baseY <<((core.control shr 1) band 0x01) * 240;
+    var worldX <<(baseX + core.scrollX + x) % 512;
+    var worldY <<(baseY + core.scrollY + y) % 480;
+    var tableX << worldX / 256;
+    var tableY << worldY / 240;
+    var table <<(tableY * 2) + tableX;
+    var localX << worldX % 256;
+    var localY << worldY % 240;
+    var tileX << localX / 8;
+    var tileY << localY / 8;
+    var finePixelX << localX band 0x07;
+    var finePixelY << localY band 0x07;
+    var nametableBase << 0x2000 +(table * 0x0400);
+    var tile << read(state, nametableBase +(tileY * 32) + tileX);
+    var attribute << read(state, nametableBase + 0x03C0 +((tileY / 4) * 8) +(tileX / 4));
+    var quadrantShift <<((tileY band 0x02) * 2) +(tileX band 0x02);
+    var paletteNumber <<(attribute shr quadrantShift) band 0x03;
+    var patternBase << 0;
+    if ((core.control band 0x10) != 0) {
+        patternBase << 0x1000;
+    }
+    var patternAddress << patternBase +(tile * 16) + finePixelY;
+    var low << read(state, patternAddress);
+    var high << read(state, patternAddress + 8);
+    var bit << 7 - finePixelX;
+    var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
+    if (patternPixel == 0) {
+        return Pixel(read(state, 0x3F00), false, false, false);
+    }
+    Pixel(read(state, 0x3F00 +(paletteNumber * 4) + patternPixel), true, false, false);
+}
+fct spritePixel(state, x, y) {
+    var core << state["core"];
+    if ((core.mask band 0x10) == 0) {
+        return Pixel(0, false, false, false);
+    }
+    if (x < 8 and(core.mask band 0x04) == 0) {
+        return Pixel(0, false, false, false);
+    }
+    var spriteHeight << 8;
+    if ((core.control band 0x20) != 0) {
+        spriteHeight << 16;
+    }
+    var sprite << 0;
+    var visible << 0;
+    while (sprite < 64) {
+        var offset << sprite * 4;
+        var top << toInt(state["oam"][offset]) + 1;
+        var row << y - top;
+        if (row >= 0 and row < spriteHeight) {
+            visible << visible + 1;
+            if (visible <= 8) {
+                var left << toInt(state["oam"][offset + 3]);
+                if (x >= left and x < left + 8) {
+                    var tile << toInt(state["oam"][offset + 1]);
+                    var attributes << toInt(state["oam"][offset + 2]);
+                    var pixelX << x - left;
+                    var pixelY << row;
+                    if ((attributes band 0x40) != 0) {
+                        pixelX << 7 - pixelX;
+                    }
+                    if ((attributes band 0x80) != 0) {
+                        pixelY << spriteHeight - 1 - pixelY;
+                    }
+                    var patternBase << 0;
+                    if (spriteHeight == 16) {
+                        patternBase <<(tile band 0x01) * 0x1000;
+                        tile << tile band 0xFE;
+                        if (pixelY >= 8) {
+                            tile << tile + 1;
+                            pixelY << pixelY - 8;
+                        }
+                    } else {
+                        if ((core.control band 0x08) != 0) {
+                            patternBase << 0x1000;
+                        }
+                    }
+                    var address << patternBase +(tile * 16) + pixelY;
+                    var low << read(state, address);
+                    var high << read(state, address + 8);
+                    var bit << 7 - pixelX;
+                    var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
+                    if (patternPixel != 0) {
+                        var paletteNumber << attributes band 0x03;
+                        return Pixel(read(state, 0x3F10 +(paletteNumber * 4) + patternPixel), true,(attributes band 0x20) != 0, sprite == 0);
+                    }
+                }
+            }
+        }
+        sprite << sprite + 1;
+    }
+    Pixel(0, false, false, false);
+}
+fct evaluateSprites(state, y) {
+    var core << state["core"];
+    var height << 8;
+    if ((core.control band 0x20) != 0) {
+        height << 16;
+    }
+    var count << 0;
+    var sprite << 0;
+    while (sprite < 64) {
+        var top << toInt(state["oam"][sprite * 4]) + 1;
+        if (y >= top and y < top + height) {
+            count << count + 1;
+        }
+        sprite << sprite + 1;
+    }
+    core.spritesOnLine << count;
+    if (count > 8) {
+        core.status << core.status bor 0x20;
+    }
+}
+fct renderPixel(state, x, y) {
+    var core << state["core"];
+    var background << backgroundPixel(state, x, y);
+    var sprite << spritePixel(state, x, y);
+    var color << background.color;
+    if (sprite.opaque and(!background.opaque or!sprite.behindBackground)) {
+        color << sprite.color;
+    }
+    if (background.opaque and sprite.opaque and sprite.spriteZero and x < 255) {
+        core.status << core.status bor 0x40;
+    }
+    state["framebuffer"][(y * constants.PPU_WIDTH) + x] << u8(color band 0x3F);
+}
+
+/// Advances one PPU dot and returns true when a new frame completes.
+pub fct tick(state) {
+    var core << state["core"];
+    core.frameComplete << false;
+    if (core.scanline ==-1 and core.dot == 1) {
+        core.status << core.status band 0x1F;
+        core.nmiPending << false;
+        updateNmi(core);
+    }
+    if (core.scanline >= 0 and core.scanline < 240) {
+        if (core.dot == 0) {
+            evaluateSprites(state, core.scanline);
+        }
+        if (core.dot >= 1 and core.dot <= 256) {
+            renderPixel(state, core.dot - 1, core.scanline);
+        }
+    }
+    if (core.scanline == 241 and core.dot == 1) {
+        core.status << core.status bor 0x80;
+        updateNmi(core);
+    }
+    core.cycles << u64(core.cycles + 1u64);
+    if (core.scanline ==-1 and core.dot == 339 and core.oddFrame and renderingEnabled(core)) {
+        core.dot << 0;
+        core.scanline << 0;
+        return false;
+    }
+    core.dot << core.dot + 1;
+    if (core.dot >= constants.PPU_DOTS_PER_SCANLINE) {
+        core.dot << 0;
+        core.scanline << core.scanline + 1;
+        if (core.scanline >= 261) {
+            core.scanline <<-1;
+            core.frame << u64(core.frame + 1u64);
+            core.frameComplete << true;
+            core.oddFrame <<!core.oddFrame;
+            return true;
+        }
+    }
+    false;
+}
+
+/// Returns and clears the edge-triggered PPU NMI request.
+pub fct takeNmi(state) {
+    var core << state["core"];
+    var pending << core.nmiPending;
+    core.nmiPending << false;
+    pending;
+}
+
+/// Writes one OAM byte and increments OAMADDR, as used by $4014 DMA.
+pub fct oamDmaWrite(state, value) {
+    var core << state["core"];
+    state["oam"][core.oamAddress] << u8(toInt(value) band 0xFF);
+    core.oamAddress <<(core.oamAddress + 1) band 0xFF;
+}
+
+/// Clears the frame-complete edge after the frontend consumes it.
+pub fct clearFrameComplete(state) {
+    state["core"].frameComplete << false;
+}
+
+/// Returns a stable digest of the 256x240 palette-index framebuffer.
+pub fct frameDigest(state) {
+    sha256(state["framebuffer"]);
+}

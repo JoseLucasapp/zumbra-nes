@@ -1,0 +1,20 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var systemBus << bus.create(cart);
+var index << 0;
+while (index < 256) {
+    bus.write(systemBus, 0x0200 + index, u8(index));
+    index << index + 1;
+}
+bus.write(systemBus, 0x2003, 0x10u8);
+bus.write(systemBus, 0x4014, 0x02u8);
+var evenStall << bus.performDma(systemBus, 8);
+test.assertInt(evenStall, 513, "even DMA stall");
+test.assertInt(toInt(systemBus["ppu"]["oam"][0x10]), 0, "DMA first byte");
+test.assertInt(toInt(systemBus["ppu"]["oam"][0x0F]), 255, "DMA wrapped final byte");
+test.assertInt(systemBus["ppu"]["core"].oamAddress, 0x10, "DMA preserves wrapped OAMADDR");
+bus.write(systemBus, 0x4014, 0x02u8);
+test.assertInt(bus.performDma(systemBus, 9), 514, "odd DMA stall");
+show("dma_test: ok");

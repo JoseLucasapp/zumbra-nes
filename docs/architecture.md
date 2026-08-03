@@ -1,99 +1,55 @@
-# Arquitetura Z20
+# Arquitetura Z21
 
-## Camadas
-
-### `src/core`
-
-Código determinístico e independente da interface:
-
-- `header.zum`: valida e interpreta iNES/NES 2.0;
-- `cartridge.zum`: separa trainer, PRG e CHR;
-- `mapper.zum`: contrato de mapeamento e Mapper 0;
-- `bus.zum`: mapa de memória visto pela CPU;
-- `cpu6502.zum`: CPU Ricoh 2A03/NMOS 6502;
-- `clock.zum`: scheduler 3 PPU : 1 CPU;
-- `devices.zum`: contratos para PPU, APU, controles e linhas de CPU.
-
-### `src/frontend`
-
-- `headless.zum`: executa duas instruções e produz diagnóstico reproduzível;
-- `desktop_contract.zum`: fronteira neutra para o frontend SDL futuro.
-
-### `src/persistence`
-
-- `metadata.zum`: grava metadados e hashes sem copiar a ROM.
-
-### `src/testing`
-
-- `assert.zum`: asserts portáveis entre VM e C11;
-- `cpu_fixture.zum`: máquina NROM sintética, instalação de programas e vetores.
-
-## Fluxo de execução
+## Fluxo principal
 
 ```text
-arquivo .nes
-    ↓
-header.inspect
-    ↓
-cartridge.load
-    ↓
-Mapper 0 + Bus
-    ↓
-cpu6502.create → reset vector
-    ↓
-fetch → decode → execute
-    ↓
-clock.stepCpu(ciclos)
-    ↓
-frontend headless
+ROM → Cartridge → Mapper 0 → Bus
+                         ├─ CPU 2A03
+                         ├─ PPU 2C02 → framebuffer 256×240
+                         ├─ APU → PCM ring buffer
+                         ├─ Controller 1/2
+                         └─ OAM DMA / DMC fetch
+                                  ↓
+                              Console scheduler
 ```
 
-## Estado da CPU
+## Módulos de núcleo
 
-A CPU guarda:
+- `header.zum`: iNES/NES 2.0;
+- `cartridge.zum`: PRG, CHR, trainer e metadata;
+- `mapper.zum`: Mapper 0/NROM;
+- `bus.zum`: mapa CPU e roteamento PPU/APU/controles/DMA;
+- `cpu6502.zum`: 151 opcodes oficiais;
+- `ppu.zum`: memória, registradores, render, timing e NMI;
+- `apu.zum`: canais, frame sequencer, IRQ e PCM;
+- `controller.zum`: dois controles serializados;
+- `console.zum`: scheduler integrado;
+- `clock.zum`: relógio genérico preservado para testes históricos;
+- `devices.zum`: contratos observáveis.
 
-```text
-A, X, Y
-SP, PC
-status
-cycles
-instructions
-lastOpcode
-halted
-irqLine
-nmiPending
-```
+## Scheduler
 
-O status mantém o bit `U` ativo. O bit `B` não representa um latch físico: ele é aplicado somente nos valores empilhados por `BRK`/`PHP` e removido nos estados restaurados.
+`console.stepInstruction` executa uma instrução da CPU e avança um ciclo APU e três dots PPU para cada ciclo retornado. Depois da instrução:
 
-## Interrupções
+- uma escrita em `$4014` dispara a cópia de 256 bytes para OAM e adiciona 513/514 ciclos;
+- uma solicitação DMC busca um byte pelo CPU bus e adiciona quatro ciclos de stall;
+- PPU NMI e APU IRQ são atualizadas nas fronteiras do scheduler.
 
-Prioridade por fronteira de instrução:
+## PPU
 
-1. NMI pendente;
-2. IRQ ativa quando `I = 0`;
-3. fetch da próxima instrução.
+A PPU mantém estado de registradores, loopy registers `v/t/x/w`, scanline/dot, OAM, VRAM, palette e framebuffer. O render headless resolve background e sprites por pixel e produz índices de paleta estáveis.
 
-NMI e IRQ empilham PC e status com `B = 0`, ativam `I` e carregam seus vetores. BRK avança o PC de acordo com o byte de padding, empilha status com `B = 1` e usa o vetor IRQ/BRK.
+## APU
 
-## Ciclos
+A APU mantém os quatro geradores tradicionais mais DMC, executa quarter/half-frame clocks, gera IRQs e grava amostras unsigned de 8 bits em um ring buffer determinístico.
 
-Cada `step` retorna os ciclos consumidos. O scheduler da Z19 recebe esse número e avança a PPU contratual em três ciclos por ciclo de CPU.
+## Fronteiras da Z21
 
-A Z20 contabiliza:
+A Z21 é headless. Permanecem para Z22:
 
-- ciclos-base por opcode;
-- um ciclo adicional em leituras indexadas que cruzam página;
-- um ciclo por branch tomado;
-- mais um ciclo quando o branch tomado cruza página;
-- sete ciclos em reset, IRQ e NMI.
-
-## Fronteiras da Z20
-
-A CPU está em nível de instrução e ciclos agregados. A Z20 não modela acessos internos a cada ciclo nem DMA de sprite, pois a PPU/APU ainda não existem.
-
-Ficam fora deste marco:
-
-- Z21: PPU, APU, controllers, DMA e sincronização de hardware;
-- Z22: janela jogável, vídeo, áudio, seleção de ROM e conquistas locais;
-- Z23: contas e sincronização online.
+- janela SDL e apresentação do framebuffer;
+- áudio em dispositivo real;
+- teclado/gamepad real;
+- seleção visual de ROM;
+- save states;
+- conquistas locais em SQLite.

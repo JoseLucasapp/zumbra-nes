@@ -1,30 +1,28 @@
 # Changelog
 
+## 0.3.0 — Z21
+
+- PPU Ricoh 2C02 com registradores CPU, VRAM, palette, OAM e framebuffer 256×240.
+- Background, attribute tables, scroll, sprites 8×8/8×16, prioridade, flip, sprite zero hit e overflow.
+- Scanlines/dots, VBlank, NMI e odd-frame skip.
+- OAM DMA em `$4014` com stalls de 513/514 ciclos.
+- Dois controles NES com strobe e shift serial.
+- APU com pulse 1/2, triangle, noise e DMC.
+- Envelopes, sweep, length/linear counters, frame sequencer, IRQs e buffer PCM.
+- Scheduler integrado de CPU, PPU e APU, incluindo DMA, DMC e linhas de interrupção.
+- Vinte testes de hardware adicionados, totalizando 43 arquivos de teste.
+- Frontend headless atualizado com digests de frame e áudio.
+- Gate Z21 com paridade VM/C11.
+- Documentação da PPU, APU, arquitetura, testes e release 0.3.0.
+
 ## 0.2.0 — Z20
 
 - CPU Ricoh 2A03/NMOS 6502 completa no escopo de opcodes oficiais.
-- 151 opcodes oficiais implementados e catalogados.
-- Todos os modos de endereçamento oficiais.
-- Registradores, flags, stack, vetores, reset, IRQ, NMI e BRK.
-- Contagem de ciclos, page crossing e penalidades de branch.
-- Bug de wrap da indireção do `JMP` reproduzido.
-- Semântica binária de ADC/SBC mesmo com a flag decimal, como no NES.
-- Integração da CPU com o bus e o scheduler da Z19.
-- Treze novos testes de CPU e 23 testes totais de projeto.
-- Smoke test headless executando instruções reais.
-- Gate Z20 com paridade entre VM e backend C11.
-- Documentação de CPU, arquitetura, testes e release 0.2.0.
+- 151 opcodes oficiais, modos de endereçamento, stack, vetores, IRQ/NMI e ciclos.
+- Treze novos testes de CPU e 23 testes totais.
+- Gate Z20 com paridade VM/C11.
 
 ## 0.1.0 — Z19
 
-- Fundação do emulador NES/Famicom concluída.
-- Parser iNES 1.0 e identificação básica NES 2.0.
-- Cartucho, trainer, PRG ROM/RAM e CHR ROM/RAM.
-- Mapper 0 com NROM-128 e NROM-256.
-- Barramento inicial, espelhamentos e reset vector.
-- Relógio determinístico CPU/PPU em razão 1:3.
-- Contratos para CPU, PPU, APU, controles e frontend desktop.
-- Frontend headless e persistência de metadados.
-- Seis fixtures sintéticas e dez testes executáveis.
-- Gate único com paridade entre VM e backend C11.
-- Versão mínima atualizada para Zumbra 0.14.2, que adiciona `panic` ao backend nativo.
+- Fundação do emulador NES/Famicom.
+- iNES/NES 2.0 básico, cartucho, Mapper 0, bus, clock, fixtures e frontend headless.

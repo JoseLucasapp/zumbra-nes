@@ -16,5 +16,25 @@ pub const CPU_RAM_BYTES << 2048;
 pub const PPU_REGISTER_BYTES << 8;
 /// APU and I/O register window.
 pub const APU_IO_BYTES << 32;
-/// PPU master cycles per NTSC frame.
+/// Visible NES framebuffer width.
+pub const PPU_WIDTH << 256;
+/// Visible NES framebuffer height.
+pub const PPU_HEIGHT << 240;
+/// Dots per PPU scanline.
+pub const PPU_DOTS_PER_SCANLINE << 341;
+/// NTSC PPU scanlines including pre-render and VBlank.
+pub const PPU_SCANLINES_PER_FRAME << 262;
+/// PPU master cycles per normal NTSC frame.
 pub const NTSC_PPU_CYCLES_PER_FRAME << 89342u64;
+/// Internal nametable RAM for horizontal/vertical mirroring.
+pub const NAMETABLE_BYTES << 2048;
+/// Four-screen nametable RAM.
+pub const FOUR_SCREEN_NAMETABLE_BYTES << 4096;
+/// Palette RAM after mirroring.
+pub const PALETTE_BYTES << 32;
+/// Primary OAM capacity.
+pub const OAM_BYTES << 256;
+/// Palette-index framebuffer capacity.
+pub const FRAMEBUFFER_BYTES << 61440;
+/// Deterministic ring buffer used by the headless APU.
+pub const AUDIO_BUFFER_BYTES << 65536;
