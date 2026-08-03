@@ -18,7 +18,21 @@ As fixtures são geradas por `scripts/generate-synthetic-fixtures.py`. Elas não
 ## Gate
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
+EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z19-foundation.sh
 ```
 
-O gate valida hashes, formatação, lint, pipeline, testes, documentação, execução interpretada, compilação nativa e higiene.
+O gate valida hashes, formatação, lint, pipeline, testes, documentação, execução pela VM, compilação nativa, execução do binário, paridade exata VM/native e higiene.
+
+Arquivos produzidos durante o gate:
+
+```text
+build/vm-smoke.txt
+build/zumbra-nes
+build/native-smoke.txt
+```
+
+A aprovação nativa exige:
+
+```bash
+diff -u build/vm-smoke.txt build/native-smoke.txt
+```

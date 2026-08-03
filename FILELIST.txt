@@ -6,6 +6,7 @@
 ./VALIDATION.md
 ./docs/architecture.md
 ./docs/ines-format.md
+./docs/release-0.1.0.md
 ./docs/testing.md
 ./docs/z19-completion.md
 ./fixtures/SHA256SUMS

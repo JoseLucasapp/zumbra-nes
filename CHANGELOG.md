@@ -1,13 +1,15 @@
-## Unreleased
-
-- Atualiza a versão mínima da CLI para Zumbra 0.14.1, que corrige a negação de booleanos derivados de comparações de inteiros de largura fixa encontrada por `header_test.zum`.
-
 # Changelog
 
 ## 0.1.0 — Z19
 
-- Fundação do emulador NES/Famicom.
-- Parser iNES 1.0 e identificação NES 2.0.
-- Cartucho, Mapper 0, barramento e relógio determinístico.
-- Frontend headless, persistência de metadados e ROMs sintéticas.
-- Gate único `scripts/test-z19-foundation.sh`.
+- Fundação do emulador NES/Famicom concluída.
+- Parser iNES 1.0 e identificação básica NES 2.0.
+- Cartucho, trainer, PRG ROM/RAM e CHR ROM/RAM.
+- Mapper 0 com NROM-128 e NROM-256.
+- Barramento inicial, espelhamentos e reset vector.
+- Relógio determinístico CPU/PPU em razão 1:3.
+- Contratos para CPU, PPU, APU, controles e frontend desktop.
+- Frontend headless e persistência de metadados.
+- Seis fixtures sintéticas e dez testes executáveis.
+- Gate único com paridade entre VM e backend C11.
+- Versão mínima atualizada para Zumbra 0.14.2, que adiciona `panic` ao backend nativo.

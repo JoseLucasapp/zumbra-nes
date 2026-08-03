@@ -1,45 +1,70 @@
 # Validation report — Z19 foundation 0.1.0
 
-## Executed in the delivery environment
+## Status
 
-- all 22 `.zum` files parsed successfully;
-- canonical Zumbra front-end pipeline completed for every source and test file:
-  - parser;
-  - module resolution;
-  - semantic analysis;
-  - type checking;
-  - HIR;
-  - MIR;
-  - MIR optimization;
-- official formatter applied to all `.zum` files;
-- official linter passed with the same non-pipeline options used by the gate;
-- synthetic fixture SHA-256 checks passed;
-- repository hygiene passed;
-- shell scripts passed `bash -n`;
-- fixture generator passed Python compilation;
-- GitHub Actions workflow passed YAML parsing.
+A implementação técnica da Z19 está concluída para Zumbra 0.14.2. O gate oficial exige a mesma saída na VM e no executável C11 nativo.
 
-## Not executable in the delivery environment
+## Validações já comprovadas no ambiente do usuário
 
-The complete `scripts/test-z19-foundation.sh` gate requires the published Zumbra 0.14.1 CLI and its native build dependencies. The delivery environment did not contain that binary and could not download external dependencies.
+- hashes das seis fixtures sintéticas;
+- formatter em 22 arquivos `.zum`;
+- linter sem erros ou avisos bloqueantes;
+- `zumbra project info`;
+- `zumbra project check`;
+- dez testes executáveis;
+- documentação de 56 símbolos;
+- execução headless pela VM;
+- higiene do repositório.
 
-Run on the target development machine:
+## Correção de linguagem necessária para o fechamento
+
+A Zumbra 0.14.2 adiciona suporte a `panic` no backend C11. A Z19 mantém validações defensivas e helpers de assert sem remover caminhos de erro para contornar o compilador.
+
+## Gate oficial
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
+EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z19-foundation.sh
 ```
 
-For a first interpreted-only validation:
+O gate executa:
+
+1. SHA-256 das fixtures;
+2. formatter;
+3. linter;
+4. informações e análise do projeto;
+5. dez testes;
+6. geração da documentação;
+7. execução pela VM;
+8. build C11 nativo;
+9. execução do binário nativo;
+10. comparação exata entre as saídas VM e nativa;
+11. higiene do repositório.
+
+## Verificação rápida
 
 ```bash
-Z19_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.1 scripts/test-z19-foundation.sh
+Z19_SKIP_NATIVE=1 EXPECTED_ZUMBRA_VERSION=0.14.2 scripts/test-z19-foundation.sh
 ```
 
-## Approval criteria
+Esse modo não substitui o gate completo.
 
-The foundation is approved when the complete gate ends with:
+## Critérios de aprovação
 
 ```text
 Z19 repository hygiene checks passed.
 Z19 foundation gate passed.
+```
+
+Também devem existir:
+
+```text
+build/zumbra-nes
+build/vm-smoke.txt
+build/native-smoke.txt
+```
+
+E este comando deve retornar sucesso:
+
+```bash
+diff -u build/vm-smoke.txt build/native-smoke.txt
 ```

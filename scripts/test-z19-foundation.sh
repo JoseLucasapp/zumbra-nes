@@ -5,7 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 zumbra_bin="${ZUMBRA_BIN:-zumbra}"
-expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.1}"
+expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.2}"
 
 if ! command -v "$zumbra_bin" >/dev/null 2>&1; then
     echo "Zumbra CLI not found: $zumbra_bin" >&2
@@ -29,13 +29,21 @@ sha256sum -c fixtures/SHA256SUMS
 "$zumbra_bin" project check
 "$zumbra_bin" project test
 "$zumbra_bin" project doc
-"$zumbra_bin" project run
+"$zumbra_bin" project run > build/vm-smoke.txt
+cat build/vm-smoke.txt
+
+grep -q '^Zumbra NES Z19 foundation$' build/vm-smoke.txt
+grep -q '^iNES 1.0$' build/vm-smoke.txt
+grep -q '^32768$' build/vm-smoke.txt
+grep -q '^10$' build/vm-smoke.txt
+grep -q '^30$' build/vm-smoke.txt
 
 if [[ "${Z19_SKIP_NATIVE:-0}" != "1" ]]; then
     "$zumbra_bin" project build -o build/zumbra-nes
+    test -x build/zumbra-nes
     ./build/zumbra-nes > build/native-smoke.txt
-    grep -q 'Zumbra NES Z19 foundation' build/native-smoke.txt
-    grep -q '^32768$' build/native-smoke.txt
+    cat build/native-smoke.txt
+    diff -u build/vm-smoke.txt build/native-smoke.txt
 fi
 
 scripts/check-repository-hygiene.sh
