@@ -49,13 +49,10 @@ fct paletteOffset(address) {
     }
     offset;
 }
-fct nametableOffset(state, address) {
+fct nametableOffsetForMode(address, mode) {
     var normalized <<(address - 0x2000) band 0x0FFF;
     var table << normalized / 0x0400;
     var within << normalized band 0x03FF;
-    var cart << state["cart"];
-    var info << cart["info"];
-    var mode << mapper.mirroring(state["mapper"], info.header.mirroring);
     if (mode == "four-screen") {
         return(table * 0x0400) + within;
     }
@@ -70,6 +67,12 @@ fct nametableOffset(state, address) {
     }
     return((table shr 1) * 0x0400) + within;
 }
+fct nametableOffset(state, address) {
+    var cart << state["cart"];
+    var info << cart["info"];
+    var mode << mapper.mirroring(state["mapper"], info.header.mirroring);
+    nametableOffsetForMode(address, mode);
+}
 
 /// Creates a power-on PPU package with VRAM, palette, OAM and framebuffer.
 pub fct createWithMapper(cart, mapperState) {
@@ -79,7 +82,7 @@ pub fct createWithMapper(cart, mapperState) {
         vramBytes << constants.FOUR_SCREEN_NAMETABLE_BYTES;
     }
     {
-        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "mapper": mapperState, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES)
+        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "mapper": mapperState, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES), "backgroundOpaque": bytes(constants.PPU_WIDTH), "lineSprites": bytes(8), "lineSpriteCount": 0, "renderOutput": true
     };
 }
 
@@ -96,9 +99,9 @@ pub fct read(state, address) {
     if (normalized < 0x2000) {
         var cart << state["cart"];
         var info << cart["info"];
-        var mapping << mapper.ppuRead(state["mapper"], normalized, sizeOf(cart["chrMemory"]));
-        if (mapping.mapped) {
-            return toInt(cart["chrMemory"][mapping.offset]);
+        var offset << mapper.ppuReadOffset(state["mapper"], normalized, sizeOf(cart["chrMemory"]));
+        if (offset >= 0) {
+            return toInt(cart["chrMemory"][offset]);
         }
         return 0;
     }
@@ -225,107 +228,96 @@ pub fct cpuWrite(state, register, value) {
     }
     true;
 }
-fct backgroundPixel(state, x, y) {
+fct patternByte(state, address) {
+    var cart << state["cart"];
+    var memory << cart["chrMemory"];
+    var offset << mapper.ppuReadOffset(state["mapper"], address, sizeOf(memory));
+    if (offset < 0) {
+        return 0;
+    }
+    toInt(memory[offset]);
+}
+fct paletteByte(memory, address) {
+    toInt(memory[paletteOffset(address)]) band 0x3F;
+}
+fct clearBackgroundLine(state, y, color) {
+    var framebuffer << state["framebuffer"];
+    var opaque << state["backgroundOpaque"];
+    var base << y * constants.PPU_WIDTH;
+    var x << 0;
+    while (x < constants.PPU_WIDTH) {
+        framebuffer[base + x] << u8(color);
+        opaque[x] << 0u8;
+        x << x + 1;
+    }
+}
+fct renderBackgroundLine(state, y) {
     var core << state["core"];
+    var framebuffer << state["framebuffer"];
+    var opaque << state["backgroundOpaque"];
+    var paletteMemory << state["palette"];
+    var universal << paletteByte(paletteMemory, 0x3F00);
     if ((core.mask band 0x08) == 0) {
-        return Pixel(read(state, 0x3F00), false, false, false);
+        clearBackgroundLine(state, y, universal);
+        return;
     }
-    if (x < 8 and(core.mask band 0x02) == 0) {
-        return Pixel(read(state, 0x3F00), false, false, false);
-    }
+    var cart << state["cart"];
+    var info << cart["info"];
+    var mode << mapper.mirroring(state["mapper"], info.header.mirroring);
+    var vram << state["vram"];
     var baseX <<(core.control band 0x01) * 256;
     var baseY <<((core.control shr 1) band 0x01) * 240;
-    var worldX <<(baseX + core.scrollX + x) % 512;
     var worldY <<(baseY + core.scrollY + y) % 480;
-    var tableX << worldX / 256;
     var tableY << worldY / 240;
-    var table <<(tableY * 2) + tableX;
-    var localX << worldX % 256;
     var localY << worldY % 240;
-    var tileX << localX / 8;
     var tileY << localY / 8;
-    var finePixelX << localX band 0x07;
     var finePixelY << localY band 0x07;
-    var nametableBase << 0x2000 +(table * 0x0400);
-    var tile << read(state, nametableBase +(tileY * 32) + tileX);
-    var attribute << read(state, nametableBase + 0x03C0 +((tileY / 4) * 8) +(tileX / 4));
-    var quadrantShift <<((tileY band 0x02) * 2) +(tileX band 0x02);
-    var paletteNumber <<(attribute shr quadrantShift) band 0x03;
     var patternBase << 0;
     if ((core.control band 0x10) != 0) {
         patternBase << 0x1000;
     }
-    var patternAddress << patternBase +(tile * 16) + finePixelY;
-    var low << read(state, patternAddress);
-    var high << read(state, patternAddress + 8);
-    var bit << 7 - finePixelX;
-    var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
-    if (patternPixel == 0) {
-        return Pixel(read(state, 0x3F00), false, false, false);
-    }
-    Pixel(read(state, 0x3F00 +(paletteNumber * 4) + patternPixel), true, false, false);
-}
-fct spritePixel(state, x, y) {
-    var core << state["core"];
-    if ((core.mask band 0x10) == 0) {
-        return Pixel(0, false, false, false);
-    }
-    if (x < 8 and(core.mask band 0x04) == 0) {
-        return Pixel(0, false, false, false);
-    }
-    var spriteHeight << 8;
-    if ((core.control band 0x20) != 0) {
-        spriteHeight << 16;
-    }
-    var sprite << 0;
-    var visible << 0;
-    while (sprite < 64) {
-        var offset << sprite * 4;
-        var top << toInt(state["oam"][offset]) + 1;
-        var row << y - top;
-        if (row >= 0 and row < spriteHeight) {
-            visible << visible + 1;
-            if (visible <= 8) {
-                var left << toInt(state["oam"][offset + 3]);
-                if (x >= left and x < left + 8) {
-                    var tile << toInt(state["oam"][offset + 1]);
-                    var attributes << toInt(state["oam"][offset + 2]);
-                    var pixelX << x - left;
-                    var pixelY << row;
-                    if ((attributes band 0x40) != 0) {
-                        pixelX << 7 - pixelX;
-                    }
-                    if ((attributes band 0x80) != 0) {
-                        pixelY << spriteHeight - 1 - pixelY;
-                    }
-                    var patternBase << 0;
-                    if (spriteHeight == 16) {
-                        patternBase <<(tile band 0x01) * 0x1000;
-                        tile << tile band 0xFE;
-                        if (pixelY >= 8) {
-                            tile << tile + 1;
-                            pixelY << pixelY - 8;
-                        }
-                    } else {
-                        if ((core.control band 0x08) != 0) {
-                            patternBase << 0x1000;
-                        }
-                    }
-                    var address << patternBase +(tile * 16) + pixelY;
-                    var low << read(state, address);
-                    var high << read(state, address + 8);
-                    var bit << 7 - pixelX;
-                    var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
-                    if (patternPixel != 0) {
-                        var paletteNumber << attributes band 0x03;
-                        return Pixel(read(state, 0x3F10 +(paletteNumber * 4) + patternPixel), true,(attributes band 0x20) != 0, sprite == 0);
-                    }
-                }
+    var cachedTable <<-1;
+    var cachedTileX <<-1;
+    var low << 0;
+    var high << 0;
+    var paletteNumber << 0;
+    var rowBase << y * constants.PPU_WIDTH;
+    var x << 0;
+    while (x < constants.PPU_WIDTH) {
+        if (x < 8 and(core.mask band 0x02) == 0) {
+            framebuffer[rowBase + x] << u8(universal);
+            opaque[x] << 0u8;
+        } else {
+            var worldX <<(baseX + core.scrollX + x) % 512;
+            var tableX << worldX / 256;
+            var table <<(tableY * 2) + tableX;
+            var localX << worldX % 256;
+            var tileX << localX / 8;
+            var finePixelX << localX band 0x07;
+            if (table != cachedTable or tileX != cachedTileX) {
+                cachedTable << table;
+                cachedTileX << tileX;
+                var nametableBase << 0x2000 +(table * 0x0400);
+                var tile << toInt(vram[nametableOffsetForMode(nametableBase +(tileY * 32) + tileX, mode)]);
+                var attribute << toInt(vram[nametableOffsetForMode(nametableBase + 0x03C0 +((tileY / 4) * 8) +(tileX / 4), mode)]);
+                var quadrantShift <<((tileY band 0x02) * 2) +(tileX band 0x02);
+                paletteNumber <<(attribute shr quadrantShift) band 0x03;
+                var patternAddress << patternBase +(tile * 16) + finePixelY;
+                low << patternByte(state, patternAddress);
+                high << patternByte(state, patternAddress + 8);
+            }
+            var bit << 7 - finePixelX;
+            var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
+            if (patternPixel == 0) {
+                framebuffer[rowBase + x] << u8(universal);
+                opaque[x] << 0u8;
+            } else {
+                framebuffer[rowBase + x] << u8(paletteByte(paletteMemory, 0x3F00 +(paletteNumber * 4) + patternPixel));
+                opaque[x] << 1u8;
             }
         }
-        sprite << sprite + 1;
+        x << x + 1;
     }
-    Pixel(0, false, false, false);
 }
 fct evaluateSprites(state, y) {
     var core << state["core"];
@@ -334,31 +326,100 @@ fct evaluateSprites(state, y) {
         height << 16;
     }
     var count << 0;
+    var stored << 0;
     var sprite << 0;
+    var lineSprites << state["lineSprites"];
     while (sprite < 64) {
         var top << toInt(state["oam"][sprite * 4]) + 1;
         if (y >= top and y < top + height) {
             count << count + 1;
+            if (stored < 8) {
+                lineSprites[stored] << u8(sprite);
+                stored << stored + 1;
+            }
         }
         sprite << sprite + 1;
     }
+    state["lineSpriteCount"] << stored;
     core.spritesOnLine << count;
     if (count > 8) {
         core.status << core.status bor 0x20;
     }
 }
-fct renderPixel(state, x, y) {
+fct renderSpritesLine(state, y) {
     var core << state["core"];
-    var background << backgroundPixel(state, x, y);
-    var sprite << spritePixel(state, x, y);
-    var color << background.color;
-    if (sprite.opaque and(!background.opaque or!sprite.behindBackground)) {
-        color << sprite.color;
+    if ((core.mask band 0x10) == 0) {
+        return;
     }
-    if (background.opaque and sprite.opaque and sprite.spriteZero and x < 255) {
-        core.status << core.status bor 0x40;
+    var spriteHeight << 8;
+    if ((core.control band 0x20) != 0) {
+        spriteHeight << 16;
     }
-    state["framebuffer"][(y * constants.PPU_WIDTH) + x] << u8(color band 0x3F);
+    var framebuffer << state["framebuffer"];
+    var backgroundOpaque << state["backgroundOpaque"];
+    var paletteMemory << state["palette"];
+    var oam << state["oam"];
+    var lineSprites << state["lineSprites"];
+    var slot << state["lineSpriteCount"] - 1;
+    var rowBase << y * constants.PPU_WIDTH;
+    while (slot >= 0) {
+        var sprite << toInt(lineSprites[slot]);
+        var offset << sprite * 4;
+        var top << toInt(oam[offset]) + 1;
+        var row << y - top;
+        var tile << toInt(oam[offset + 1]);
+        var attributes << toInt(oam[offset + 2]);
+        var left << toInt(oam[offset + 3]);
+        var pixelY << row;
+        if ((attributes band 0x80) != 0) {
+            pixelY << spriteHeight - 1 - pixelY;
+        }
+        var patternBase << 0;
+        if (spriteHeight == 16) {
+            patternBase <<(tile band 0x01) * 0x1000;
+            tile << tile band 0xFE;
+            if (pixelY >= 8) {
+                tile << tile + 1;
+                pixelY << pixelY - 8;
+            }
+        } else {
+            if ((core.control band 0x08) != 0) {
+                patternBase << 0x1000;
+            }
+        }
+        var address << patternBase +(tile * 16) + pixelY;
+        var low << patternByte(state, address);
+        var high << patternByte(state, address + 8);
+        var outputPixel << 0;
+        while (outputPixel < 8) {
+            var x << left + outputPixel;
+            if (x >= 0 and x < constants.PPU_WIDTH and!(x < 8 and(core.mask band 0x04) == 0)) {
+                var sourcePixel << outputPixel;
+                if ((attributes band 0x40) != 0) {
+                    sourcePixel << 7 - sourcePixel;
+                }
+                var bit << 7 - sourcePixel;
+                var patternPixel <<((low shr bit) band 0x01) bor(((high shr bit) band 0x01) shl 1);
+                if (patternPixel != 0) {
+                    var backgroundVisible << toInt(backgroundOpaque[x]) != 0;
+                    if (backgroundVisible and sprite == 0 and x < 255) {
+                        core.status << core.status bor 0x40;
+                    }
+                    if (!backgroundVisible or(attributes band 0x20) == 0) {
+                        var paletteNumber << attributes band 0x03;
+                        framebuffer[rowBase + x] << u8(paletteByte(paletteMemory, 0x3F10 +(paletteNumber * 4) + patternPixel));
+                    }
+                }
+            }
+            outputPixel << outputPixel + 1;
+        }
+        slot << slot - 1;
+    }
+}
+fct renderScanline(state, y) {
+    evaluateSprites(state, y);
+    renderBackgroundLine(state, y);
+    renderSpritesLine(state, y);
 }
 
 /// Advances one PPU dot and returns true when a new frame completes.
@@ -370,11 +431,13 @@ pub fct tick(state) {
         updateNmi(core);
     }
     if (core.scanline >= 0 and core.scanline < 240) {
-        if (core.dot == 0) {
-            evaluateSprites(state, core.scanline);
-        }
-        if (core.dot >= 1 and core.dot <= 256) {
-            renderPixel(state, core.dot - 1, core.scanline);
+        if (state["renderOutput"]) {
+            if (core.dot == 0) {
+                evaluateSprites(state, core.scanline);
+            }
+            if (core.dot == 1) {
+                renderScanline(state, core.scanline);
+            }
         }
         if (core.dot == 260 and renderingEnabled(core)) {
             mapper.clockScanline(state["mapper"]);
@@ -403,6 +466,12 @@ pub fct tick(state) {
         }
     }
     false;
+}
+
+/// Enables or disables expensive visible scanline rendering while keeping timing/NMI progression.
+pub fct setRenderOutput(state, enabled) {
+    state["renderOutput"] << enabled;
+    true;
 }
 
 /// Returns and clears the edge-triggered PPU NMI request.

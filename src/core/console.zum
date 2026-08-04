@@ -28,8 +28,10 @@ fct updateInterruptLines(machine) {
 fct tickHardware(machine) {
     var core << machine["core"];
     var systemBus << machine["bus"];
-    apu.tick(systemBus["apu"]);
-    core.apuCycles << u64(core.apuCycles + 1u64);
+    if (systemBus["audioEnabled"]) {
+        apu.tick(systemBus["apu"]);
+        core.apuCycles << u64(core.apuCycles + 1u64);
+    }
     var ppuIndex << 0;
     while (ppuIndex < 3) {
         ppu.tick(systemBus["ppu"]);
@@ -44,6 +46,9 @@ fct serviceDmc(machine) {
     var core << machine["core"];
     var processor << machine["cpu"];
     var systemBus << machine["bus"];
+    if (!systemBus["audioEnabled"]) {
+        return 0;
+    }
     var apuState << systemBus["apu"];
     if (!apu.dmcNeedsByte(apuState)) {
         return 0;
@@ -106,16 +111,48 @@ pub fct runHardwareCycles(machine, count) {
     machine["core"].cpuCycles;
 }
 
-/// Runs instructions until the current PPU frame completes.
-pub fct runFrame(machine, instructionLimit) {
+/// Runs up to `instructionLimit` instructions for the current frame without blocking the host event loop.
+pub fct runFrameSlice(machine, instructionLimit) {
     var ppuState << machine["bus"]["ppu"];
-    ppu.clearFrameComplete(ppuState);
+    if (ppuState["core"].frameComplete) {
+        ppu.clearFrameComplete(ppuState);
+    }
     var executed << 0;
     while (!ppuState["core"].frameComplete and executed < instructionLimit and!machine["cpu"].halted) {
         stepInstruction(machine);
         executed << executed + 1;
     }
-    if (!ppuState["core"].frameComplete) {
+    {
+        "executed": executed, "frameComplete": ppuState["core"].frameComplete
+    };
+}
+
+/// Enables or disables expensive visible PPU rendering while preserving PPU timing.
+pub fct setVideoOutput(machine, enabled) {
+    ppu.setRenderOutput(machine["bus"]["ppu"], enabled);
+    true;
+}
+
+/// Returns whether the PPU has completed the currently rendered frame.
+pub fct frameComplete(machine) {
+    machine["bus"]["ppu"]["core"].frameComplete;
+}
+
+/// Clears the current PPU frame-complete flag before starting another frame.
+pub fct clearFrameComplete(machine) {
+    ppu.clearFrameComplete(machine["bus"]["ppu"]);
+    true;
+}
+
+/// Runs instructions until the current PPU frame completes.
+pub fct runFrame(machine, instructionLimit) {
+    ppu.clearFrameComplete(machine["bus"]["ppu"]);
+    var executed << 0;
+    while (!frameComplete(machine) and executed < instructionLimit and!machine["cpu"].halted) {
+        var slice << runFrameSlice(machine, 512);
+        executed << executed + slice["executed"];
+    }
+    if (!frameComplete(machine)) {
         panic("console frame did not complete before the instruction limit");
     }
     executed;

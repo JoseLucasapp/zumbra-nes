@@ -36,7 +36,7 @@ pub fct runFile(path) {
     store.seedAchievements(db, info.digest, catalog.defaults());
     var unlocked << achievements.evaluate(db, info.digest, machine, 1, 0, 0, 1u64);
     var recent << store.recentRoms(db, 10);
-    var report << PlayableReport("0.5.0", info.header.mapper, mapper.name(info.header.mapper), machine["bus"]["ppu"]["core"].frame, sizeOf(pixels), sha256(pixels), sizeOf(samples), sha256(samples), store.schemaVersion(db), sizeOf(unlocked), sizeOf(recent), sizeOf(mapper.supportedIds()), saveState.SCHEMA_VERSION);
+    var report << PlayableReport("0.5.8", info.header.mapper, mapper.name(info.header.mapper), machine["bus"]["ppu"]["core"].frame, sizeOf(pixels), sha256(pixels), sizeOf(samples), sha256(samples), store.schemaVersion(db), sizeOf(unlocked), sizeOf(recent), sizeOf(mapper.supportedIds()), saveState.SCHEMA_VERSION);
     store.close(db);
     report;
 }

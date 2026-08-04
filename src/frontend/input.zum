@@ -1,35 +1,53 @@
 import "../core/controller.zum" as controller;
 import "native_bridge.zum" as native;
+fct hostKey(context, key) {
+    if (key < 0) {
+        return false;
+    }
+    native.keyDown(context, key);
+}
 fct pressed(context, key, player, gamepadButton) {
-    native.keyDown(context, key) or native.gamepadButton(context, player, gamepadButton);
+    hostKey(context, key) or native.gamepadButton(context, player, gamepadButton);
+}
+fct pressedAny(context, key, player, gamepadButton, alt1, alt2, alt3, alt4) {
+    pressed(context, key, player, gamepadButton) or hostKey(context, alt1) or hostKey(context, alt2) or hostKey(context, alt3) or hostKey(context, alt4);
 }
 
 /// Builds the complete NES button mask for one player from keyboard and gamepad.
+///
+/// Primary defaults remain persisted in the settings table. Extra host-key
+/// aliases are intentionally always active so real multicart menus can be used
+/// without opening the remapping dialog first.
+///
+/// Start  = Enter, Space or keypad Enter
+/// Select = Right Shift, Left Shift, Tab or Backspace
+/// D-pad  = Arrow keys or WASD
+/// A/B    = Z/X or J/K
 pub fct playerMask(context, settings, player) {
     var mask << 0;
     if (player == 1) {
-        if (pressed(context, settings.p1A, 1, 0)) {
+        if (pressedAny(context, settings.p1A, 1, 0, 13,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_A;
         }
-        if (pressed(context, settings.p1B, 1, 1)) {
+        if (pressedAny(context, settings.p1B, 1, 1, 14,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_B;
         }
-        if (pressed(context, settings.p1Select, 1, 4)) {
+        if (pressedAny(context, settings.p1Select, 1, 4, 225, 43, 42, 229)) {
             mask << mask bor controller.BUTTON_SELECT;
         }
-        if (pressed(context, settings.p1Start, 1, 6)) {
+        if (pressedAny(context, settings.p1Start, 1, 6, 44, 88,-1,-1)) {
             mask << mask bor controller.BUTTON_START;
         }
-        if (pressed(context, settings.p1Up, 1, 11)) {
+        if (pressedAny(context, settings.p1Up, 1, 11, 26,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_UP;
         }
-        if (pressed(context, settings.p1Down, 1, 12)) {
+        if (pressedAny(context, settings.p1Down, 1, 12, 22,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_DOWN;
         }
-        if (pressed(context, settings.p1Left, 1, 13)) {
+        if (pressedAny(context, settings.p1Left, 1, 13, 4,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_LEFT;
         }
-        if (pressed(context, settings.p1Right, 1, 14)) {
+        if (pressedAny(context, settings.p1Right, 1, 14, 7,-1,-1,-1)) {
             mask << mask bor controller.BUTTON_RIGHT;
         }
     } else {

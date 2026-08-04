@@ -1,0 +1,77 @@
+/// Startup/transition splash used by the desktop frontend before a ROM produces
+/// its first meaningful frame. Keeping an explicit first present avoids the
+/// transparent/gray compositor surface that can appear while heavy multicarts
+/// initialize.
+fct putPixel(output, x, y, red, green, blue) {
+    if (x < 0 or x >= 256 or y < 0 or y >= 240) {
+        return false;
+    }
+    var offset <<(y * 256 + x) * 4;
+    output[offset] << u8(red);
+    output[offset + 1] << u8(green);
+    output[offset + 2] << u8(blue);
+    output[offset + 3] << 255u8;
+    true;
+}
+fct rect(output, x, y, width, height, red, green, blue) {
+    var yy << y;
+    while (yy < y + height) {
+        var xx << x;
+        while (xx < x + width) {
+            putPixel(output, xx, yy, red, green, blue);
+            xx << xx + 1;
+        }
+        yy << yy + 1;
+    }
+    true;
+}
+fct border(output, x, y, width, height, red, green, blue) {
+    rect(output, x, y, width, 2, red, green, blue);
+    rect(output, x, y + height - 2, width, 2, red, green, blue);
+    rect(output, x, y, 2, height, red, green, blue);
+    rect(output, x + width - 2, y, 2, height, red, green, blue);
+    true;
+}
+fct zMark(output, x, y, scale, red, green, blue) {
+    rect(output, x, y, 48 * scale, 6 * scale, red, green, blue);
+    rect(output, x, y + 36 * scale, 48 * scale, 6 * scale, red, green, blue);
+    var step << 0;
+    while (step < 8) {
+        rect(output, x +(36 - step * 5) * scale, y +(6 + step * 4) * scale, 8 * scale, 5 * scale, red, green, blue);
+        step << step + 1;
+    }
+    true;
+}
+fct loadingBars(output, phase) {
+    var active <<(phase / 8) % 12;
+    var index << 0;
+    while (index < 12) {
+        var red << 40;
+        var green << 50;
+        var blue << 70;
+        if (index <= active) {
+            red << 76 +(index * 8);
+            green << 154;
+            blue << 236;
+        }
+        rect(output, 62 +(index * 11), 190, 8, 8, red, green, blue);
+        index << index + 1;
+    }
+    true;
+}
+
+/// Returns a 256x240 RGBA splash frame.
+pub fct frame(phase) {
+    var output << bytes(256 * 240 * 4);
+    rect(output, 0, 0, 256, 240, 6, 8, 18);
+    rect(output, 0, 0, 256, 26, 14, 20, 42);
+    rect(output, 0, 214, 256, 26, 14, 20, 42);
+    border(output, 18, 34, 220, 172, 76, 154, 236);
+    border(output, 24, 40, 208, 160, 236, 84, 236);
+    zMark(output, 84, 67, 2, 76, 154, 236);
+    zMark(output, 88, 71, 2, 236, 84, 236);
+    rect(output, 64, 153, 128, 4, 236, 238, 236);
+    rect(output, 78, 164, 100, 3, 236, 180, 176);
+    loadingBars(output, phase);
+    output;
+}

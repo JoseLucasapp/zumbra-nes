@@ -1,4 +1,25 @@
+## 0.5.8 — Z23 Mapper 227 low-latency input hotfix
+
+- Removed the automatic Mapper 227 idle path that starved real multicart menus.
+- Replaced huge input-boost slices with short cooperative slices so SDL polling runs frequently.
+- Removed the per-slice sleep while Mapper 227 is still producing the next frame.
+- Extended short key taps so the ROM has enough controller-read windows to observe them.
+- Documented the exact keyboard/gamepad buttons heard by the desktop frontend.
+
 # Changelog
+
+## 0.5.8
+
+- Mapper 227 performance/input hotfix for the real `1200-in-1.nes` menu.
+- Disabled Mapper 227 APU ticking while audio remains muted.
+- Added PPU render skipping for intermediate Mapper 227 frames while preserving timing/NMI.
+
+
+## 0.5.8 — Z23 responsiveness hotfix
+
+- Added cooperative desktop emulation slices so SDL events are drained while a frame is being emulated.
+- Added bounded event draining and short host yields to prevent the window manager from marking the emulator as not responding.
+- Kept Mapper 227 compatibility, SRAM, save states and debugger behavior from 0.5.0.
 
 ## 0.5.0 — Z23 compatibility, persistence and debugger
 

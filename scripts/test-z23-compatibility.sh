@@ -22,10 +22,10 @@ python3 -m py_compile scripts/generate-synthetic-fixtures.py scripts/verify-cpu-
 "$zumbra_bin" lint --deny-warnings --no-pipeline --no-public-docs --max-line-length 1000 src tests
 "$zumbra_bin" project info | tee build/project-info.txt
 grep -q '^project: Zumbra NES$' build/project-info.txt
-grep -q '^version: 0.5.0$' build/project-info.txt
+grep -q '^version: 0.5.8$' build/project-info.txt
 "$zumbra_bin" project check
 "$zumbra_bin" project test | tee build/project-tests.txt
-grep -q '^project test: 74 test file(s) executed$' build/project-tests.txt
+grep -q '^project test: 75 test file(s) executed$' build/project-tests.txt
 "$zumbra_bin" project doc
 
 "$zumbra_bin" project run > build/vm-run-raw.txt
@@ -33,7 +33,7 @@ awk '!/^semantic warning in /' build/vm-run-raw.txt > build/vm-smoke.txt
 cat build/vm-smoke.txt
 mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[0]:-}" == "Zumbra NES Z23 compatibility" ]]
-[[ "${smoke[1]:-}" == "0.5.0" ]]
+[[ "${smoke[1]:-}" == "0.5.8" ]]
 [[ "${smoke[2]:-}" == "0" ]]
 [[ "${smoke[3]:-}" == "NROM" ]]
 [[ "${smoke[4]:-}" == "1" ]]

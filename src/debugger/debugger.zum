@@ -35,6 +35,7 @@ fct accessReason(systemBus) {
 /// Creates a debugger attached to one live machine.
 pub fct create(machine) {
     machine["bus"]["debug"]["enabled"] << true;
+    machine["bus"]["debugEnabled"] << true;
     {
         "machine": machine, "paused": true, "reason": "attached", "pcBreakpoints":[], "trace":[], "traceEnabled": true, "traceLimit": 256
     };

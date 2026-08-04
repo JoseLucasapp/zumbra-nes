@@ -4,7 +4,7 @@
 
 ```text
 Zumbra: 0.14.3
-zumbra-nes: 0.5.0
+zumbra-nes: 0.5.8
 Linux: amd64
 ```
 
@@ -23,7 +23,7 @@ EXPECTED_ZUMBRA_VERSION=0.14.3 \
 Resultado obrigatório:
 
 ```text
-project test: 74 test file(s) executed
+project test: 75 test file(s) executed
 Zumbra NES repository hygiene checks passed.
 Z23 compatibility, persistence and debugger gate passed.
 ```
@@ -118,11 +118,11 @@ Confirmar slots diferentes e rejeição ao tentar restaurar um estado de outra R
 ```bash
 scripts/package-z23-linux.sh
 
-dpkg-deb --info dist/zumbra-nes_0.5.0_amd64.deb
-dpkg-deb --contents dist/zumbra-nes_0.5.0_amd64.deb
+dpkg-deb --info dist/zumbra-nes_0.5.8_amd64.deb
+dpkg-deb --contents dist/zumbra-nes_0.5.8_amd64.deb
 
 ZUMBRA_DESKTOP_HEADLESS=1 \
-  dist/zumbra-nes-0.5.0-linux-amd64.AppDir/AppRun
+  dist/zumbra-nes-0.5.8-linux-amd64.AppDir/AppRun
 ```
 
 AppImage é opcional e requer `appimagetool`.
@@ -141,3 +141,19 @@ scripts/check-repository-hygiene.sh
 ```
 
 Os dois primeiros comandos não devem produzir saída, e o último deve passar.
+
+
+## 0.5.6 Mapper 227 input hotfix
+
+The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
+
+
+## 0.5.8 manual Mapper 227 input validation
+
+1. Run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
+2. Click the emulator window once.
+3. Press Enter/Space/keypad Enter for Start.
+4. Press Right Shift/Left Shift/Tab/Backspace for Select.
+5. Press arrows or WASD for menu movement.
+6. Confirm inputs are processed without multi-second delay.
+

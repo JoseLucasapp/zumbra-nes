@@ -11,6 +11,7 @@ import "../core/palette.zum" as palette;
 import "../persistence/store.zum" as store;
 import "input.zum" as input;
 import "native_bridge.zum" as native;
+import "splash.zum" as splash;
 pub struct DesktopState {
     paused: bool;
     frameAdvance: bool;
@@ -23,6 +24,16 @@ pub struct DesktopState {
     fps: int;
     saveSlot: int;
     running: bool;
+    pendingFrame: bool;
+    lastPresent: u64;
+    inputBoost: int;
+    lastPlayerOne: int;
+    lastPlayerTwo: int;
+    visibleFrames: int;
+    heldPlayerOne: int;
+    heldPlayerTwo: int;
+    playerOneHold: int;
+    playerTwoHold: int;
 }
 fct noResult() {
 }
@@ -101,6 +112,36 @@ fct remapControllers(context, preferences) {
     preferences.p2Right << capture(context, "Jogador 2: pressione Direita", preferences.p2Right);
     true;
 }
+fct visibleFramebuffer(framebuffer) {
+    if (sizeOf(framebuffer) == 0) {
+        return false;
+    }
+    var first << toInt(framebuffer[0]) band 0x3F;
+    var index << 0;
+    var nonZero << 0;
+    var different << 0;
+    while (index < sizeOf(framebuffer)) {
+        var color << toInt(framebuffer[index]) band 0x3F;
+        if (color != 0) {
+            nonZero << nonZero + 1;
+        }
+        if (color != first) {
+            different << different + 1;
+        }
+        if (nonZero >= 32 and different >= 8) {
+            return true;
+        }
+        index << index + 257;
+    }
+    false;
+}
+fct presentSplash(context, phase, headlessMode) {
+    if (!headlessMode) {
+        native.present(context, splash.frame(phase));
+        native.pollAll(context, 16);
+    }
+    true;
+}
 fct emptyGame(message) {
     {
         "ok": false, "message": message, "path": ""
@@ -176,7 +217,7 @@ fct updateStatus(context, game, state, preferences) {
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
     var requestedHeadless << false;
-    var context << native.create("Zumbra NES 0.5.0", 3, true, false, requestedHeadless);
+    var context << native.create("Zumbra NES 0.5.8", 3, true, false, requestedHeadless);
     var headlessMode << native.headless(context);
     var dataDirectory << native.dataPath(context);
     var databasePath << dataDirectory + "/zumbra-nes.sqlite3";
@@ -191,6 +232,7 @@ pub fct run() {
     if (!native.valid(context)) {
         panic(native.error(context));
     }
+    presentSplash(context, 0, headlessMode);
     native.setVolume(context, preferences.volume);
     native.setMuted(context, preferences.muted);
     var now << native.unixSeconds();
@@ -206,11 +248,11 @@ pub fct run() {
             native.notify(context, "Zumbra NES", game["message"]);
         }
     }
-    var state << DesktopState(false, false, preferences.fullscreen, preferences.muted, 0u64, now, native.ticks(context), 0, 0, 0, true);
+    var state << DesktopState(false, false, preferences.fullscreen, preferences.muted, 0u64, now, native.ticks(context), 0, 0, 0, true, true, native.ticks(context), 0, 0, 0, 0, 0, 0, 0, 0);
     updateStatus(context, game, state, preferences);
     while (state.running and!native.shouldClose(context)) {
         var frameStart << native.ticks(context);
-        native.poll(context);
+        native.pollAll(context, 64);
         if (native.commandPressed(context, native.COMMAND_OPEN, 18)) {
             var selected << native.pickRom(context);
             if (selected != "") {
@@ -220,6 +262,7 @@ pub fct run() {
                     game << candidate;
                     state.frames << 0u64;
                     state.sessionStarted << native.unixSeconds();
+                    state.pendingFrame << true;
                 } else {
                     native.notify(context, "ROM error", candidate["message"]);
                     noResult();
@@ -234,6 +277,7 @@ pub fct run() {
             game << openGame(game["path"], db, native.unixSeconds(), dataDirectory);
             state.frames << 0u64;
             state.sessionStarted << native.unixSeconds();
+            state.pendingFrame << true;
         }
         if (native.commandPressed(context, native.COMMAND_FULLSCREEN, 68)) {
             state.fullscreen <<!state.fullscreen;
@@ -300,6 +344,7 @@ pub fct run() {
             game << emptyGame("Nenhuma ROM carregada");
             state.frames << 0u64;
             state.paused << true;
+            state.pendingFrame << true;
             native.notify(context, "ROM", "ROM fechada.");
             updateStatus(context, game, state, preferences);
         }
@@ -389,40 +434,125 @@ pub fct run() {
             state.running << false;
         }
         if (game["ok"]) {
-            var playerOne << input.playerMask(context, preferences, 1);
-            var playerTwo << input.playerMask(context, preferences, 2);
+            var rawPlayerOne << input.playerMask(context, preferences, 1);
+            var rawPlayerTwo << input.playerMask(context, preferences, 2);
+            if (rawPlayerOne != 0) {
+                state.heldPlayerOne << rawPlayerOne;
+                state.playerOneHold << 180;
+            } else {
+                if (state.playerOneHold > 0) {
+                    state.playerOneHold << state.playerOneHold - 1;
+                } else {
+                    state.heldPlayerOne << 0;
+                }
+            }
+            if (rawPlayerTwo != 0) {
+                state.heldPlayerTwo << rawPlayerTwo;
+                state.playerTwoHold << 24;
+            } else {
+                if (state.playerTwoHold > 0) {
+                    state.playerTwoHold << state.playerTwoHold - 1;
+                } else {
+                    state.heldPlayerTwo << 0;
+                }
+            }
+            var playerOne << state.heldPlayerOne;
+            var playerTwo << state.heldPlayerTwo;
             console.setController(game["machine"], 1, playerOne);
             console.setController(game["machine"], 2, playerTwo);
-            if (!state.paused or state.frameAdvance) {
-                if (headlessMode) {
-                    console.runFrame(game["machine"], 200000);
-                    noResult();
-                }
-                if (!headlessMode) {
-                    console.runFrame(game["machine"], 200000);
-                    noResult();
-                }
-                state.frameAdvance << false;
-                state.frames << state.frames + 1u64;
-                state.fpsFrames << state.fpsFrames + 1;
-                var rgba << palette.rgba(game["machine"]["bus"]["ppu"]["framebuffer"]);
-                native.present(context, rgba);
-                var samples << audioOutput.drain(game["machine"]["bus"]["apu"], game["audioCursor"]);
-                if (native.audioQueued(context) < 176400) {
-                    native.queueAudio(context, samples);
-                }
-                var elapsedSeconds << toInt(native.unixSeconds() - state.sessionStarted);
-                var unlocked << achievements.evaluate(db, game["info"].digest, game["machine"], toInt(state.frames), playerOne, elapsedSeconds, native.unixSeconds());
-                var achievementIndex << 0;
-                while (achievementIndex < sizeOf(unlocked)) {
-                    native.notify(context, unlocked[achievementIndex]["title"], unlocked[achievementIndex]["description"]);
-                    achievementIndex << achievementIndex + 1;
-                }
+            if (rawPlayerOne != 0 or rawPlayerTwo != 0 or playerOne != state.lastPlayerOne or playerTwo != state.lastPlayerTwo or playerOne != 0 or playerTwo != 0) {
+                state.inputBoost << 360;
+                state.lastPlayerOne << playerOne;
+                state.lastPlayerTwo << playerTwo;
+            }
+            var mapperId << game["info"].header.mapper;
+            // 0.5.8: Mapper 227 multicart menus poll controllers very late and very irregularly.
+            // Do not enter the old idle path here: it made the host responsive, but starved
+            // the emulated CPU/PPU enough that short Start/Select/D-pad taps were lost.
+            // The loop below keeps mapper 227 running in short cooperative slices instead.
+            var idleMulticartMenu << false;
+            if (idleMulticartMenu) {
                 noResult();
             } else {
-                var pausedRgba << palette.rgba(game["machine"]["bus"]["ppu"]["framebuffer"]);
-                native.present(context, pausedRgba);
-                noResult();
+                if (!state.paused or state.frameAdvance) {
+                    if (state.pendingFrame) {
+                        console.clearFrameComplete(game["machine"]);
+                        state.pendingFrame << false;
+                    }
+                    var sliceLimit << 256;
+                    var presentThisFrame << true;
+                    if (mapperId == 227 and!preferences.unlimited) {
+                        // 0.5.8: the real 1200-in-1 menu is too slow with fully rendered
+                        // cooperative slices. Run a whole emulated frame per host turn,
+                        // keep audio disabled, and render only every fourth frame while
+                        // preserving PPU timing/NMI. This trades perfect visual cadence for
+                        // usable input latency on the Mapper 227 menu.
+                        sliceLimit << 240000;
+                        presentThisFrame << state.frames < 3u64 or(state.frames % 4u64) == 0u64;
+                    }
+                    if (headlessMode) {
+                        sliceLimit << 200000;
+                        presentThisFrame << true;
+                    }
+                    if (preferences.unlimited) {
+                        sliceLimit << 4096;
+                        presentThisFrame << true;
+                    }
+                    console.setVideoOutput(game["machine"], presentThisFrame);
+                    var slice << console.runFrameSlice(game["machine"], sliceLimit);
+                    console.setVideoOutput(game["machine"], true);
+                    if (state.inputBoost > 0) {
+                        state.inputBoost << state.inputBoost - 1;
+                    }
+                    native.pollAll(context, 128);
+                    if (slice["frameComplete"]) {
+                        state.frameAdvance << false;
+                        state.pendingFrame << true;
+                        state.frames << state.frames + 1u64;
+                        state.fpsFrames << state.fpsFrames + 1;
+                        if (presentThisFrame) {
+                            var framebuffer << game["machine"]["bus"]["ppu"]["framebuffer"];
+                            var frameIsVisible << visibleFramebuffer(framebuffer);
+                            if (frameIsVisible) {
+                                state.visibleFrames << state.visibleFrames + 1;
+                            }
+                            var rgba << palette.rgba(framebuffer);
+                            if (!headlessMode and state.visibleFrames == 0) {
+                                rgba << splash.frame(toInt(state.frames % 120u64));
+                            }
+                            native.present(context, rgba);
+                            state.lastPresent << native.ticks(context);
+                        }
+                        if (mapperId != 227) {
+                            var samples << audioOutput.drain(game["machine"]["bus"]["apu"], game["audioCursor"]);
+                            if (native.audioQueued(context) < 88200) {
+                                native.queueAudio(context, samples);
+                            }
+                        }
+                        var elapsedSeconds << toInt(native.unixSeconds() - state.sessionStarted);
+                        var unlocked << achievements.evaluate(db, game["info"].digest, game["machine"], toInt(state.frames), playerOne, elapsedSeconds, native.unixSeconds());
+                        var achievementIndex << 0;
+                        while (achievementIndex < sizeOf(unlocked)) {
+                            native.notify(context, unlocked[achievementIndex]["title"], unlocked[achievementIndex]["description"]);
+                            achievementIndex << achievementIndex + 1;
+                        }
+                        noResult();
+                    } else {
+                        if (!headlessMode and mapperId != 227) {
+                            native.delay(context, 4);
+                        }
+                        noResult();
+                    }
+                } else {
+                    var pausedTicks << native.ticks(context);
+                    if (pausedTicks - state.lastPresent >= 100u64) {
+                        var pausedRgba << palette.rgba(game["machine"]["bus"]["ppu"]["framebuffer"]);
+                        native.present(context, pausedRgba);
+                        state.lastPresent << pausedTicks;
+                    }
+                    native.delay(context, 8);
+                    noResult();
+                }
             }
         }
         var ticks << native.ticks(context);
@@ -438,7 +568,11 @@ pub fct run() {
         if (headlessMode and state.frames >= 2u64) {
             state.running << false;
         }
-        if (!preferences.unlimited) {
+        var delayFrame <<!preferences.unlimited and(state.pendingFrame or state.paused or!game["ok"]);
+        if (game["ok"] and game["info"].header.mapper == 227 and state.inputBoost > 0) {
+            delayFrame << false;
+        }
+        if (delayFrame) {
             var elapsed << native.ticks(context) - frameStart;
             if (elapsed < 16u64) {
                 native.delay(context, toInt(16u64 - elapsed));

@@ -666,6 +666,56 @@ Advances hardware clocks without executing CPU instructions.
 | `machine` | parameter | `` |
 | `count` | parameter | `` |
 
+### runFrameSlice
+
+```zumbra
+pub fct runFrameSlice(machine, instructionLimit)
+```
+
+Runs up to `instructionLimit` instructions for the current frame without blocking the host event loop.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
+### setVideoOutput
+
+```zumbra
+pub fct setVideoOutput(machine, enabled)
+```
+
+Enables or disables expensive visible PPU rendering while preserving PPU timing.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `enabled` | parameter | `` |
+
+### frameComplete
+
+```zumbra
+pub fct frameComplete(machine)
+```
+
+Returns whether the PPU has completed the currently rendered frame.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+
+### clearFrameComplete
+
+```zumbra
+pub fct clearFrameComplete(machine)
+```
+
+Clears the current PPU frame-complete flag before starting another frame.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+
 ### runFrame
 
 ```zumbra
@@ -1533,6 +1583,20 @@ pub fct mirroring(state, fallback)
 | `state` | parameter | `` |
 | `fallback` | parameter | `` |
 
+### cpuReadOffset
+
+```zumbra
+pub fct cpuReadOffset(state, address, prgBytes)
+```
+
+Maps one CPU-visible PRG ROM address.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `address` | parameter | `` |
+| `prgBytes` | parameter | `` |
+
 ### cpuRead
 
 ```zumbra
@@ -1561,6 +1625,20 @@ Handles mapper register writes in the CPU $8000-$FFFF range.
 | `address` | parameter | `` |
 | `value` | parameter | `` |
 | `prgBytes` | parameter | `` |
+
+### ppuReadOffset
+
+```zumbra
+pub fct ppuReadOffset(state, address, chrBytes)
+```
+
+Maps a PPU pattern-table read.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `address` | parameter | `` |
+| `chrBytes` | parameter | `` |
 
 ### ppuRead
 
@@ -1832,6 +1910,19 @@ Advances one PPU dot and returns true when a new frame completes.
 |---|---|---|
 | `state` | parameter | `` |
 
+### setRenderOutput
+
+```zumbra
+pub fct setRenderOutput(state, enabled)
+```
+
+Enables or disables expensive visible scanline rendering while keeping timing/NMI progression.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `enabled` | parameter | `` |
+
 ### takeNmi
 
 ```zumbra
@@ -2102,6 +2193,16 @@ pub struct DesktopState
 | `fps` | field | `int` |
 | `saveSlot` | field | `int` |
 | `running` | field | `bool` |
+| `pendingFrame` | field | `bool` |
+| `lastPresent` | field | `u64` |
+| `inputBoost` | field | `int` |
+| `lastPlayerOne` | field | `int` |
+| `lastPlayerTwo` | field | `int` |
+| `visibleFrames` | field | `int` |
+| `heldPlayerOne` | field | `int` |
+| `heldPlayerTwo` | field | `int` |
+| `playerOneHold` | field | `int` |
+| `playerTwoHold` | field | `int` |
 
 ### run
 
@@ -2210,7 +2311,16 @@ Loads a ROM and runs the deterministic Z21 frontend.
 pub fct playerMask(context, settings, player)
 ```
 
-Builds the complete NES button mask for one player from keyboard and gamepad.
+Builds the complete NES button mask for one player from keyboard and gamepad.  
+  
+Primary defaults remain persisted in the settings table. Extra host-key  
+aliases are intentionally always active so real multicart menus can be used  
+without opening the remapping dialog first.  
+  
+Start  = Enter, Space or keypad Enter  
+Select = Right Shift, Left Shift, Tab or Backspace  
+D-pad  = Arrow keys or WASD  
+A/B    = Z/X or J/K
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -2485,6 +2595,19 @@ pub fct poll(context)
 | Member | Kind | Type / Signature |
 |---|---|---|
 | `context` | parameter | `` |
+
+### pollAll
+
+```zumbra
+pub fct pollAll(context, maxEvents)
+```
+
+Drains a bounded batch of pending desktop events so the WM never marks the emulator as hung.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `context` | parameter | `` |
+| `maxEvents` | parameter | `` |
 
 ### shouldClose
 
@@ -2816,6 +2939,20 @@ pub fct asDictionary(value)
 | Member | Kind | Type / Signature |
 |---|---|---|
 | `value` | parameter | `` |
+
+## `/home/joselucasapp/projects/zumbra-nes/src/frontend/splash.zum`
+
+### frame
+
+```zumbra
+pub fct frame(phase)
+```
+
+Returns a 256x240 RGBA splash frame.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `phase` | parameter | `` |
 
 ## `/home/joselucasapp/projects/zumbra-nes/src/persistence/metadata.zum`
 

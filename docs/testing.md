@@ -6,7 +6,7 @@ Todas as ROMs versionadas são sintéticas e legalmente redistribuíveis.
 
 - 55 testes herdados das Z19–Z22;
 - 19 testes adicionados na Z23;
-- **74 testes totais**.
+- **75 testes totais**.
 
 ## Novos grupos
 
@@ -59,9 +59,9 @@ Etapas:
 1. checksums das fixtures;
 2. tabela dos 151 opcodes;
 3. formatter e linter;
-4. versão `0.5.0`;
+4. versão `0.5.8`;
 5. project check;
-6. 74 testes pela VM;
+6. 75 testes pela VM;
 7. documentação;
 8. execução headless pela VM;
 9. build/execução C11;
@@ -78,3 +78,15 @@ Resultado:
 ```text
 Z23 compatibility, persistence and debugger gate passed.
 ```
+
+
+## 0.5.6 Mapper 227 input hotfix
+
+The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
+
+
+## 0.5.8 Mapper 227 low-latency input hotfix
+
+Manual validation target: run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`, click the window once, then verify Start, Select and D-pad taps are processed without multi-second delay.
+
+Keyboard aliases heard by player 1: Enter/Space/keypad Enter for Start, Right Shift/Left Shift/Tab/Backspace for Select, arrows/WASD for D-pad, Z/J for A, X/K for B, Esc to quit.

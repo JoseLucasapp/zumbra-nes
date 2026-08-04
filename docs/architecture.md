@@ -83,7 +83,7 @@ O frontend oferece dez slots e o SQLite registra caminho, frame e timestamp de c
 
 ## Desktop Pure Zumbra
 
-O frontend continua sem código C local. Ele utiliza as APIs desktop/media oficiais da Zumbra 0.14.3 para janela, framebuffer, áudio, teclado, gamepad, diálogo e notificações.
+O frontend continua sem código C local. Ele utiliza as APIs desktop/media oficiais da Zumbra 0.14.4 para janela, framebuffer, áudio, teclado, gamepad, diálogo e notificações.
 
 ## Limites conhecidos
 

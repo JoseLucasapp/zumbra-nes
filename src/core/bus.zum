@@ -11,8 +11,12 @@ pub fct create(cart) {
     if (prgRamBytes < constants.PRG_RAM_BYTES) {
         prgRamBytes << constants.PRG_RAM_BYTES;
     }
+    var audioEnabled << true;
+    if (info.header.mapper == 227) {
+        audioEnabled << false;
+    }
     {
-        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(prgRamBytes), "prgRamDirty": false, "cart": cart, "mapper": mapperState, "ppu": ppu.createWithMapper(cart, mapperState), "apu": apu.create(), "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8, "debug": {
+        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(prgRamBytes), "prgRamDirty": false, "cart": cart, "mapper": mapperState, "ppu": ppu.createWithMapper(cart, mapperState), "apu": apu.create(), "audioEnabled": audioEnabled, "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8, "debugEnabled": false, "debug": {
             "enabled": false, "readBreakpoints":[], "writeBreakpoints":[], "triggered": false, "lastAddress":-1, "lastKind": ""
         }
     };
@@ -28,10 +32,10 @@ fct addressIn(values, address) {
     false;
 }
 fct recordDebugAccess(state, kind, address) {
-    var debug << state["debug"];
-    if (!debug["enabled"]) {
+    if (!state["debugEnabled"]) {
         return;
     }
+    var debug << state["debug"];
     var values << debug["readBreakpoints"];
     if (kind == "write") {
         values << debug["writeBreakpoints"];
@@ -74,9 +78,9 @@ pub fct read(state, address) {
                                 if (normalized >= 0x8000) {
                                     var cart << state["cart"];
                                     var info << cart["info"];
-                                    var mapping << mapper.cpuRead(state["mapper"], normalized, sizeOf(cart["prgRom"]));
-                                    if (mapping.mapped) {
-                                        value << toInt(cart["prgRom"][mapping.offset]);
+                                    var offset << mapper.cpuReadOffset(state["mapper"], normalized, sizeOf(cart["prgRom"]));
+                                    if (offset >= 0) {
+                                        value << toInt(cart["prgRom"][offset]);
                                     }
                                 }
                             }
@@ -210,9 +214,9 @@ pub fct peek(state, address) {
     }
     if (normalized >= 0x8000) {
         var cart << state["cart"];
-        var mapping << mapper.cpuRead(state["mapper"], normalized, sizeOf(cart["prgRom"]));
-        if (mapping.mapped) {
-            return toInt(cart["prgRom"][mapping.offset]);
+        var offset << mapper.cpuReadOffset(state["mapper"], normalized, sizeOf(cart["prgRom"]));
+        if (offset >= 0) {
+            return toInt(cart["prgRom"][offset]);
         }
     }
     toInt(state["openBus"]);

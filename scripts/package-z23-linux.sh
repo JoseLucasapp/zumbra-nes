@@ -19,15 +19,15 @@ grep -q '^Z23 desktop session complete$' build/desktop-headless.txt
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format appdir --binary build/zumbra-nes-app --output-dir "$output_dir"
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format deb --binary build/zumbra-nes-app --output-dir "$output_dir"
 
-appdir="$output_dir/zumbra-nes-0.5.0-linux-${arch}.AppDir"
-deb="$output_dir/zumbra-nes_0.5.0_${arch}.deb"
+appdir="$output_dir/zumbra-nes-0.5.8-linux-${arch}.AppDir"
+deb="$output_dir/zumbra-nes_0.5.8_${arch}.deb"
 test -x "$appdir/AppRun"
 test -f "$deb"
 ZUMBRA_DESKTOP_HEADLESS=1 "$appdir/AppRun" | tee build/appdir-headless.txt
 grep -q '^Z23 desktop session complete$' build/appdir-headless.txt
 dpkg-deb --info "$deb" > build/deb-info.txt
 dpkg-deb --contents "$deb" > build/deb-contents.txt
-grep -q ' Version: 0.5.0' build/deb-info.txt
+grep -q ' Version: 0.5.8' build/deb-info.txt
 grep -q 'usr/bin/zumbra-nes' build/deb-contents.txt
 
 if command -v appimagetool >/dev/null 2>&1 || [[ -x tools/appimagetool-x86_64.AppImage ]] || [[ -x tools/appimagetool ]]; then
