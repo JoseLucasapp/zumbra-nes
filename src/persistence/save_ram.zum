@@ -1,0 +1,57 @@
+import "../core/bus.zum" as bus;
+/// Returns the battery-backed SRAM path for one ROM digest.
+pub fct pathFor(directory, digest) {
+    directory + "/saves/" + digest + ".sav";
+}
+fct copyInto(target, source) {
+    var length << sizeOf(source);
+    if (length > sizeOf(target)) {
+        length << sizeOf(target);
+    }
+    if (length > 0) {
+        copyBytes(target, 0, source, 0, length);
+    }
+    length;
+}
+
+/// Loads battery-backed PRG RAM into a live console. Missing saves are valid.
+pub fct load(machine, directory) {
+    var info << machine["bus"]["cart"]["info"];
+    if (!info.header.battery) {
+        return false;
+    }
+    var path << pathFor(directory, info.digest);
+    if (!fileExists(path)) {
+        return false;
+    }
+    var saved << readBytes(path);
+    copyInto(machine["bus"]["prgRam"], saved);
+    bus.clearPrgRamDirty(machine["bus"]);
+    true;
+}
+
+/// Flushes dirty battery-backed PRG RAM to disk.
+pub fct flush(machine, directory) {
+    var systemBus << machine["bus"];
+    var info << systemBus["cart"]["info"];
+    if (!info.header.battery or!bus.prgRamDirty(systemBus)) {
+        return false;
+    }
+    createFile(directory + "/saves/.zumbra-sram", "1");
+    writeBytes(pathFor(directory, info.digest), systemBus["prgRam"]);
+    bus.clearPrgRamDirty(systemBus);
+    true;
+}
+
+/// Writes battery-backed PRG RAM even when the dirty flag is clear.
+pub fct forceFlush(machine, directory) {
+    var systemBus << machine["bus"];
+    var info << systemBus["cart"]["info"];
+    if (!info.header.battery) {
+        return false;
+    }
+    createFile(directory + "/saves/.zumbra-sram", "1");
+    writeBytes(pathFor(directory, info.digest), systemBus["prgRam"]);
+    bus.clearPrgRamDirty(systemBus);
+    true;
+}

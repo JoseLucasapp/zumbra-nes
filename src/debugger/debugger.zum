@@ -1,0 +1,188 @@
+import "../core/bus.zum" as bus;
+import "../core/console.zum" as console;
+import "../core/cpu6502.zum" as cpu6502;
+import "../core/mapper.zum" as mapper;
+fct contains(values, expected) {
+    var index << 0;
+    while (index < sizeOf(values)) {
+        if (values[index] == expected) {
+            return true;
+        }
+        index << index + 1;
+    }
+    false;
+}
+fct appendUnique(values, value) {
+    if (!contains(values, value)) {
+        addToArrayEnd(values, value);
+    }
+    true;
+}
+fct record(debugger, entry) {
+    if (sizeOf(debugger["trace"]) >= debugger["traceLimit"]) {
+        debugger["trace"] <<[];
+    }
+    addToArrayEnd(debugger["trace"], entry);
+}
+fct accessReason(systemBus) {
+    var access << systemBus["debug"];
+    if (!access["triggered"]) {
+        return "";
+    }
+    access["lastKind"] + " breakpoint at " + toString(access["lastAddress"]);
+}
+
+/// Creates a debugger attached to one live machine.
+pub fct create(machine) {
+    machine["bus"]["debug"]["enabled"] << true;
+    {
+        "machine": machine, "paused": true, "reason": "attached", "pcBreakpoints":[], "trace":[], "traceEnabled": true, "traceLimit": 256
+    };
+}
+pub fct addPcBreakpoint(debugger, address) {
+    appendUnique(debugger["pcBreakpoints"], address band 0xFFFF);
+}
+pub fct addReadBreakpoint(debugger, address) {
+    appendUnique(debugger["machine"]["bus"]["debug"]["readBreakpoints"], address band 0xFFFF);
+}
+pub fct addWriteBreakpoint(debugger, address) {
+    appendUnique(debugger["machine"]["bus"]["debug"]["writeBreakpoints"], address band 0xFFFF);
+}
+pub fct clearBreakpoints(debugger) {
+    debugger["pcBreakpoints"] <<[];
+    debugger["machine"]["bus"]["debug"]["readBreakpoints"] <<[];
+    debugger["machine"]["bus"]["debug"]["writeBreakpoints"] <<[];
+    debugger["machine"]["bus"]["debug"]["triggered"] << false;
+    true;
+}
+pub fct pause(debugger, reason) {
+    debugger["paused"] << true;
+    debugger["reason"] << reason;
+}
+pub fct resume(debugger) {
+    debugger["paused"] << false;
+    debugger["reason"] << "running";
+    debugger["machine"]["bus"]["debug"]["triggered"] << false;
+    true;
+}
+pub fct registers(debugger) {
+    var cpu << debugger["machine"]["cpu"];
+    {
+        "a": cpu.a, "x": cpu.x, "y": cpu.y, "sp": cpu.sp, "pc": cpu.pc, "status": cpu.status, "cycles": cpu.cycles, "instructions": cpu.instructions, "lastOpcode": cpu.lastOpcode, "halted": cpu.halted
+    };
+}
+pub fct mapperState(debugger) {
+    mapper.snapshot(debugger["machine"]["bus"]["mapper"]);
+}
+pub fct memory(debugger, start, length) {
+    var result << bytes(length);
+    var index << 0;
+    while (index < length) {
+        result[index] << u8(bus.peek(debugger["machine"]["bus"], start + index));
+        index << index + 1;
+    }
+    result;
+}
+pub fct stack(debugger, length) {
+    var cpu << debugger["machine"]["cpu"];
+    var count << length;
+    if (count > 256) {
+        count << 256;
+    }
+    memory(debugger, 0x0100 +((cpu.sp + 1) band 0xFF), count);
+}
+pub fct disassembleAt(debugger, address) {
+    var systemBus << debugger["machine"]["bus"];
+    var opcode << bus.peek(systemBus, address);
+    var info << cpu6502.opcodeInfo(opcode);
+    var operand << "";
+    if (info.bytes >= 2) {
+        operand << toString(bus.peek(systemBus, address + 1));
+    }
+    if (info.bytes >= 3) {
+        operand << toString(bus.peek(systemBus, address + 1) bor(bus.peek(systemBus, address + 2) shl 8));
+    }
+    {
+        "address": address band 0xFFFF, "opcode": opcode, "mnemonic": info.mnemonic, "mode": info.mode, "bytes": info.bytes, "cycles": info.cycles, "operand": operand, "text": toString(address band 0xFFFF) + ": " + info.mnemonic + " " + operand
+    };
+}
+pub fct disassemble(debugger, address, instructionCount) {
+    var result <<[];
+    var cursor << address band 0xFFFF;
+    var index << 0;
+    while (index < instructionCount) {
+        var item << disassembleAt(debugger, cursor);
+        addToArrayEnd(result, item);
+        cursor <<(cursor + item["bytes"]) band 0xFFFF;
+        index << index + 1;
+    }
+    result;
+}
+fct pcBreak(debugger) {
+    contains(debugger["pcBreakpoints"], debugger["machine"]["cpu"].pc);
+}
+
+/// Executes exactly one instruction while preserving paused debugger state.
+pub fct stepInstruction(debugger) {
+    var machine << debugger["machine"];
+    var before << disassembleAt(debugger, machine["cpu"].pc);
+    machine["bus"]["debug"]["triggered"] << false;
+    var used << console.stepInstruction(machine);
+    if (debugger["traceEnabled"]) {
+        record(debugger, {
+            "pc": before["address"], "opcode": before["opcode"], "mnemonic": before["mnemonic"], "mode": before["mode"], "operand": before["operand"], "cycles": used, "nextPc": machine["cpu"].pc
+        });
+    }
+    var reason << accessReason(machine["bus"]);
+    if (reason != "") {
+        pause(debugger, reason);
+    } else {
+        debugger["paused"] << true;
+        debugger["reason"] << "single step";
+    }
+    used;
+}
+pub fct stepFrame(debugger, instructionLimit) {
+    debugger["machine"]["bus"]["debug"]["triggered"] << false;
+    var used << console.runFrame(debugger["machine"], instructionLimit);
+    debugger["paused"] << true;
+    debugger["reason"] << "frame step";
+    used;
+}
+
+/// Runs until a PC/access breakpoint, halt, or instruction budget is reached.
+pub fct run(debugger, instructionLimit) {
+    resume(debugger);
+    var executed << 0;
+    while (executed < instructionLimit and!debugger["machine"]["cpu"].halted and!debugger["paused"]) {
+        if (pcBreak(debugger)) {
+            pause(debugger, "PC breakpoint at " + toString(debugger["machine"]["cpu"].pc));
+        } else {
+            var machine << debugger["machine"];
+            var before << disassembleAt(debugger, machine["cpu"].pc);
+            machine["bus"]["debug"]["triggered"] << false;
+            var used << console.stepInstruction(machine);
+            if (debugger["traceEnabled"]) {
+                record(debugger, {
+                    "pc": before["address"], "opcode": before["opcode"], "mnemonic": before["mnemonic"], "mode": before["mode"], "operand": before["operand"], "cycles": used, "nextPc": machine["cpu"].pc
+                });
+            }
+            executed << executed + 1;
+            var reason << accessReason(machine["bus"]);
+            if (reason != "") {
+                pause(debugger, reason);
+            }
+        }
+    }
+    if (!debugger["paused"]) {
+        pause(debugger, "instruction limit");
+    }
+    executed;
+}
+pub fct trace(debugger) {
+    debugger["trace"];
+}
+pub fct summary(debugger) {
+    var cpu << debugger["machine"]["cpu"];
+    "CPU PC=" + toString(cpu.pc) + " A=" + toString(cpu.a) + " X=" + toString(cpu.x) + " Y=" + toString(cpu.y) + " SP=" + toString(cpu.sp) + " P=" + toString(cpu.status) + "\n" + "Reason: " + debugger["reason"] + "\n" + "Mapper: " + debugger["machine"]["bus"]["mapper"]["core"].name;
+}

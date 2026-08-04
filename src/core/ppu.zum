@@ -55,25 +55,39 @@ fct nametableOffset(state, address) {
     var within << normalized band 0x03FF;
     var cart << state["cart"];
     var info << cart["info"];
-    if (info.header.fourScreen) {
+    var mode << mapper.mirroring(state["mapper"], info.header.mirroring);
+    if (mode == "four-screen") {
         return(table * 0x0400) + within;
     }
-    if (info.header.mirroring == "vertical") {
+    if (mode == "vertical") {
         return((table band 0x01) * 0x0400) + within;
+    }
+    if (mode == "single-screen-lower") {
+        return within;
+    }
+    if (mode == "single-screen-upper") {
+        return 0x0400 + within;
     }
     return((table shr 1) * 0x0400) + within;
 }
 
 /// Creates a power-on PPU package with VRAM, palette, OAM and framebuffer.
-pub fct create(cart) {
+pub fct createWithMapper(cart, mapperState) {
     var info << cart["info"];
     var vramBytes << constants.NAMETABLE_BYTES;
     if (info.header.fourScreen) {
         vramBytes << constants.FOUR_SCREEN_NAMETABLE_BYTES;
     }
     {
-        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES)
+        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "mapper": mapperState, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES)
     };
+}
+
+/// Creates a standalone PPU and owns a mapper state for isolated tests.
+pub fct create(cart) {
+    var info << cart["info"];
+    var mapperState << mapper.create(info.header.mapper, info.header.submapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]), info.header.battery, info.header.mirroring);
+    createWithMapper(cart, mapperState);
 }
 
 /// Reads the complete PPU address space after mirroring.
@@ -82,7 +96,7 @@ pub fct read(state, address) {
     if (normalized < 0x2000) {
         var cart << state["cart"];
         var info << cart["info"];
-        var mapping << mapper.ppuRead(info.header.mapper, normalized, sizeOf(cart["chrMemory"]));
+        var mapping << mapper.ppuRead(state["mapper"], normalized, sizeOf(cart["chrMemory"]));
         if (mapping.mapped) {
             return toInt(cart["chrMemory"][mapping.offset]);
         }
@@ -101,7 +115,7 @@ pub fct write(state, address, value) {
     if (normalized < 0x2000) {
         var cart << state["cart"];
         var info << cart["info"];
-        var mapping << mapper.ppuWrite(info.header.mapper, normalized, sizeOf(cart["chrMemory"]), info.chrIsRam);
+        var mapping << mapper.ppuWrite(state["mapper"], normalized, sizeOf(cart["chrMemory"]), info.chrIsRam);
         if (!mapping.writable) {
             return false;
         }
@@ -361,6 +375,9 @@ pub fct tick(state) {
         }
         if (core.dot >= 1 and core.dot <= 256) {
             renderPixel(state, core.dot - 1, core.scanline);
+        }
+        if (core.dot == 260 and renderingEnabled(core)) {
+            mapper.clockScanline(state["mapper"]);
         }
     }
     if (core.scanline == 241 and core.dot == 1) {

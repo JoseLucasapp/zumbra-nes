@@ -1,0 +1,7 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var state << mapper.create(7u16, 0u8, 262144, 8192, false, "horizontal");
+mapper.cpuWrite(state, 0x8000, 0x13, 262144);
+test.assertInt(mapper.cpuRead(state, 0x8000, 262144).offset, 3 * 32768, "AxROM PRG bank");
+test.assertString(mapper.mirroring(state, "horizontal"), "single-screen-upper", "AxROM one-screen select");
+show("mapper7_test: ok");

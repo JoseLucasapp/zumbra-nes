@@ -10,16 +10,20 @@ fct migrations() {
     var indexSql << "CREATE INDEX IF NOT EXISTS rom_library_recent_idx ON rom_library(last_opened DESC); ";
     indexSql << indexSql + "CREATE INDEX IF NOT EXISTS play_sessions_rom_idx ON play_sessions(rom_digest, started_at DESC); ";
     indexSql << indexSql + "CREATE INDEX IF NOT EXISTS achievement_progress_game_idx ON achievement_progress(game_digest, unlocked, achievement_id);";
+    var stateSql << "CREATE TABLE IF NOT EXISTS save_states (game_digest TEXT NOT NULL, slot INTEGER NOT NULL, path TEXT NOT NULL, updated_at INTEGER NOT NULL, frame INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(game_digest, slot)); ";
+    stateSql << stateSql + "CREATE INDEX IF NOT EXISTS save_states_game_idx ON save_states(game_digest, updated_at DESC);";
     [{
         "version": 1, "name": "z22_core", "sql": coreSql
     }, {
         "version": 2, "name": "z22_achievements", "sql": achievementSql
     }, {
         "version": 3, "name": "z22_indexes", "sql": indexSql
+    }, {
+        "version": 4, "name": "z23_save_states", "sql": stateSql
     }];
 }
 
-/// Opens the local store and applies all Z22 migrations.
+/// Opens the local store and applies all Z22/Z23 migrations.
 pub fct open(path) {
     var db << database.open(path);
     database.migrate(db, migrations());
@@ -172,11 +176,25 @@ pub fct updateAchievement(db, digest, id, progress, unlocked, unlockedAt) {
         "progress": progress, "unlocked": unlocked, "unlockedAt": unlockedAt, "digest": digest, "id": id
     });
 }
+
+/// Records one file-backed save-state slot in the local library.
+pub fct recordSaveState(db, digest, slot, path, updatedAt, frame) {
+    database.exec(db, "INSERT INTO save_states(game_digest, slot, path, updated_at, frame) VALUES (:digest, :slot, :path, :updated, :frame) ON CONFLICT(game_digest, slot) DO UPDATE SET path = excluded.path, updated_at = excluded.updated_at, frame = excluded.frame", {
+        "digest": digest, "slot": slot, "path": path, "updated": updatedAt, "frame": frame
+    });
+    true;
+}
+pub fct saveStateRows(db, digest) {
+    database.query(db, "SELECT game_digest, slot, path, updated_at, frame FROM save_states WHERE game_digest = :digest ORDER BY slot", {
+        "digest": digest
+    });
+}
 pub fct snapshot(db) {
     {
         "settings": database.query(db, "SELECT key, value FROM settings ORDER BY key", {
         }), "roms": database.query(db, "SELECT * FROM rom_library ORDER BY last_opened DESC", {
         }), "achievements": database.query(db, "SELECT * FROM achievement_progress ORDER BY game_digest, achievement_id", {
+        }), "saveStates": database.query(db, "SELECT * FROM save_states ORDER BY game_digest, slot", {
         })
     };
 }
@@ -209,6 +227,13 @@ pub fct importSnapshot(db, snapshot) {
     while (index < sizeOf(achievementRowsValue)) {
         var progress << achievementRowsValue[index];
         database.exec(db, "INSERT INTO achievement_progress(game_digest, achievement_id, progress, unlocked, unlocked_at) VALUES (:game_digest, :achievement_id, :progress, :unlocked, :unlocked_at) ON CONFLICT(game_digest, achievement_id) DO UPDATE SET progress = excluded.progress, unlocked = excluded.unlocked, unlocked_at = excluded.unlocked_at", progress);
+        index << index + 1;
+    }
+    var stateRows << snapshot["saveStates"];
+    index << 0;
+    while (index < sizeOf(stateRows)) {
+        var stateRow << stateRows[index];
+        recordSaveState(db, stateRow["game_digest"], stateRow["slot"], stateRow["path"], stateRow["updated_at"], stateRow["frame"]);
         index << index + 1;
     }
     true;

@@ -1,0 +1,13 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var ids << mapper.supportedIds();
+test.assertInt(sizeOf(ids), 7, "seven Z23 mappers");
+test.assertBool(mapper.supports(0u16), "NROM");
+test.assertBool(mapper.supports(1u16), "MMC1");
+test.assertBool(mapper.supports(2u16), "UxROM");
+test.assertBool(mapper.supports(3u16), "CNROM");
+test.assertBool(mapper.supports(4u16), "MMC3");
+test.assertBool(mapper.supports(7u16), "AxROM");
+test.assertBool(mapper.supports(227u16), "Mapper 227");
+test.assertBool(!mapper.supports(5u16), "unsupported mapper rejected");
+show("mapper_registry_test: ok");

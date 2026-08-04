@@ -1,65 +1,80 @@
-# Testes Z22
+# Testes Z23
 
-Todas as ROMs versionadas são fixtures sintéticas e não contêm conteúdo comercial.
+Todas as ROMs versionadas são sintéticas e legalmente redistribuíveis.
 
-## Totais
+## Total
 
-- 10 testes herdados da Z19;
-- 13 testes de CPU da Z20;
-- 20 testes de hardware da Z21;
-- 12 testes adicionados na Z22;
-- **55 testes totais**.
+- 55 testes herdados das Z19–Z22;
+- 19 testes adicionados na Z23;
+- **74 testes totais**.
 
-## Testes Z22
+## Novos grupos
 
-- `palette_test.zum`: conversão dos índices de paleta para RGBA;
-- `audio_output_test.zum`: cursor e drenagem incremental de PCM;
-- `settings_test.zum`: defaults e serialização das preferências;
-- `store_migration_test.zum`: migrações, versão e integridade SQLite;
-- `store_library_test.zum`: biblioteca, sessões e recentes;
-- `achievement_engine_test.zum`: regras e desbloqueio;
-- `achievement_progress_test.zum`: persistência e idempotência;
-- `achievement_frame_boundary_test.zum`: um frame desbloqueia apenas a conquista de primeiro frame;
-- `store_export_test.zum`: snapshot e exportação JSON;
-- `store_import_test.zum`: importação de configurações e biblioteca;
-- `playable_headless_test.zum`: vídeo, áudio, SQLite e conquista no relatório determinístico;
-- `playable_rom_execution_test.zum`: execução de um frame da fixture jogável sem opcode de preenchimento.
+### Mappers
 
-## Gate completo
+- `mapper_registry_test.zum`;
+- `mapper1_test.zum`;
+- `mapper2_test.zum`;
+- `mapper3_test.zum`;
+- `mapper4_test.zum`;
+- `mapper7_test.zum`;
+- `mapper227_test.zum`;
+- `mapper227_cartridge_test.zum`;
+- `mapper227_execution_test.zum`;
+- `mapper_compatibility_test.zum`.
+
+### Persistência
+
+- `save_ram_test.zum`;
+- `save_state_test.zum`;
+- `save_state_mismatch_test.zum`;
+- `save_state_mapper_test.zum`;
+- `store_save_state_test.zum`.
+
+### Debugger
+
+- `debugger_test.zum`;
+- `debugger_breakpoint_test.zum`;
+- `debugger_execution_breakpoint_test.zum`.
+
+### Vídeo
+
+- `visible_frame_test.zum` valida quantidade de pixels coloridos, primeiro pixel e digest do framebuffer.
+
+## Fixtures novas
+
+- `z23-visible-frame.nes`: Mapper 0 com paleta, CHR e nametable visíveis;
+- `mapper227-multicart.nes`: 512 KiB PRG e CHR RAM;
+- `unsupported-mapper5.nes`: valida o diagnóstico de incompatibilidade.
+
+## Gate
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z22-playable.sh
+EXPECTED_ZUMBRA_VERSION=0.14.3 \
+  scripts/test-z23-compatibility.sh
 ```
 
-O gate valida:
+Etapas:
 
-1. SHA-256 das fixtures;
-2. tabela e decoder dos 151 opcodes oficiais;
-3. ausência de `.c`, `.h` e `extern "C"` no projeto;
-4. formatter e linter;
-5. versão `0.4.0`;
-6. análise completa do projeto;
-7. os 55 testes pela VM;
-8. geração da documentação;
-9. execução headless pela VM;
-10. build e execução C11 do núcleo headless;
-11. paridade exata VM/native;
-12. `app doctor`;
-13. build e smoke do frontend com `ZUMBRA_DESKTOP_HEADLESS=1`;
-14. geração e inspeção de AppDir e `.deb`;
-15. higiene do repositório.
+1. checksums das fixtures;
+2. tabela dos 151 opcodes;
+3. formatter e linter;
+4. versão `0.5.0`;
+5. project check;
+6. 74 testes pela VM;
+7. documentação;
+8. execução headless pela VM;
+9. build/execução C11;
+10. paridade VM/native;
+11. app doctor e app build;
+12. smoke desktop Mapper 0;
+13. smoke desktop Mapper 227;
+14. rejeição do Mapper 5;
+15. AppDir e `.deb`;
+16. higiene.
 
-Resultado esperado:
+Resultado:
 
 ```text
-Zumbra NES repository hygiene checks passed.
-Z22 playable emulator gate passed.
+Z23 compatibility, persistence and debugger gate passed.
 ```
-
-## Teste manual desktop
-
-O CI não substitui a validação visual e sonora em uma máquina com SDL3. Antes da promoção final, validar janela, escala, vídeo, áudio, teclado, gamepads, remapeamento, hot-plug, controles de execução, SQLite, conquistas e pacotes.
-
-## AppImage
-
-O caminho de empacotamento está implementado, mas depende de `appimagetool`. Quando a ferramenta não está disponível, AppDir e `.deb` continuam sendo validados.

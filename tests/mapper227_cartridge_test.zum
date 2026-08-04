@@ -1,0 +1,11 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/testing/assert.zum" as test;
+var cart << cartridge.load("fixtures/synthetic/mapper227-multicart.nes");
+test.assertU16(cart["info"].header.mapper, 227u16, "Mapper227 header");
+test.assertInt(cart["info"].header.prgRomBytes, 524288, "Mapper227 PRG size");
+var machine << console.create(cart);
+test.assertInt(bus.peek(machine["bus"], 0x8000), 0x78, "Mapper227 reset program");
+test.assertInt(machine["cpu"].pc, 0x8000, "Mapper227 reset vector");
+show("mapper227_cartridge_test: ok");

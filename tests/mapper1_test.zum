@@ -1,0 +1,26 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+fct writeSerial(state, address, value) {
+    var bit << 0;
+    while (bit < 5) {
+        mapper.cpuWrite(state, address,(value shr bit) band 1, 65536);
+        bit << bit + 1;
+    }
+}
+var state << mapper.create(1u16, 0u8, 65536, 16384, true, "horizontal");
+var initialLow << mapper.cpuRead(state, 0x8000, 65536);
+var initialHigh << mapper.cpuRead(state, 0xC000, 65536);
+test.assertInt(initialLow.offset, 0, "MMC1 lower starts bank zero");
+test.assertInt(initialHigh.offset, 49152, "MMC1 fixes last bank");
+writeSerial(state, 0xE000, 2);
+var switched << mapper.cpuRead(state, 0x8000, 65536);
+test.assertInt(switched.offset, 32768, "MMC1 serial PRG bank");
+writeSerial(state, 0x8000, 2);
+test.assertString(mapper.mirroring(state, "horizontal"), "vertical", "MMC1 mirroring register");
+writeSerial(state, 0xA000, 2);
+writeSerial(state, 0xC000, 3);
+var chrLow << mapper.ppuRead(state, 0x0000, 16384);
+var chrHigh << mapper.ppuRead(state, 0x1000, 16384);
+test.assertInt(chrLow.offset, 8192, "MMC1 lower CHR bank");
+test.assertInt(chrHigh.offset, 12288, "MMC1 upper CHR bank");
+show("mapper1_test: ok");

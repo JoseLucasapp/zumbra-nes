@@ -1,4 +1,4 @@
-# Arquitetura Z22
+# Arquitetura Z23
 
 ## Visão geral
 
@@ -6,99 +6,85 @@
 ROM iNES/NES 2.0
         │
         ▼
-Cartridge → Mapper 0/NROM → Bus
-                            ├─ CPU Ricoh 2A03
-                            ├─ PPU Ricoh 2C02 → framebuffer 256×240
-                            ├─ APU → ring buffer PCM
-                            ├─ Controller 1/2
-                            └─ OAM DMA / DMC fetch
-                                      │
-                                      ▼
-                              Console scheduler
-                                      │
-                         ┌────────────┴────────────┐
-                         ▼                         ▼
-                 Frontend headless          Frontend desktop
-                 VM/C11 parity              Zumbra runtime + SDL3 + SQLite
+    Cartridge
+        │
+        ▼
+ Mutable Mapper Registry
+  0 / 1 / 2 / 3 / 4 / 7 / 227
+        │
+        ▼
+       Bus ─────────────── Debug breakpoints
+   ┌────┼───────┬─────┐
+   ▼    ▼       ▼     ▼
+  CPU   PPU     APU  Controllers
+   │     │       │
+   │     ▼       ▼
+   │ framebuffer PCM
+   └──── Console scheduler
+            │
+   ┌────────┼───────────┐
+   ▼        ▼           ▼
+Desktop   Save RAM   Save states
+  │                       │
+  └──────── Debugger ─────┘
 ```
 
-## Núcleo de emulação
+## Mapper registry
 
-- `src/core/header.zum`: leitura e validação iNES e identificação NES 2.0;
-- `src/core/cartridge.zum`: PRG, CHR, trainer e metadados;
-- `src/core/mapper.zum`: Mapper 0, NROM-128 e NROM-256;
-- `src/core/bus.zum`: mapa CPU, PPU, APU, controles, DMA e cartridge;
-- `src/core/cpu6502.zum`: 151 opcodes oficiais, interrupções e ciclos;
-- `src/core/ppu.zum`: registradores, VRAM, OAM, render, VBlank e NMI;
-- `src/core/apu.zum`: pulse 1/2, triangle, noise, DMC, IRQ e PCM;
-- `src/core/controller.zum`: dois controles NES serializados;
-- `src/core/console.zum`: scheduler CPU/PPU/APU, DMA, DMC e interrupções;
-- `src/core/palette.zum`: conversão dos índices PPU para RGBA;
-- `src/core/audio_output.zum`: drenagem incremental do ring buffer da APU.
+`src/core/mapper.zum` mantém um objeto mutável compartilhado pelo bus e pela PPU. Isso evita estados divergentes entre o bank switching observado pela CPU e o observado pelo renderer.
 
-## Scheduler
+Implementações:
 
-Cada ciclo retornado pela CPU avança um ciclo da APU e três dots da PPU. O scheduler também:
+- Mapper 0: NROM-128/NROM-256;
+- Mapper 1: shift register MMC1, modos PRG, CHR 4/8 KiB e mirroring;
+- Mapper 2: banco PRG de 16 KiB com último banco fixo;
+- Mapper 3: banco CHR de 8 KiB;
+- Mapper 4: bancos PRG de 8 KiB, bancos CHR de 1/2 KiB, mirroring, PRG RAM e IRQ;
+- Mapper 7: banco PRG de 32 KiB e one-screen mirroring;
+- Mapper 227: latch pelo endereço escrito, modos 16/32 KiB, mirroring e proteção de CHR RAM.
 
-- aplica OAM DMA de 256 bytes e stall de 513/514 ciclos;
-- atende buscas DMC pelo bus e aplica quatro ciclos de stall;
-- propaga NMI da PPU e IRQ da APU para a CPU;
-- permite execução por instrução, quantidade de ciclos ou frame completo.
+O registro expõe `supports`, `supportedIds`, `compatibility`, `cpuRead`, `cpuWrite`, `ppuRead`, `ppuWrite`, `irqLine`, `snapshot` e `restore`.
 
-## Frontend desktop
+## Bus e PPU
 
-`src/frontend/desktop.zum` é o loop de aplicação e `src/frontend/native_bridge.zum` é agora uma fachada **100% Zumbra** sobre o runtime oficial 0.14.3. O repositório não contém `.c`, `.h` nem `extern "C"`.
+O bus resolve:
 
-As APIs oficiais usadas são:
+- RAM interna e mirrors;
+- registradores PPU;
+- APU/I/O;
+- controles;
+- OAM DMA;
+- PRG RAM;
+- PRG ROM pelo mapper;
+- breakpoints de leitura e escrita.
 
-- `desktopApp`, `desktopWindow` e `desktopPoll`;
-- `desktopWindowPresentRGBA` para o framebuffer;
-- `desktopWindowSetVSync`;
-- `desktopKeyDown` e `desktopGamepadButton`;
-- `desktopAudioQueue` e `desktopAudioQueued`;
-- `desktopPickFile`, `desktopNotify` e `desktopPaths`;
-- `processArgs`, `unixTimeSeconds` e `createFile`.
-
-SDL3 e o backend C11 continuam existindo dentro do compilador/runtime da linguagem, como detalhe de implementação. Nenhuma ponte C é distribuída ou mantida pelo projeto do emulador.
-
-## Fluxo de frame
-
-1. o frontend coleta teclado e gamepads;
-2. os masks dos dois controles são enviados ao console;
-3. o scheduler executa um frame;
-4. a PPU fornece 61.440 índices de paleta;
-5. `palette.rgba` produz 245.760 bytes RGBA;
-6. SDL3 atualiza e apresenta a textura;
-7. novas amostras da APU são drenadas e enfileiradas;
-8. conquistas são avaliadas e persistidas;
-9. FPS, sessão e estado da janela são atualizados.
+A PPU usa o mesmo mapper para CHR e mirroring. O MMC3 recebe um evento filtrado de scanline durante renderização e pode elevar sua linha de IRQ.
 
 ## Persistência
 
-`src/persistence/store.zum` usa SQLite como fonte de verdade. As migrações criam:
+### SRAM
 
-- `settings`;
-- `rom_library`;
-- `play_sessions`;
-- `achievement_definitions`;
-- `achievement_progress`.
+`src/persistence/save_ram.zum` persiste somente cartuchos com battery flag. O caminho é derivado do SHA-256 da ROM, e a escrita acontece quando a PRG RAM está dirty ou no fechamento forçado.
 
-A ROM é identificada pelo SHA-256, não apenas pelo caminho. JSON é usado exclusivamente para exportação, importação e depuração.
+### Save states
 
-## Conquistas
+`src/persistence/save_state.zum` grava um snapshot binário versionado sem duplicar a PRG ROM imutável. A restauração exige igualdade de:
 
-`src/achievements/engine.zum` avalia regras de frame, instruções, tempo, controle e memória. O desbloqueio é idempotente e vinculado ao digest da ROM.
+- schema;
+- formato `Z23-0.5.0`;
+- SHA-256 da ROM;
+- mapper.
 
-## Empacotamento
+O frontend oferece dez slots e o SQLite registra caminho, frame e timestamp de cada slot.
 
-`zumbra-app.toml` descreve o aplicativo desktop. O pipeline Linux produz:
+## Debugger
 
-- binário C11;
-- AppDir;
-- pacote `.deb`;
-- AppImage quando `appimagetool` está disponível;
-- checksums SHA-256.
+`src/debugger/debugger.zum` trabalha sobre a máquina viva. Leituras de memória para inspeção usam `bus.peek`, que não dispara efeitos colaterais. Breakpoints de acesso são observados pelo bus; breakpoints de PC e trace são gerenciados pelo debugger.
 
-## Limites atuais
+## Desktop Pure Zumbra
 
-A interface jogável aceita apenas Mapper 0/NROM. Não são distribuídas ROMs comerciais. Save states, mappers adicionais, depuração avançada e validação extensa com homebrew/test ROMs ficam para a Z23.
+O frontend continua sem código C local. Ele utiliza as APIs desktop/media oficiais da Zumbra 0.14.3 para janela, framebuffer, áudio, teclado, gamepad, diálogo e notificações.
+
+## Limites conhecidos
+
+A compatibilidade é definida por famílias de mapper iNES e não significa que toda variante de placa esteja certificada. Submappers, chips de expansão, timing muito específico e opcodes 6502 não oficiais podem exigir refinamento posterior. ROMs comerciais nunca são incluídas nas fixtures.

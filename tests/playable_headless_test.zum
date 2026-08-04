@@ -1,9 +1,12 @@
 import "../src/frontend/playable_headless.zum" as playable;
 import "../src/testing/assert.zum" as test;
-var report << playable.runFile("fixtures/synthetic/z22-playable-loop.nes");
-test.assertString(report.version, "0.4.0", "Z22 version");
+var report << playable.runFile("fixtures/synthetic/z23-visible-frame.nes");
+test.assertString(report.version, "0.5.0", "Z23 version");
 test.assertInt(report.rgbaBytes, 245760, "256x240 RGBA framebuffer");
-test.assertInt(report.schemaVersion, 3, "SQLite migrations");
+test.assertInt(report.schemaVersion, 4, "SQLite migrations");
 test.assertInt(report.achievements, 1, "first frame achievement");
 test.assertInt(report.recentRoms, 1, "local library record");
+test.assertInt(report.supportedMappers, 7, "supported mapper count");
+test.assertInt(report.saveStateSchema, 1, "save-state schema");
+test.assertString(report.mapperName, "NROM", "mapper name");
 show("playable_headless_test: ok");

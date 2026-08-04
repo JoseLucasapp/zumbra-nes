@@ -1,0 +1,275 @@
+import "../core/mapper.zum" as mapper;
+pub const SCHEMA_VERSION << 1;
+pub const FORMAT_VERSION << "Z23-0.5.0";
+/// Non-fatal save-state load result.
+pub struct LoadResult {
+    ok: bool;
+    message: string;
+}
+fct copyBuffer(target, source) {
+    var length << sizeOf(source);
+    if (length > sizeOf(target)) {
+        length << sizeOf(target);
+    }
+    if (length > 0) {
+        copyBytes(target, 0, source, 0, length);
+    }
+    length;
+}
+fct consoleSnapshot(core) {
+    {
+        "cpuCycles": core.cpuCycles, "ppuCycles": core.ppuCycles, "apuCycles": core.apuCycles, "instructions": core.instructions, "dmaCycles": core.dmaCycles, "dmcStallCycles": core.dmcStallCycles, "frames": core.frames, "running": core.running
+    };
+}
+fct cpuSnapshot(cpu) {
+    {
+        "a": cpu.a, "x": cpu.x, "y": cpu.y, "sp": cpu.sp, "pc": cpu.pc, "status": cpu.status, "cycles": cpu.cycles, "instructions": cpu.instructions, "lastOpcode": cpu.lastOpcode, "halted": cpu.halted, "irqLine": cpu.irqLine, "nmiPending": cpu.nmiPending
+    };
+}
+fct ppuCoreSnapshot(core) {
+    {
+        "control": core.control, "mask": core.mask, "status": core.status, "oamAddress": core.oamAddress, "v": core.v, "t": core.t, "fineX": core.fineX, "writeToggle": core.writeToggle, "readBuffer": core.readBuffer, "openBus": core.openBus, "scrollX": core.scrollX, "scrollY": core.scrollY, "scanline": core.scanline, "dot": core.dot, "cycles": core.cycles, "frame": core.frame, "frameComplete": core.frameComplete, "nmiLine": core.nmiLine, "nmiPending": core.nmiPending, "oddFrame": core.oddFrame, "spritesOnLine": core.spritesOnLine
+    };
+}
+fct envelopeSnapshot(value) {
+    {
+        "start": value.start, "loop": value.loop, "constantVolume": value.constantVolume, "volume": value.volume, "divider": value.divider, "decay": value.decay
+    };
+}
+fct pulseSnapshot(value) {
+    {
+        "enabled": value.enabled, "channelOne": value.channelOne, "duty": value.duty, "sequence": value.sequence, "timerPeriod": value.timerPeriod, "timerCounter": value.timerCounter, "lengthCounter": value.lengthCounter, "envelope": envelopeSnapshot(value.envelope), "sweepEnabled": value.sweepEnabled, "sweepPeriod": value.sweepPeriod, "sweepNegate": value.sweepNegate, "sweepShift": value.sweepShift, "sweepReload": value.sweepReload, "sweepDivider": value.sweepDivider
+    };
+}
+fct triangleSnapshot(value) {
+    {
+        "enabled": value.enabled, "sequence": value.sequence, "timerPeriod": value.timerPeriod, "timerCounter": value.timerCounter, "lengthCounter": value.lengthCounter, "linearCounter": value.linearCounter, "linearReload": value.linearReload, "controlFlag": value.controlFlag, "reloadFlag": value.reloadFlag
+    };
+}
+fct noiseSnapshot(value) {
+    {
+        "enabled": value.enabled, "mode": value.mode, "shiftRegister": value.shiftRegister, "timerPeriod": value.timerPeriod, "timerCounter": value.timerCounter, "lengthCounter": value.lengthCounter, "envelope": envelopeSnapshot(value.envelope)
+    };
+}
+fct dmcSnapshot(value) {
+    {
+        "enabled": value.enabled, "irqEnabled": value.irqEnabled, "loop": value.loop, "irq": value.irq, "timerPeriod": value.timerPeriod, "timerCounter": value.timerCounter, "outputLevel": value.outputLevel, "sampleAddress": value.sampleAddress, "sampleLength": value.sampleLength, "currentAddress": value.currentAddress, "bytesRemaining": value.bytesRemaining, "sampleBuffer": value.sampleBuffer, "sampleBufferEmpty": value.sampleBufferEmpty, "shiftRegister": value.shiftRegister, "bitsRemaining": value.bitsRemaining, "silence": value.silence
+    };
+}
+fct apuSnapshot(state) {
+    var core << state["core"];
+    {
+        "core": {
+            "cycle": core.cycle, "frameCycle": core.frameCycle, "fiveStep": core.fiveStep, "irqInhibit": core.irqInhibit, "frameIrq": core.frameIrq, "sampleDivider": core.sampleDivider, "sampleCount": core.sampleCount, "sampleWrite": core.sampleWrite
+        }, "pulse1": pulseSnapshot(state["pulse1"]), "pulse2": pulseSnapshot(state["pulse2"]), "triangle": triangleSnapshot(state["triangle"]), "noise": noiseSnapshot(state["noise"]), "dmc": dmcSnapshot(state["dmc"]), "samples": state["samples"]
+    };
+}
+fct controllerSnapshot(value) {
+    {
+        "buttons": value.buttons, "latched": value.latched, "index": value.index, "strobe": value.strobe
+    };
+}
+
+/// Creates a portable snapshot without embedding immutable PRG ROM bytes.
+pub fct snapshot(machine) {
+    var systemBus << machine["bus"];
+    var ppuState << systemBus["ppu"];
+    var info << systemBus["cart"]["info"];
+    {
+        "schema": SCHEMA_VERSION, "format": FORMAT_VERSION, "romDigest": info.digest, "mapperId": info.header.mapper, "console": consoleSnapshot(machine["core"]), "cpu": cpuSnapshot(machine["cpu"]), "bus": {
+            "ram": systemBus["ram"], "apuIo": systemBus["apuIo"], "prgRam": systemBus["prgRam"], "prgRamDirty": systemBus["prgRamDirty"], "dmaPending": systemBus["dmaPending"], "dmaPage": systemBus["dmaPage"], "openBus": systemBus["openBus"], "chrMemory": systemBus["cart"]["chrMemory"]
+        }, "mapper": mapper.snapshot(systemBus["mapper"]), "ppu": {
+            "core": ppuCoreSnapshot(ppuState["core"]), "vram": ppuState["vram"], "palette": ppuState["palette"], "oam": ppuState["oam"], "framebuffer": ppuState["framebuffer"]
+        }, "apu": apuSnapshot(systemBus["apu"]), "controller1": controllerSnapshot(systemBus["controller1"]), "controller2": controllerSnapshot(systemBus["controller2"])
+    };
+}
+fct restoreConsole(target, source) {
+    target.cpuCycles << source["cpuCycles"];
+    target.ppuCycles << source["ppuCycles"];
+    target.apuCycles << source["apuCycles"];
+    target.instructions << source["instructions"];
+    target.dmaCycles << source["dmaCycles"];
+    target.dmcStallCycles << source["dmcStallCycles"];
+    target.frames << source["frames"];
+    target.running << source["running"];
+}
+fct restoreCpu(target, source) {
+    target.a << source["a"];
+    target.x << source["x"];
+    target.y << source["y"];
+    target.sp << source["sp"];
+    target.pc << source["pc"];
+    target.status << source["status"];
+    target.cycles << source["cycles"];
+    target.instructions << source["instructions"];
+    target.lastOpcode << source["lastOpcode"];
+    target.halted << source["halted"];
+    target.irqLine << source["irqLine"];
+    target.nmiPending << source["nmiPending"];
+}
+fct restorePpuCore(target, source) {
+    target.control << source["control"];
+    target.mask << source["mask"];
+    target.status << source["status"];
+    target.oamAddress << source["oamAddress"];
+    target.v << source["v"];
+    target.t << source["t"];
+    target.fineX << source["fineX"];
+    target.writeToggle << source["writeToggle"];
+    target.readBuffer << source["readBuffer"];
+    target.openBus << source["openBus"];
+    target.scrollX << source["scrollX"];
+    target.scrollY << source["scrollY"];
+    target.scanline << source["scanline"];
+    target.dot << source["dot"];
+    target.cycles << source["cycles"];
+    target.frame << source["frame"];
+    target.frameComplete << source["frameComplete"];
+    target.nmiLine << source["nmiLine"];
+    target.nmiPending << source["nmiPending"];
+    target.oddFrame << source["oddFrame"];
+    target.spritesOnLine << source["spritesOnLine"];
+}
+fct restoreEnvelope(target, source) {
+    target.start << source["start"];
+    target.loop << source["loop"];
+    target.constantVolume << source["constantVolume"];
+    target.volume << source["volume"];
+    target.divider << source["divider"];
+    target.decay << source["decay"];
+}
+fct restorePulse(target, source) {
+    target.enabled << source["enabled"];
+    target.channelOne << source["channelOne"];
+    target.duty << source["duty"];
+    target.sequence << source["sequence"];
+    target.timerPeriod << source["timerPeriod"];
+    target.timerCounter << source["timerCounter"];
+    target.lengthCounter << source["lengthCounter"];
+    restoreEnvelope(target.envelope, source["envelope"]);
+    target.sweepEnabled << source["sweepEnabled"];
+    target.sweepPeriod << source["sweepPeriod"];
+    target.sweepNegate << source["sweepNegate"];
+    target.sweepShift << source["sweepShift"];
+    target.sweepReload << source["sweepReload"];
+    target.sweepDivider << source["sweepDivider"];
+}
+fct restoreTriangle(target, source) {
+    target.enabled << source["enabled"];
+    target.sequence << source["sequence"];
+    target.timerPeriod << source["timerPeriod"];
+    target.timerCounter << source["timerCounter"];
+    target.lengthCounter << source["lengthCounter"];
+    target.linearCounter << source["linearCounter"];
+    target.linearReload << source["linearReload"];
+    target.controlFlag << source["controlFlag"];
+    target.reloadFlag << source["reloadFlag"];
+}
+fct restoreNoise(target, source) {
+    target.enabled << source["enabled"];
+    target.mode << source["mode"];
+    target.shiftRegister << source["shiftRegister"];
+    target.timerPeriod << source["timerPeriod"];
+    target.timerCounter << source["timerCounter"];
+    target.lengthCounter << source["lengthCounter"];
+    restoreEnvelope(target.envelope, source["envelope"]);
+}
+fct restoreDmc(target, source) {
+    target.enabled << source["enabled"];
+    target.irqEnabled << source["irqEnabled"];
+    target.loop << source["loop"];
+    target.irq << source["irq"];
+    target.timerPeriod << source["timerPeriod"];
+    target.timerCounter << source["timerCounter"];
+    target.outputLevel << source["outputLevel"];
+    target.sampleAddress << source["sampleAddress"];
+    target.sampleLength << source["sampleLength"];
+    target.currentAddress << source["currentAddress"];
+    target.bytesRemaining << source["bytesRemaining"];
+    target.sampleBuffer << source["sampleBuffer"];
+    target.sampleBufferEmpty << source["sampleBufferEmpty"];
+    target.shiftRegister << source["shiftRegister"];
+    target.bitsRemaining << source["bitsRemaining"];
+    target.silence << source["silence"];
+}
+fct restoreApu(target, source) {
+    var core << target["core"];
+    var sourceCore << source["core"];
+    core.cycle << sourceCore["cycle"];
+    core.frameCycle << sourceCore["frameCycle"];
+    core.fiveStep << sourceCore["fiveStep"];
+    core.irqInhibit << sourceCore["irqInhibit"];
+    core.frameIrq << sourceCore["frameIrq"];
+    core.sampleDivider << sourceCore["sampleDivider"];
+    core.sampleCount << sourceCore["sampleCount"];
+    core.sampleWrite << sourceCore["sampleWrite"];
+    restorePulse(target["pulse1"], source["pulse1"]);
+    restorePulse(target["pulse2"], source["pulse2"]);
+    restoreTriangle(target["triangle"], source["triangle"]);
+    restoreNoise(target["noise"], source["noise"]);
+    restoreDmc(target["dmc"], source["dmc"]);
+    copyBuffer(target["samples"], source["samples"]);
+}
+fct restoreController(target, source) {
+    target.buttons << source["buttons"];
+    target.latched << source["latched"];
+    target.index << source["index"];
+    target.strobe << source["strobe"];
+}
+
+/// Restores a validated snapshot into an existing console object graph.
+pub fct restore(machine, value) {
+    var info << machine["bus"]["cart"]["info"];
+    if (value["schema"] != SCHEMA_VERSION) {
+        return LoadResult(false, "unsupported save-state schema");
+    }
+    if (value["format"] != FORMAT_VERSION) {
+        return LoadResult(false, "save-state format version mismatch");
+    }
+    if (value["romDigest"] != info.digest) {
+        return LoadResult(false, "save-state ROM digest mismatch");
+    }
+    if (value["mapperId"] != info.header.mapper) {
+        return LoadResult(false, "save-state mapper mismatch");
+    }
+    restoreConsole(machine["core"], value["console"]);
+    restoreCpu(machine["cpu"], value["cpu"]);
+    var systemBus << machine["bus"];
+    var sourceBus << value["bus"];
+    copyBuffer(systemBus["ram"], sourceBus["ram"]);
+    copyBuffer(systemBus["apuIo"], sourceBus["apuIo"]);
+    copyBuffer(systemBus["prgRam"], sourceBus["prgRam"]);
+    copyBuffer(systemBus["cart"]["chrMemory"], sourceBus["chrMemory"]);
+    systemBus["prgRamDirty"] << sourceBus["prgRamDirty"];
+    systemBus["dmaPending"] << sourceBus["dmaPending"];
+    systemBus["dmaPage"] << sourceBus["dmaPage"];
+    systemBus["openBus"] << sourceBus["openBus"];
+    mapper.restore(systemBus["mapper"], value["mapper"]);
+    var ppuState << systemBus["ppu"];
+    var sourcePpu << value["ppu"];
+    restorePpuCore(ppuState["core"], sourcePpu["core"]);
+    copyBuffer(ppuState["vram"], sourcePpu["vram"]);
+    copyBuffer(ppuState["palette"], sourcePpu["palette"]);
+    copyBuffer(ppuState["oam"], sourcePpu["oam"]);
+    copyBuffer(ppuState["framebuffer"], sourcePpu["framebuffer"]);
+    restoreApu(systemBus["apu"], value["apu"]);
+    restoreController(systemBus["controller1"], value["controller1"]);
+    restoreController(systemBus["controller2"], value["controller2"]);
+    systemBus["debug"]["triggered"] << false;
+    LoadResult(true, "ok");
+}
+
+/// Serializes a portable save state atomically.
+pub fct save(path, machine) {
+    createFile(path + ".parent", "Z23");
+    binaryWriteFile(path, snapshot(machine));
+    true;
+}
+
+/// Loads and validates a save state without aborting on normal incompatibility.
+pub fct load(path, machine) {
+    if (!fileExists(path)) {
+        return LoadResult(false, "save-state file not found");
+    }
+    restore(machine, binaryReadFile(path));
+}

@@ -1,0 +1,15 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var state << mapper.create(227u16, 1u8, 1048576, 8192, false, "horizontal");
+test.assertInt(mapper.cpuRead(state, 0x8000, 1048576).offset, 0, "Mapper227 power-on low bank");
+test.assertInt(mapper.cpuRead(state, 0xC000, 1048576).offset, 0, "Mapper227 power-on mirrored bank");
+mapper.cpuWrite(state, 0x818D, 0, 1048576);
+test.assertInt(mapper.cpuRead(state, 0x8000, 1048576).offset, 34 * 16384, "Mapper227 32K low bank from address latch");
+test.assertInt(mapper.cpuRead(state, 0xC000, 1048576).offset, 35 * 16384, "Mapper227 32K high bank from address latch");
+test.assertString(mapper.mirroring(state, "horizontal"), "vertical", "Mapper227 address mirroring bit");
+var protectedWrite << mapper.ppuWrite(state, 0x0000, 8192, true);
+test.assertBool(!protectedWrite.writable, "Mapper227 multicart CHR RAM protection");
+mapper.cpuWrite(state, 0x8002, 0, 1048576);
+test.assertString(mapper.mirroring(state, "vertical"), "horizontal", "Mapper227 horizontal mirroring");
+test.assertBool(mapper.ppuWrite(state, 0x0000, 8192, true).writable, "Mapper227 CHR RAM writable outside NROM mode");
+show("mapper227_test: ok");

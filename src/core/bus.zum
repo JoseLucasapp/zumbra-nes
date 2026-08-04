@@ -6,15 +6,47 @@ import "ppu.zum" as ppu;
 /// Builds the complete Z21 CPU bus around one validated cartridge.
 pub fct create(cart) {
     var info << cart["info"];
-    mapper.create(info.header.mapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]));
+    var mapperState << mapper.create(info.header.mapper, info.header.submapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]), info.header.battery, info.header.mirroring);
+    var prgRamBytes << info.header.prgRamBytes;
+    if (prgRamBytes < constants.PRG_RAM_BYTES) {
+        prgRamBytes << constants.PRG_RAM_BYTES;
+    }
     {
-        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(constants.PRG_RAM_BYTES), "cart": cart, "ppu": ppu.create(cart), "apu": apu.create(), "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8
+        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(prgRamBytes), "prgRamDirty": false, "cart": cart, "mapper": mapperState, "ppu": ppu.createWithMapper(cart, mapperState), "apu": apu.create(), "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8, "debug": {
+            "enabled": false, "readBreakpoints":[], "writeBreakpoints":[], "triggered": false, "lastAddress":-1, "lastKind": ""
+        }
     };
+}
+fct addressIn(values, address) {
+    var index << 0;
+    while (index < sizeOf(values)) {
+        if (values[index] == address) {
+            return true;
+        }
+        index << index + 1;
+    }
+    false;
+}
+fct recordDebugAccess(state, kind, address) {
+    var debug << state["debug"];
+    if (!debug["enabled"]) {
+        return;
+    }
+    var values << debug["readBreakpoints"];
+    if (kind == "write") {
+        values << debug["writeBreakpoints"];
+    }
+    if (addressIn(values, address)) {
+        debug["triggered"] << true;
+        debug["lastAddress"] << address;
+        debug["lastKind"] << kind;
+    }
 }
 
 /// Reads one CPU-visible byte, including PPU, APU and controller side effects.
 pub fct read(state, address) {
     var normalized << address band 0xFFFF;
+    recordDebugAccess(state, "read", normalized);
     var value << toInt(state["openBus"]);
     if (normalized <= 0x1FFF) {
         value << toInt(state["ram"][normalized band 0x07FF]);
@@ -35,12 +67,14 @@ pub fct read(state, address) {
                             value << toInt(state["apuIo"][normalized - 0x4000]);
                         } else {
                             if (normalized >= 0x6000 and normalized <= 0x7FFF) {
-                                value << toInt(state["prgRam"][normalized - 0x6000]);
+                                if (mapper.prgRamEnabled(state["mapper"])) {
+                                    value << toInt(state["prgRam"][(normalized - 0x6000) % sizeOf(state["prgRam"])]);
+                                }
                             } else {
                                 if (normalized >= 0x8000) {
                                     var cart << state["cart"];
                                     var info << cart["info"];
-                                    var mapping << mapper.cpuRead(info.header.mapper, normalized, sizeOf(cart["prgRom"]));
+                                    var mapping << mapper.cpuRead(state["mapper"], normalized, sizeOf(cart["prgRom"]));
                                     if (mapping.mapped) {
                                         value << toInt(cart["prgRom"][mapping.offset]);
                                     }
@@ -59,6 +93,7 @@ pub fct read(state, address) {
 /// Writes one CPU-visible byte and routes all Z21 hardware registers.
 pub fct write(state, address, value) {
     var normalized << address band 0xFFFF;
+    recordDebugAccess(state, "write", normalized);
     var byteValue << toInt(value) band 0xFF;
     state["openBus"] << u8(byteValue);
     if (normalized <= 0x1FFF) {
@@ -97,7 +132,16 @@ pub fct write(state, address, value) {
         return true;
     }
     if (normalized >= 0x6000 and normalized <= 0x7FFF) {
-        state["prgRam"][normalized - 0x6000] << u8(byteValue);
+        if (mapper.prgRamWritable(state["mapper"])) {
+            state["prgRam"][(normalized - 0x6000) % sizeOf(state["prgRam"])] << u8(byteValue);
+            state["prgRamDirty"] << true;
+            return true;
+        }
+        return false;
+    }
+    if (normalized >= 0x8000) {
+        var cart << state["cart"];
+        mapper.cpuWrite(state["mapper"], normalized, byteValue, sizeOf(cart["prgRom"]));
         return true;
     }
     false;
@@ -151,5 +195,31 @@ pub fct takePpuNmi(state) {
 
 /// Returns the combined APU IRQ line.
 pub fct apuIrq(state) {
-    apu.irqLine(state["apu"]);
+    apu.irqLine(state["apu"]) or mapper.irqLine(state["mapper"]);
+} /// Side-effect-free CPU bus read used by the debugger and disassembler.
+pub fct peek(state, address) {
+    var normalized << address band 0xFFFF;
+    if (normalized <= 0x1FFF) {
+        return toInt(state["ram"][normalized band 0x07FF]);
+    }
+    if (normalized >= 0x6000 and normalized <= 0x7FFF) {
+        if (mapper.prgRamEnabled(state["mapper"])) {
+            return toInt(state["prgRam"][(normalized - 0x6000) % sizeOf(state["prgRam"])]);
+        }
+        return toInt(state["openBus"]);
+    }
+    if (normalized >= 0x8000) {
+        var cart << state["cart"];
+        var mapping << mapper.cpuRead(state["mapper"], normalized, sizeOf(cart["prgRom"]));
+        if (mapping.mapped) {
+            return toInt(cart["prgRom"][mapping.offset]);
+        }
+    }
+    toInt(state["openBus"]);
+}
+pub fct clearPrgRamDirty(state) {
+    state["prgRamDirty"] << false;
+}
+pub fct prgRamDirty(state) {
+    state["prgRamDirty"];
 }

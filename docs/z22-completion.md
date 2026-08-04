@@ -38,8 +38,8 @@ Ainda devem ser executados na máquina de desenvolvimento:
 - [ ] geração e execução do AppImage com `appimagetool`;
 - [ ] commit e push;
 - [ ] CI verde da branch e da tag;
-- [ ] tag `v0.4.0`;
-- [ ] Release `0.4.0`.
+- [x] tag `v0.4.0`;
+- [x] Release `0.4.0`.
 
 A ausência de `appimagetool` não invalida o código de AppDir/`.deb`, mas o AppImage deve ser produzido antes de declarar a distribuição Linux completa.
 

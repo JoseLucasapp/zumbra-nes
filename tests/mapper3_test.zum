@@ -1,0 +1,7 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var state << mapper.create(3u16, 0u8, 32768, 32768, false, "vertical");
+mapper.cpuWrite(state, 0x8000, 2, 32768);
+test.assertInt(mapper.ppuRead(state, 0x0010, 32768).offset, 16384 + 16, "CNROM CHR bank");
+test.assertInt(mapper.cpuRead(state, 0xFFFF, 32768).offset, 32767, "CNROM NROM PRG");
+show("mapper3_test: ok");

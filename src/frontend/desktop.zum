@@ -3,6 +3,10 @@ import "../achievements/engine.zum" as achievements;
 import "../core/audio_output.zum" as audioOutput;
 import "../core/cartridge.zum" as cartridge;
 import "../core/console.zum" as console;
+import "../core/mapper.zum" as mapper;
+import "../debugger/debugger.zum" as debug;
+import "../persistence/save_ram.zum" as saveRam;
+import "../persistence/save_state.zum" as saveState;
 import "../core/palette.zum" as palette;
 import "../persistence/store.zum" as store;
 import "input.zum" as input;
@@ -17,6 +21,7 @@ pub struct DesktopState {
     lastSecond: u64;
     fpsFrames: int;
     fps: int;
+    saveSlot: int;
     running: bool;
 }
 fct noResult() {
@@ -53,6 +58,22 @@ fct achievementText(db, game) {
     }
     text;
 }
+fct debuggerText(game) {
+    if (!game["ok"]) {
+        return "Nenhum jogo carregado.";
+    }
+    var text << debug.summary(game["debugger"]) + "\n\nPróximas instruções:\n";
+    var lines << debug.disassemble(game["debugger"], game["machine"]["cpu"].pc, 12);
+    var index << 0;
+    while (index < sizeOf(lines)) {
+        text << text + lines[index]["text"] + "\n";
+        index << index + 1;
+    }
+    text;
+}
+fct statePath(game, dataDirectory, slot) {
+    dataDirectory + "/states/" + game["info"].digest + "-slot" + toString(slot) + ".zst";
+}
 fct capture(context, prompt, current) {
     var next << native.captureKey(context, prompt);
     if (next >= 0) {
@@ -85,7 +106,7 @@ fct emptyGame(message) {
         "ok": false, "message": message, "path": ""
     };
 }
-fct openGame(path, db, timestamp) {
+fct openGame(path, db, timestamp, dataDirectory) {
     if (path == "" or!fileExists(path)) {
         return {
             "ok": false, "message": "ROM file not found", "path": path
@@ -100,21 +121,25 @@ fct openGame(path, db, timestamp) {
     }
     var cart << cartridge.fromBytes(data, path);
     var info << cart["info"];
-    if (info.header.mapper != 0u16) {
+    var compatibility << mapper.compatibility(info.header.mapper);
+    if (!compatibility["ok"]) {
         return {
-            "ok": false, "message": "Z22 playable frontend currently supports Mapper 0/NROM", "path": path
+            "ok": false, "message": compatibility["message"], "path": path
         };
     }
     var machine << console.create(cart);
+    saveRam.load(machine, dataDirectory);
+    var debuggerState << debug.create(machine);
     store.recordRom(db, info, timestamp);
     store.seedAchievements(db, info.digest, catalog.defaults());
     var sessionId << store.beginSession(db, info.digest, timestamp);
     {
-        "ok": true, "message": "ok", "path": path, "cart": cart, "machine": machine, "info": info, "sessionId": sessionId, "audioCursor": audioOutput.createCursor()
+        "ok": true, "message": "ok", "path": path, "cart": cart, "machine": machine, "info": info, "sessionId": sessionId, "audioCursor": audioOutput.createCursor(), "debugger": debuggerState, "dataDirectory": dataDirectory
     };
 }
-fct closeSession(db, game, state, timestamp) {
+fct closeSession(db, game, state, timestamp, dataDirectory) {
     if (game["ok"]) {
+        saveRam.flush(game["machine"], dataDirectory);
         var seconds << toInt(timestamp - state.sessionStarted);
         store.finishSession(db, game["sessionId"], game["info"].digest, timestamp, seconds, state.frames);
     }
@@ -124,8 +149,8 @@ fct chooseInitialRom(context, db, headlessMode) {
     if (path != "") {
         return path;
     }
-    if (headlessMode and fileExists("fixtures/synthetic/z22-playable-loop.nes")) {
-        return "fixtures/synthetic/z22-playable-loop.nes";
+    if (headlessMode and fileExists("fixtures/synthetic/z23-visible-frame.nes")) {
+        return "fixtures/synthetic/z23-visible-frame.nes";
     }
     if (!headlessMode) {
         return native.pickRom(context);
@@ -141,7 +166,7 @@ fct updateStatus(context, game, state, preferences) {
     if (state.paused) {
         mode << "paused";
     }
-    var status << game["path"] + " | " + mode;
+    var status << game["path"] + " | mapper " + toString(game["info"].header.mapper) + " | slot " + toString(state.saveSlot) + " | " + mode;
     if (preferences.showFps) {
         status << status + " | " + toString(state.fps) + " FPS";
     }
@@ -151,7 +176,7 @@ fct updateStatus(context, game, state, preferences) {
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
     var requestedHeadless << false;
-    var context << native.create("Zumbra NES 0.4.0", 3, true, false, requestedHeadless);
+    var context << native.create("Zumbra NES 0.5.0", 3, true, false, requestedHeadless);
     var headlessMode << native.headless(context);
     var dataDirectory << native.dataPath(context);
     var databasePath << dataDirectory + "/zumbra-nes.sqlite3";
@@ -169,15 +194,19 @@ pub fct run() {
     native.setVolume(context, preferences.volume);
     native.setMuted(context, preferences.muted);
     var now << native.unixSeconds();
+    var commandLineRom << native.initialRom();
     var initialPath << chooseInitialRom(context, db, headlessMode);
     var game << emptyGame("Nenhuma ROM carregada");
     if (initialPath != "") {
-        game << openGame(initialPath, db, now);
+        game << openGame(initialPath, db, now, dataDirectory);
         if (!game["ok"]) {
+            if (commandLineRom != "") {
+                panic(game["message"]);
+            }
             native.notify(context, "Zumbra NES", game["message"]);
         }
     }
-    var state << DesktopState(false, false, preferences.fullscreen, preferences.muted, 0u64, now, native.ticks(context), 0, 0, true);
+    var state << DesktopState(false, false, preferences.fullscreen, preferences.muted, 0u64, now, native.ticks(context), 0, 0, 0, true);
     updateStatus(context, game, state, preferences);
     while (state.running and!native.shouldClose(context)) {
         var frameStart << native.ticks(context);
@@ -185,9 +214,9 @@ pub fct run() {
         if (native.commandPressed(context, native.COMMAND_OPEN, 18)) {
             var selected << native.pickRom(context);
             if (selected != "") {
-                var candidate << openGame(selected, db, native.unixSeconds());
+                var candidate << openGame(selected, db, native.unixSeconds(), dataDirectory);
                 if (candidate["ok"]) {
-                    closeSession(db, game, state, native.unixSeconds());
+                    closeSession(db, game, state, native.unixSeconds(), dataDirectory);
                     game << candidate;
                     state.frames << 0u64;
                     state.sessionStarted << native.unixSeconds();
@@ -201,8 +230,8 @@ pub fct run() {
             state.paused <<!state.paused;
         }
         if (native.commandPressed(context, native.COMMAND_RESET, 21) and game["ok"]) {
-            closeSession(db, game, state, native.unixSeconds());
-            game << openGame(game["path"], db, native.unixSeconds());
+            closeSession(db, game, state, native.unixSeconds(), dataDirectory);
+            game << openGame(game["path"], db, native.unixSeconds(), dataDirectory);
             state.frames << 0u64;
             state.sessionStarted << native.unixSeconds();
         }
@@ -267,7 +296,7 @@ pub fct run() {
             }
         }
         if (native.commandPressed(context, native.COMMAND_CLOSE, 62) and game["ok"]) {
-            closeSession(db, game, state, native.unixSeconds());
+            closeSession(db, game, state, native.unixSeconds(), dataDirectory);
             game << emptyGame("Nenhuma ROM carregada");
             state.frames << 0u64;
             state.paused << true;
@@ -299,6 +328,62 @@ pub fct run() {
             preferences.vsync <<!preferences.vsync;
             native.setVsync(context, preferences.vsync);
             store.saveSettings(db, preferences);
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_1, 30)) {
+            state.saveSlot << 1;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_2, 31)) {
+            state.saveSlot << 2;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_3, 32)) {
+            state.saveSlot << 3;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_4, 33)) {
+            state.saveSlot << 4;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_5, 34)) {
+            state.saveSlot << 5;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_6, 35)) {
+            state.saveSlot << 6;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_7, 36)) {
+            state.saveSlot << 7;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_8, 37)) {
+            state.saveSlot << 8;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_9, 38)) {
+            state.saveSlot << 9;
+        }
+        if (native.commandPressed(context, native.COMMAND_SLOT_0, 39)) {
+            state.saveSlot << 0;
+        }
+        if (native.commandPressed(context, native.COMMAND_SAVE_STATE, 20) and game["ok"]) {
+            var path << statePath(game, dataDirectory, state.saveSlot);
+            saveState.save(path, game["machine"]);
+            store.recordSaveState(db, game["info"].digest, state.saveSlot, path, native.unixSeconds(), game["machine"]["core"].frames);
+            native.notify(context, "Save state", "Estado salvo no slot " + toString(state.saveSlot) + ".");
+        }
+        if (native.commandPressed(context, native.COMMAND_LOAD_STATE, 8) and game["ok"]) {
+            var path << statePath(game, dataDirectory, state.saveSlot);
+            var result << saveState.load(path, game["machine"]);
+            if (result.ok) {
+                game["audioCursor"] << audioOutput.createCursor();
+                state.frames << game["machine"]["core"].frames;
+                native.notify(context, "Save state", "Estado do slot " + toString(state.saveSlot) + " restaurado.");
+            } else {
+                native.notify(context, "Save state", result.message);
+            }
+        }
+        if (native.commandPressed(context, native.COMMAND_DEBUGGER, 9) and game["ok"]) {
+            state.paused << true;
+            native.showPanel(context, "Debugger Z23", debuggerText(game));
+        }
+        if (native.commandPressed(context, native.COMMAND_STEP_INSTRUCTION, 6) and game["ok"]) {
+            state.paused << true;
+            debug.stepInstruction(game["debugger"]);
+            native.showPanel(context, "Debugger Z23 — step", debuggerText(game));
         }
         if (native.keyDown(context, 41)) {
             state.running << false;
@@ -345,6 +430,9 @@ pub fct run() {
             state.fps << state.fpsFrames;
             state.fpsFrames << 0;
             state.lastSecond << ticks;
+            if (game["ok"]) {
+                saveRam.flush(game["machine"], dataDirectory);
+            }
             updateStatus(context, game, state, preferences);
         }
         if (headlessMode and state.frames >= 2u64) {
@@ -357,10 +445,10 @@ pub fct run() {
             }
         }
     }
-    closeSession(db, game, state, native.unixSeconds());
+    closeSession(db, game, state, native.unixSeconds(), dataDirectory);
     store.close(db);
     native.destroy(context);
-    show("Z22 desktop session complete");
+    show("Z23 desktop session complete");
     show(state.frames);
     true;
 }

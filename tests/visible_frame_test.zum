@@ -1,0 +1,18 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/testing/assert.zum" as test;
+var machine << console.create(cartridge.load("fixtures/synthetic/z23-visible-frame.nes"));
+console.runFrame(machine, 200000);
+var framebuffer << machine["bus"]["ppu"]["framebuffer"];
+var colored << 0;
+var index << 0;
+while (index < sizeOf(framebuffer)) {
+    if (toInt(framebuffer[index]) == 0x21) {
+        colored << colored + 1;
+    }
+    index << index + 1;
+}
+test.assertBool(colored > 20000, "visible fixture renders colored pattern");
+test.assertInt(toInt(framebuffer[0]), 0x21, "visible first pixel");
+test.assertString(console.frameDigest(machine), "0c918765c7ecb2bbf64c23c386b00cf8c97e0293ac4c6840ab9c550bd958bce9", "visible frame digest");
+show("visible_frame_test: ok");

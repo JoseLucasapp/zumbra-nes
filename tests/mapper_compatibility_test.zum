@@ -1,0 +1,9 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var supported << mapper.compatibility(227u16);
+test.assertBool(supported["ok"], "Mapper227 compatibility");
+test.assertString(supported["name"], "Mapper 227 multicart", "Mapper227 name");
+var rejected << mapper.compatibility(5u16);
+test.assertBool(!rejected["ok"], "Mapper5 rejected");
+test.assertString(rejected["message"], "ROM incompatível: mapper 5. Suportados: 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 227 (multicart)", "compatibility message");
+show("mapper_compatibility_test: ok");

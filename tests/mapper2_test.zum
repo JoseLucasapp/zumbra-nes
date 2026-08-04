@@ -1,0 +1,7 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var state << mapper.create(2u16, 0u8, 65536, 8192, false, "horizontal");
+mapper.cpuWrite(state, 0x8000, 1, 65536);
+test.assertInt(mapper.cpuRead(state, 0x8000, 65536).offset, 16384, "UxROM switched bank");
+test.assertInt(mapper.cpuRead(state, 0xC000, 65536).offset, 49152, "UxROM fixed last bank");
+show("mapper2_test: ok");

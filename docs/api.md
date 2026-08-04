@@ -474,6 +474,37 @@ Returns the combined APU IRQ line.
 |---|---|---|
 | `state` | parameter | `` |
 
+### peek
+
+```zumbra
+pub fct peek(state, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `address` | parameter | `` |
+
+### clearPrgRamDirty
+
+```zumbra
+pub fct clearPrgRamDirty(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### prgRamDirty
+
+```zumbra
+pub fct prgRamDirty(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/cartridge.zum`
 
 ### Cartridge
@@ -1381,20 +1412,40 @@ Result of translating a CPU or PPU address through a mapper.
 | `offset` | field | `int` |
 | `writable` | field | `bool` |
 
-### MapperDescriptor
+### MapperCore
 
 ```zumbra
-pub struct MapperDescriptor
+pub struct MapperCore
 ```
 
-Runtime mapper contract. Z19 supports only Mapper 0/NROM.
+Mutable state shared by the CPU and PPU sides of one cartridge mapper.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
 | `id` | field | `u16` |
+| `submapper` | field | `u8` |
 | `name` | field | `string` |
-| `prgBanks` | field | `int` |
-| `chrBanks` | field | `int` |
+| `mirroring` | field | `string` |
+| `prgBank` | field | `int` |
+| `chrBank` | field | `int` |
+| `shiftValue` | field | `int` |
+| `shiftCount` | field | `int` |
+| `control` | field | `int` |
+| `chrBank0` | field | `int` |
+| `chrBank1` | field | `int` |
+| `prgBankRegister` | field | `int` |
+| `bankSelect` | field | `int` |
+| `prgMode` | field | `int` |
+| `chrMode` | field | `int` |
+| `prgRamEnabled` | field | `bool` |
+| `prgRamWriteProtected` | field | `bool` |
+| `irqLatch` | field | `int` |
+| `irqCounter` | field | `int` |
+| `irqReload` | field | `bool` |
+| `irqEnabled` | field | `bool` |
+| `irqPending` | field | `bool` |
+| `latchAddress` | field | `int` |
+| `chrWritable` | field | `bool` |
 
 ### supports
 
@@ -1402,7 +1453,43 @@ Runtime mapper contract. Z19 supports only Mapper 0/NROM.
 pub fct supports(mapperId)
 ```
 
-Returns whether the mapper is implemented in the current emulator version.
+Returns whether the mapper is implemented by Z23.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `mapperId` | parameter | `` |
+
+### supportedIds
+
+```zumbra
+pub fct supportedIds()
+```
+
+### supportedText
+
+```zumbra
+pub fct supportedText()
+```
+
+Human-readable mapper compatibility list used by the desktop frontend.
+
+### name
+
+```zumbra
+pub fct name(mapperId)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `mapperId` | parameter | `` |
+
+### compatibility
+
+```zumbra
+pub fct compatibility(mapperId)
+```
+
+Structured compatibility result for frontend and CLI diagnostics.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -1411,73 +1498,173 @@ Returns whether the mapper is implemented in the current emulator version.
 ### create
 
 ```zumbra
-pub fct create(mapperId, prgBytes, chrBytes)
+pub fct create(mapperId, submapper, prgBytes, chrBytes, battery, initialMirroring)
 ```
 
-Creates the mapper descriptor or aborts for unsupported cartridges.
+Creates mutable mapper state from cartridge metadata.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
 | `mapperId` | parameter | `` |
+| `submapper` | parameter | `` |
 | `prgBytes` | parameter | `` |
 | `chrBytes` | parameter | `` |
+| `battery` | parameter | `` |
+| `initialMirroring` | parameter | `` |
+
+### descriptor
+
+```zumbra
+pub fct descriptor(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### mirroring
+
+```zumbra
+pub fct mirroring(state, fallback)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `fallback` | parameter | `` |
 
 ### cpuRead
 
 ```zumbra
-pub fct cpuRead(mapperId, address, prgBytes)
+pub fct cpuRead(state, address, prgBytes)
 ```
 
-Maps CPU reads in the PRG ROM window. Addresses are represented as int in Z19.
+Maps one CPU-visible PRG ROM address.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
-| `mapperId` | parameter | `` |
+| `state` | parameter | `` |
 | `address` | parameter | `` |
 | `prgBytes` | parameter | `` |
 
 ### cpuWrite
 
 ```zumbra
-pub fct cpuWrite(mapperId, address, prgBytes)
+pub fct cpuWrite(state, address, value, prgBytes)
 ```
 
-NROM PRG is read-only.
+Handles mapper register writes in the CPU $8000-$FFFF range.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
-| `mapperId` | parameter | `` |
+| `state` | parameter | `` |
 | `address` | parameter | `` |
+| `value` | parameter | `` |
 | `prgBytes` | parameter | `` |
 
 ### ppuRead
 
 ```zumbra
-pub fct ppuRead(mapperId, address, chrBytes)
+pub fct ppuRead(state, address, chrBytes)
 ```
 
-Maps PPU pattern-table reads and CHR RAM writes.
+Maps a PPU pattern-table read.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
-| `mapperId` | parameter | `` |
+| `state` | parameter | `` |
 | `address` | parameter | `` |
 | `chrBytes` | parameter | `` |
 
 ### ppuWrite
 
 ```zumbra
-pub fct ppuWrite(mapperId, address, chrBytes, chrIsRam)
+pub fct ppuWrite(state, address, chrBytes, chrIsRam)
 ```
 
-CHR is writable only when the cartridge uses CHR RAM.
+Maps a PPU pattern-table write, respecting CHR ROM/RAM and mapper protection.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
-| `mapperId` | parameter | `` |
+| `state` | parameter | `` |
 | `address` | parameter | `` |
 | `chrBytes` | parameter | `` |
 | `chrIsRam` | parameter | `` |
+
+### prgRamEnabled
+
+```zumbra
+pub fct prgRamEnabled(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### prgRamWritable
+
+```zumbra
+pub fct prgRamWritable(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### clockScanline
+
+```zumbra
+pub fct clockScanline(state)
+```
+
+Clocks one filtered MMC3 scanline event.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### irqLine
+
+```zumbra
+pub fct irqLine(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### clearIrq
+
+```zumbra
+pub fct clearIrq(state)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### snapshot
+
+```zumbra
+pub fct snapshot(state)
+```
+
+Portable mapper snapshot used by save states and debugger output.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+
+### restore
+
+```zumbra
+pub fct restore(state, value)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `value` | parameter | `` |
 
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/palette.zum`
 
@@ -1554,13 +1741,26 @@ CPU-visible and timing state for the Ricoh 2C02 PPU.
 | `oddFrame` | field | `bool` |
 | `spritesOnLine` | field | `int` |
 
+### createWithMapper
+
+```zumbra
+pub fct createWithMapper(cart, mapperState)
+```
+
+Creates a power-on PPU package with VRAM, palette, OAM and framebuffer.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `cart` | parameter | `` |
+| `mapperState` | parameter | `` |
+
 ### create
 
 ```zumbra
 pub fct create(cart)
 ```
 
-Creates a power-on PPU package with VRAM, palette, OAM and framebuffer.
+Creates a standalone PPU and owns a mapper state for isolated tests.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -1681,6 +1881,206 @@ Returns a stable digest of the 256x240 palette-index framebuffer.
 |---|---|---|
 | `state` | parameter | `` |
 
+## `/home/joselucasapp/projects/zumbra-nes/src/debugger/debugger.zum`
+
+### create
+
+```zumbra
+pub fct create(machine)
+```
+
+Creates a debugger attached to one live machine.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+
+### addPcBreakpoint
+
+```zumbra
+pub fct addPcBreakpoint(debugger, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `address` | parameter | `` |
+
+### addReadBreakpoint
+
+```zumbra
+pub fct addReadBreakpoint(debugger, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `address` | parameter | `` |
+
+### addWriteBreakpoint
+
+```zumbra
+pub fct addWriteBreakpoint(debugger, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `address` | parameter | `` |
+
+### clearBreakpoints
+
+```zumbra
+pub fct clearBreakpoints(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### pause
+
+```zumbra
+pub fct pause(debugger, reason)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `reason` | parameter | `` |
+
+### resume
+
+```zumbra
+pub fct resume(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### registers
+
+```zumbra
+pub fct registers(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### mapperState
+
+```zumbra
+pub fct mapperState(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### memory
+
+```zumbra
+pub fct memory(debugger, start, length)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `start` | parameter | `` |
+| `length` | parameter | `` |
+
+### stack
+
+```zumbra
+pub fct stack(debugger, length)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `length` | parameter | `` |
+
+### disassembleAt
+
+```zumbra
+pub fct disassembleAt(debugger, address)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `address` | parameter | `` |
+
+### disassemble
+
+```zumbra
+pub fct disassemble(debugger, address, instructionCount)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `address` | parameter | `` |
+| `instructionCount` | parameter | `` |
+
+### stepInstruction
+
+```zumbra
+pub fct stepInstruction(debugger)
+```
+
+Executes exactly one instruction while preserving paused debugger state.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### stepFrame
+
+```zumbra
+pub fct stepFrame(debugger, instructionLimit)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
+### run
+
+```zumbra
+pub fct run(debugger, instructionLimit)
+```
+
+Runs until a PC/access breakpoint, halt, or instruction budget is reached.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
+### trace
+
+```zumbra
+pub fct trace(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
+### summary
+
+```zumbra
+pub fct summary(debugger)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `debugger` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/frontend/desktop.zum`
 
 ### DesktopState
@@ -1700,6 +2100,7 @@ pub struct DesktopState
 | `lastSecond` | field | `u64` |
 | `fpsFrames` | field | `int` |
 | `fps` | field | `int` |
+| `saveSlot` | field | `int` |
 | `running` | field | `bool` |
 
 ### run
@@ -1933,6 +2334,90 @@ pub const COMMAND_FPS
 
 ```zumbra
 pub const COMMAND_VSYNC
+```
+
+### COMMAND_SAVE_STATE
+
+```zumbra
+pub const COMMAND_SAVE_STATE
+```
+
+### COMMAND_LOAD_STATE
+
+```zumbra
+pub const COMMAND_LOAD_STATE
+```
+
+### COMMAND_DEBUGGER
+
+```zumbra
+pub const COMMAND_DEBUGGER
+```
+
+### COMMAND_STEP_INSTRUCTION
+
+```zumbra
+pub const COMMAND_STEP_INSTRUCTION
+```
+
+### COMMAND_SLOT_0
+
+```zumbra
+pub const COMMAND_SLOT_0
+```
+
+### COMMAND_SLOT_1
+
+```zumbra
+pub const COMMAND_SLOT_1
+```
+
+### COMMAND_SLOT_2
+
+```zumbra
+pub const COMMAND_SLOT_2
+```
+
+### COMMAND_SLOT_3
+
+```zumbra
+pub const COMMAND_SLOT_3
+```
+
+### COMMAND_SLOT_4
+
+```zumbra
+pub const COMMAND_SLOT_4
+```
+
+### COMMAND_SLOT_5
+
+```zumbra
+pub const COMMAND_SLOT_5
+```
+
+### COMMAND_SLOT_6
+
+```zumbra
+pub const COMMAND_SLOT_6
+```
+
+### COMMAND_SLOT_7
+
+```zumbra
+pub const COMMAND_SLOT_7
+```
+
+### COMMAND_SLOT_8
+
+```zumbra
+pub const COMMAND_SLOT_8
+```
+
+### COMMAND_SLOT_9
+
+```zumbra
+pub const COMMAND_SLOT_9
 ```
 
 ### create
@@ -2246,6 +2731,7 @@ Deterministic Z22 report covering video, audio, persistence and achievements.
 |---|---|---|
 | `version` | field | `string` |
 | `mapper` | field | `u16` |
+| `mapperName` | field | `string` |
 | `frames` | field | `u64` |
 | `rgbaBytes` | field | `int` |
 | `frameDigest` | field | `string` |
@@ -2254,6 +2740,8 @@ Deterministic Z22 report covering video, audio, persistence and achievements.
 | `schemaVersion` | field | `int` |
 | `achievements` | field | `int` |
 | `recentRoms` | field | `int` |
+| `supportedMappers` | field | `int` |
+| `saveStateSchema` | field | `int` |
 
 ### runFile
 
@@ -2356,6 +2844,138 @@ Writes metadata only; ROM contents are never persisted by this function.
 | `path` | parameter | `` |
 | `cart` | parameter | `` |
 
+## `/home/joselucasapp/projects/zumbra-nes/src/persistence/save_ram.zum`
+
+### pathFor
+
+```zumbra
+pub fct pathFor(directory, digest)
+```
+
+Returns the battery-backed SRAM path for one ROM digest.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `directory` | parameter | `` |
+| `digest` | parameter | `` |
+
+### load
+
+```zumbra
+pub fct load(machine, directory)
+```
+
+Loads battery-backed PRG RAM into a live console. Missing saves are valid.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `directory` | parameter | `` |
+
+### flush
+
+```zumbra
+pub fct flush(machine, directory)
+```
+
+Flushes dirty battery-backed PRG RAM to disk.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `directory` | parameter | `` |
+
+### forceFlush
+
+```zumbra
+pub fct forceFlush(machine, directory)
+```
+
+Writes battery-backed PRG RAM even when the dirty flag is clear.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `directory` | parameter | `` |
+
+## `/home/joselucasapp/projects/zumbra-nes/src/persistence/save_state.zum`
+
+### SCHEMA_VERSION
+
+```zumbra
+pub const SCHEMA_VERSION
+```
+
+### FORMAT_VERSION
+
+```zumbra
+pub const FORMAT_VERSION
+```
+
+### LoadResult
+
+```zumbra
+pub struct LoadResult
+```
+
+Non-fatal save-state load result.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `ok` | field | `bool` |
+| `message` | field | `string` |
+
+### snapshot
+
+```zumbra
+pub fct snapshot(machine)
+```
+
+Creates a portable snapshot without embedding immutable PRG ROM bytes.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+
+### restore
+
+```zumbra
+pub fct restore(machine, value)
+```
+
+Restores a validated snapshot into an existing console object graph.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `value` | parameter | `` |
+
+### save
+
+```zumbra
+pub fct save(path, machine)
+```
+
+Serializes a portable save state atomically.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `path` | parameter | `` |
+| `machine` | parameter | `` |
+
+### load
+
+```zumbra
+pub fct load(path, machine)
+```
+
+Loads and validates a save state without aborting on normal incompatibility.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `path` | parameter | `` |
+| `machine` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/persistence/store.zum`
 
 ### open
@@ -2364,7 +2984,7 @@ Writes metadata only; ROM contents are never persisted by this function.
 pub fct open(path)
 ```
 
-Opens the local store and applies all Z22 migrations.
+Opens the local store and applies all Z22/Z23 migrations.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -2548,6 +3168,34 @@ pub fct updateAchievement(db, digest, id, progress, unlocked, unlockedAt)
 | `progress` | parameter | `` |
 | `unlocked` | parameter | `` |
 | `unlockedAt` | parameter | `` |
+
+### recordSaveState
+
+```zumbra
+pub fct recordSaveState(db, digest, slot, path, updatedAt, frame)
+```
+
+Records one file-backed save-state slot in the local library.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `slot` | parameter | `` |
+| `path` | parameter | `` |
+| `updatedAt` | parameter | `` |
+| `frame` | parameter | `` |
+
+### saveStateRows
+
+```zumbra
+pub fct saveStateRows(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
 
 ### snapshot
 

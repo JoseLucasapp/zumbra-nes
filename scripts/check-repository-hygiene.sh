@@ -4,9 +4,9 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-for forbidden in .env '*.key' '*.pem' '*.p12' '*.pfx' '*.sqlite' '*.sqlite3' '*.db'; do
+for forbidden in .env '*.key' '*.pem' '*.p12' '*.pfx' '*.sqlite' '*.sqlite3' '*.db' '*.sav' '*.zst'; do
     if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -name "$forbidden" -print | grep -q .; then
-        echo "Forbidden secret or generated database found: $forbidden" >&2
+        echo "Forbidden secret or generated persistence file found: $forbidden" >&2
         exit 1
     fi
 done
@@ -20,14 +20,14 @@ fi
 
 while IFS= read -r rom; do
     size="$(stat -c '%s' "$rom")"
-    if (( size > 131072 )); then
+    if (( size > 1048576 )); then
         echo "Synthetic ROM is unexpectedly large: $rom ($size bytes)" >&2
         exit 1
     fi
 done < <(find fixtures/synthetic -type f -iname '*.nes' -print)
 
-grep -q '^version = "0.4.0"$' zumbra.toml
-grep -q '^version = "0.4.0"$' zumbra-app.toml
+grep -q '^version = "0.5.0"$' zumbra.toml
+grep -q '^version = "0.5.0"$' zumbra-app.toml
 if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | grep -q .; then
     echo "Project-local C/C headers are forbidden; use the official Zumbra runtime." >&2
     exit 1
@@ -37,8 +37,15 @@ if grep -R --include='*.zum' -n 'extern "C"' src tests >/dev/null 2>&1; then
     exit 1
 fi
 test -f assets/zumbra-nes.png
-test -x scripts/test-z22-playable.sh
-test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 55
+test -f fixtures/synthetic/mapper227-multicart.nes
+test -f fixtures/synthetic/z23-visible-frame.nes
+test -f src/core/mapper.zum
+test -f src/persistence/save_ram.zum
+test -f src/persistence/save_state.zum
+test -f src/debugger/debugger.zum
+test -x scripts/test-z23-compatibility.sh
+test -x scripts/package-z23-linux.sh
+test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 74
 
 if [[ -d .git ]]; then
     tracked_generated="$(git ls-files 'build/**' 'dist/**' '.zumbra/**')"

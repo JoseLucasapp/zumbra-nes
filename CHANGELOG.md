@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0 — Z23 compatibility, persistence and debugger
+
+- arquitetura mutável e compartilhada de mappers para CPU e PPU;
+- Mapper 1/MMC1, Mapper 2/UxROM, Mapper 3/CNROM, Mapper 4/MMC3, Mapper 7/AxROM e Mapper 227;
+- bank switching PRG/CHR, mirroring, PRG RAM e IRQ de MMC3;
+- fórmulas de latch e proteção de CHR RAM do Mapper 227;
+- SRAM de bateria persistida por SHA-256 da ROM;
+- dez slots de save state com validação de schema, versão, ROM e mapper;
+- snapshots de CPU, PPU, APU, bus, RAM, OAM, controles, DMA, clock e mapper;
+- debugger com step, breakpoints, memória, stack, disassembly, mapper e trace;
+- migração SQLite 4 e metadados de save states;
+- fixture visual Mapper 0, fixture Mapper 227 e fixture de mapper incompatível;
+- diagnóstico estruturado de compatibilidade e falha explícita para mappers não suportados;
+- dezenove testes novos, totalizando 74;
+- gate Z23 com VM/C11, desktop headless, Mapper 227, incompatibilidade, AppDir e `.deb`.
+
 ## 0.4.0 — Z22 playable emulator
 
 - frontend SDL3 jogável para Mapper 0/NROM;

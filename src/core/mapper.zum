@@ -5,57 +5,529 @@ pub struct Mapping {
     writable: bool;
 }
 
-/// Runtime mapper contract. Z19 supports only Mapper 0/NROM.
-pub struct MapperDescriptor {
+/// Mutable state shared by the CPU and PPU sides of one cartridge mapper.
+pub struct MapperCore {
     id: u16;
+    submapper: u8;
     name: string;
-    prgBanks: int;
-    chrBanks: int;
+    mirroring: string;
+    prgBank: int;
+    chrBank: int;
+    shiftValue: int;
+    shiftCount: int;
+    control: int;
+    chrBank0: int;
+    chrBank1: int;
+    prgBankRegister: int;
+    bankSelect: int;
+    prgMode: int;
+    chrMode: int;
+    prgRamEnabled: bool;
+    prgRamWriteProtected: bool;
+    irqLatch: int;
+    irqCounter: int;
+    irqReload: bool;
+    irqEnabled: bool;
+    irqPending: bool;
+    latchAddress: int;
+    chrWritable: bool;
 }
-
-/// Returns whether the mapper is implemented in the current emulator version.
-pub fct supports(mapperId) {
-    mapperId == 0u16;
-}
-
-/// Creates the mapper descriptor or aborts for unsupported cartridges.
-pub fct create(mapperId, prgBytes, chrBytes) {
-    if (!supports(mapperId)) {
-        panic("unsupported mapper in Z19; only Mapper 0/NROM is available");
+fct bankCount(bytesValue, bankBytes) {
+    var count << bytesValue / bankBytes;
+    if (count < 1) {
+        count << 1;
     }
-    MapperDescriptor(mapperId, "NROM", prgBytes / 16384, chrBytes / 8192);
+    count;
+}
+fct wrapBank(bank, count) {
+    if (count <= 0) {
+        return 0;
+    }
+    var value << bank % count;
+    if (value < 0) {
+        value << value + count;
+    }
+    value;
+}
+fct mapBank(address, windowStart, bank, bankBytes, totalBytes, writable) {
+    var count << bankCount(totalBytes, bankBytes);
+    var selected << wrapBank(bank, count);
+    Mapping(true,(selected * bankBytes) +(address - windowStart), writable);
 }
 
-/// Maps CPU reads in the PRG ROM window. Addresses are represented as int in Z19.
-pub fct cpuRead(mapperId, address, prgBytes) {
-    if (!supports(mapperId) or address < 0x8000) {
+/// Returns whether the mapper is implemented by Z23.
+pub fct supports(mapperId) {
+    mapperId == 0u16 or mapperId == 1u16 or mapperId == 2u16 or mapperId == 3u16 or mapperId == 4u16 or mapperId == 7u16 or mapperId == 227u16;
+} /// Stable list of mapper IDs accepted by the current compatibility layer.
+pub fct supportedIds() {
+    [0, 1, 2, 3, 4, 7, 227];
+}
+
+/// Human-readable mapper compatibility list used by the desktop frontend.
+pub fct supportedText() {
+    "0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 227 (multicart)";
+}
+pub fct name(mapperId) {
+    match (toInt(mapperId)) {
+        case 0 {
+            "NROM";
+        }
+        case 1 {
+            "MMC1/SxROM";
+        }
+        case 2 {
+            "UxROM";
+        }
+        case 3 {
+            "CNROM";
+        }
+        case 4 {
+            "MMC3/TxROM";
+        }
+        case 7 {
+            "AxROM";
+        }
+        case 227 {
+            "Mapper 227 multicart";
+        } else {
+            "Unsupported";
+        }
+    };
+}
+
+/// Structured compatibility result for frontend and CLI diagnostics.
+pub fct compatibility(mapperId) {
+    if (supports(mapperId)) {
+        return {
+            "ok": true, "mapper": mapperId, "name": name(mapperId), "message": "supported"
+        };
+    }
+    {
+        "ok": false, "mapper": mapperId, "name": "Unsupported", "message": "ROM incompatível: mapper " + toString(mapperId) + ". Suportados: " + supportedText()
+    };
+}
+
+/// Creates mutable mapper state from cartridge metadata.
+pub fct create(mapperId, submapper, prgBytes, chrBytes, battery, initialMirroring) {
+    if (!supports(mapperId)) {
+        panic("unsupported mapper: " + toString(mapperId));
+    }
+    var mirror << initialMirroring;
+    var control << 0;
+    var ramEnabled << true;
+    var chrWritable << chrBytes <= 8192;
+    if (mapperId == 1u16) {
+        control << 0x0C;
+        mirror << "single-screen-lower";
+    }
+    if (mapperId == 4u16) {
+        ramEnabled << true;
+    }
+    if (mapperId == 7u16) {
+        mirror << "single-screen-lower";
+    }
+    if (mapperId == 227u16) {
+        mirror << "vertical";
+        chrWritable << true;
+    }
+    {
+        "core": MapperCore(mapperId, submapper, name(mapperId), mirror, 0, 0, 0, 0, control, 0, 0, 0, 0, 0, 0, ramEnabled, false, 0, 0, false, false, false, 0, chrWritable), "registers": bytes(8), "prgBytes": prgBytes, "chrBytes": chrBytes, "battery": battery
+    };
+}
+pub fct descriptor(state) {
+    var core << state["core"];
+    {
+        "id": core.id, "submapper": core.submapper, "name": core.name, "mirroring": core.mirroring, "prgBanks16": bankCount(state["prgBytes"], 16384), "chrBanks8": bankCount(state["chrBytes"], 8192)
+    };
+}
+pub fct mirroring(state, fallback) {
+    var value << state["core"].mirroring;
+    if (value == "header") {
+        return fallback;
+    }
+    value;
+}
+fct nromCpuRead(address, prgBytes) {
+    if (address < 0x8000) {
         return Mapping(false,-1, false);
     }
-    if (prgBytes == 16384) {
-        return Mapping(true, address band 0x3FFF, false);
+    if (prgBytes <= 16384) {
+        return Mapping(true,(address - 0x8000) band 0x3FFF, false);
     }
-    if (prgBytes == 32768) {
-        return Mapping(true, address band 0x7FFF, false);
+    Mapping(true,(address - 0x8000) band 0x7FFF, false);
+}
+fct mmc1CpuRead(state, address, prgBytes) {
+    var core << state["core"];
+    var mode <<(core.control shr 2) band 0x03;
+    var banks16 << bankCount(prgBytes, 16384);
+    if (mode == 0 or mode == 1) {
+        var bank32 <<(core.prgBankRegister band 0x0E) shr 1;
+        return mapBank(address, 0x8000, bank32, 32768, prgBytes, false);
+    }
+    if (mode == 2) {
+        if (address < 0xC000) {
+            return mapBank(address, 0x8000, 0, 16384, prgBytes, false);
+        }
+        return mapBank(address, 0xC000, core.prgBankRegister, 16384, prgBytes, false);
+    }
+    if (address < 0xC000) {
+        return mapBank(address, 0x8000, core.prgBankRegister, 16384, prgBytes, false);
+    }
+    mapBank(address, 0xC000, banks16 - 1, 16384, prgBytes, false);
+}
+fct uxromCpuRead(state, address, prgBytes) {
+    var banks16 << bankCount(prgBytes, 16384);
+    if (address < 0xC000) {
+        return mapBank(address, 0x8000, state["core"].prgBank, 16384, prgBytes, false);
+    }
+    mapBank(address, 0xC000, banks16 - 1, 16384, prgBytes, false);
+}
+fct mmc3CpuRead(state, address, prgBytes) {
+    var core << state["core"];
+    var banks8 << bankCount(prgBytes, 8192);
+    var slot <<(address - 0x8000) / 0x2000;
+    var bank << banks8 - 1;
+    if (slot == 0) {
+        if (core.prgMode == 0) {
+            bank << toInt(state["registers"][6]);
+        } else {
+            bank << banks8 - 2;
+        }
+    } else {
+        if (slot == 1) {
+            bank << toInt(state["registers"][7]);
+        } else {
+            if (slot == 2) {
+                if (core.prgMode == 0) {
+                    bank << banks8 - 2;
+                } else {
+                    bank << toInt(state["registers"][6]);
+                }
+            }
+        }
+    }
+    mapBank(address, 0x8000 +(slot * 0x2000), bank, 8192, prgBytes, false);
+}
+fct mapper227Banks(state) {
+    var latch << state["core"].latchAddress;
+    var s << latch band 1;
+    var p <<((latch shr 2) band 0x1F) +((latch band 0x100) shr 3);
+    var l <<(latch shr 9) band 1;
+    var low << p;
+    var high << p;
+    if ((latch band 0x80) != 0) {
+        if (s != 0) {
+            low <<(p shr 1) * 2;
+            high << low + 1;
+        }
+    } else {
+        if (s != 0) {
+            low << p band 0x3E;
+        }
+        if (l != 0) {
+            high << p bor 7;
+        } else {
+            high << p band 0x38;
+        }
+    }
+    {
+        "low": low, "high": high
+    };
+}
+
+/// Maps one CPU-visible PRG ROM address.
+pub fct cpuRead(state, address, prgBytes) {
+    if (address < 0x8000) {
+        return Mapping(false,-1, false);
+    }
+    var mapperId << state["core"].id;
+    if (mapperId == 0u16 or mapperId == 3u16) {
+        return nromCpuRead(address, prgBytes);
+    }
+    if (mapperId == 1u16) {
+        return mmc1CpuRead(state, address, prgBytes);
+    }
+    if (mapperId == 2u16) {
+        return uxromCpuRead(state, address, prgBytes);
+    }
+    if (mapperId == 4u16) {
+        return mmc3CpuRead(state, address, prgBytes);
+    }
+    if (mapperId == 7u16) {
+        return mapBank(address, 0x8000, state["core"].prgBank, 32768, prgBytes, false);
+    }
+    if (mapperId == 227u16) {
+        var banks << mapper227Banks(state);
+        if (address < 0xC000) {
+            return mapBank(address, 0x8000, banks["low"], 16384, prgBytes, false);
+        }
+        return mapBank(address, 0xC000, banks["high"], 16384, prgBytes, false);
     }
     Mapping(false,-1, false);
 }
-
-/// NROM PRG is read-only.
-pub fct cpuWrite(mapperId, address, prgBytes) {
-    var mapped << cpuRead(mapperId, address, prgBytes);
-    Mapping(mapped.mapped, mapped.offset, false);
+fct updateMmc1Mirror(core) {
+    match (core.control band 0x03) {
+        case 0 {
+            core.mirroring << "single-screen-lower";
+        }
+        case 1 {
+            core.mirroring << "single-screen-upper";
+        }
+        case 2 {
+            core.mirroring << "vertical";
+        } else {
+            core.mirroring << "horizontal";
+        }
+    };
+}
+fct writeMmc1(state, address, value) {
+    var core << state["core"];
+    if ((value band 0x80) != 0) {
+        core.shiftValue << 0;
+        core.shiftCount << 0;
+        core.control << core.control bor 0x0C;
+        updateMmc1Mirror(core);
+        return true;
+    }
+    core.shiftValue << core.shiftValue bor((value band 1) shl core.shiftCount);
+    core.shiftCount << core.shiftCount + 1;
+    if (core.shiftCount < 5) {
+        return true;
+    }
+    var data << core.shiftValue band 0x1F;
+    if (address < 0xA000) {
+        core.control << data;
+        updateMmc1Mirror(core);
+    } else {
+        if (address < 0xC000) {
+            core.chrBank0 << data;
+        } else {
+            if (address < 0xE000) {
+                core.chrBank1 << data;
+            } else {
+                core.prgBankRegister << data band 0x0F;
+                core.prgRamEnabled <<(data band 0x10) == 0;
+            }
+        }
+    }
+    core.shiftValue << 0;
+    core.shiftCount << 0;
+    true;
+}
+fct writeMmc3(state, address, value) {
+    var core << state["core"];
+    var even <<(address band 1) == 0;
+    if (address < 0xA000) {
+        if (even) {
+            core.bankSelect << value band 0x07;
+            core.prgMode <<(value shr 6) band 1;
+            core.chrMode <<(value shr 7) band 1;
+        } else {
+            state["registers"][core.bankSelect] << u8(value band 0xFF);
+        }
+        return true;
+    }
+    if (address < 0xC000) {
+        if (even) {
+            if ((value band 1) == 0) {
+                core.mirroring << "vertical";
+            } else {
+                core.mirroring << "horizontal";
+            }
+        } else {
+            core.prgRamEnabled <<(value band 0x80) != 0;
+            core.prgRamWriteProtected <<(value band 0x40) != 0;
+        }
+        return true;
+    }
+    if (address < 0xE000) {
+        if (even) {
+            core.irqLatch << value band 0xFF;
+        } else {
+            core.irqCounter << 0;
+            core.irqReload << true;
+        }
+        return true;
+    }
+    if (even) {
+        core.irqEnabled << false;
+        core.irqPending << false;
+    } else {
+        core.irqEnabled << true;
+    }
+    true;
 }
 
-/// Maps PPU pattern-table reads and CHR RAM writes.
-pub fct ppuRead(mapperId, address, chrBytes) {
-    if (!supports(mapperId) or address < 0 or address >= 0x2000 or chrBytes <= 0) {
+/// Handles mapper register writes in the CPU $8000-$FFFF range.
+pub fct cpuWrite(state, address, value, prgBytes) {
+    if (address < 0x8000) {
         return Mapping(false,-1, false);
     }
-    Mapping(true, address, false);
+    var byteValue << toInt(value) band 0xFF;
+    var core << state["core"];
+    if (core.id == 1u16) {
+        writeMmc1(state, address, byteValue);
+    } else {
+        if (core.id == 2u16) {
+            core.prgBank << byteValue;
+        } else {
+            if (core.id == 3u16) {
+                core.chrBank << byteValue;
+            } else {
+                if (core.id == 4u16) {
+                    writeMmc3(state, address, byteValue);
+                } else {
+                    if (core.id == 7u16) {
+                        core.prgBank << byteValue band 0x07;
+                        if ((byteValue band 0x10) == 0) {
+                            core.mirroring << "single-screen-lower";
+                        } else {
+                            core.mirroring << "single-screen-upper";
+                        }
+                    } else {
+                        if (core.id == 227u16) {
+                            core.latchAddress << address band 0xFFFF;
+                            if ((address band 0x02) == 0) {
+                                core.mirroring << "vertical";
+                            } else {
+                                core.mirroring << "horizontal";
+                            }
+                            core.chrWritable << state["battery"] or(address band 0x80) == 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Mapping(false,-1, false);
+}
+fct mmc1PpuRead(state, address, chrBytes) {
+    var core << state["core"];
+    if ((core.control band 0x10) == 0) {
+        var bank8 <<(core.chrBank0 band 0x1E) shr 1;
+        return mapBank(address, 0, bank8, 8192, chrBytes, false);
+    }
+    if (address < 0x1000) {
+        return mapBank(address, 0, core.chrBank0, 4096, chrBytes, false);
+    }
+    mapBank(address, 0x1000, core.chrBank1, 4096, chrBytes, false);
+}
+fct mmc3PpuRead(state, address, chrBytes) {
+    var core << state["core"];
+    var slot << address / 0x0400;
+    var bank << 0;
+    if (core.chrMode == 0) {
+        if (slot < 2) {
+            bank <<(toInt(state["registers"][0]) band 0xFE) + slot;
+        } else {
+            if (slot < 4) {
+                bank <<(toInt(state["registers"][1]) band 0xFE) +(slot - 2);
+            } else {
+                bank << toInt(state["registers"][slot - 2]);
+            }
+        }
+    } else {
+        if (slot < 4) {
+            bank << toInt(state["registers"][slot + 2]);
+        } else {
+            if (slot < 6) {
+                bank <<(toInt(state["registers"][0]) band 0xFE) +(slot - 4);
+            } else {
+                bank <<(toInt(state["registers"][1]) band 0xFE) +(slot - 6);
+            }
+        }
+    }
+    mapBank(address, slot * 0x0400, bank, 1024, chrBytes, false);
 }
 
-/// CHR is writable only when the cartridge uses CHR RAM.
-pub fct ppuWrite(mapperId, address, chrBytes, chrIsRam) {
-    var mapped << ppuRead(mapperId, address, chrBytes);
-    Mapping(mapped.mapped, mapped.offset, mapped.mapped and chrIsRam);
+/// Maps a PPU pattern-table read.
+pub fct ppuRead(state, address, chrBytes) {
+    if (address < 0 or address >= 0x2000 or chrBytes <= 0) {
+        return Mapping(false,-1, false);
+    }
+    var core << state["core"];
+    if (core.id == 1u16) {
+        return mmc1PpuRead(state, address, chrBytes);
+    }
+    if (core.id == 3u16) {
+        return mapBank(address, 0, core.chrBank, 8192, chrBytes, false);
+    }
+    if (core.id == 4u16) {
+        return mmc3PpuRead(state, address, chrBytes);
+    }
+    Mapping(true, address % chrBytes, false);
+}
+
+/// Maps a PPU pattern-table write, respecting CHR ROM/RAM and mapper protection.
+pub fct ppuWrite(state, address, chrBytes, chrIsRam) {
+    var mapped << ppuRead(state, address, chrBytes);
+    var writable << mapped.mapped and chrIsRam;
+    if (state["core"].id == 227u16) {
+        writable << writable and state["core"].chrWritable;
+    }
+    Mapping(mapped.mapped, mapped.offset, writable);
+}
+pub fct prgRamEnabled(state) {
+    state["core"].prgRamEnabled;
+}
+pub fct prgRamWritable(state) {
+    state["core"].prgRamEnabled and!state["core"].prgRamWriteProtected;
+}
+
+/// Clocks one filtered MMC3 scanline event.
+pub fct clockScanline(state) {
+    var core << state["core"];
+    if (core.id != 4u16) {
+        return false;
+    }
+    if (core.irqCounter == 0 or core.irqReload) {
+        core.irqCounter << core.irqLatch;
+        core.irqReload << false;
+    } else {
+        core.irqCounter << core.irqCounter - 1;
+    }
+    if (core.irqCounter == 0 and core.irqEnabled) {
+        core.irqPending << true;
+    }
+    core.irqPending;
+}
+pub fct irqLine(state) {
+    state["core"].irqPending;
+}
+pub fct clearIrq(state) {
+    state["core"].irqPending << false;
+}
+
+/// Portable mapper snapshot used by save states and debugger output.
+pub fct snapshot(state) {
+    var core << state["core"];
+    {
+        "id": core.id, "submapper": core.submapper, "name": core.name, "mirroring": core.mirroring, "prgBank": core.prgBank, "chrBank": core.chrBank, "shiftValue": core.shiftValue, "shiftCount": core.shiftCount, "control": core.control, "chrBank0": core.chrBank0, "chrBank1": core.chrBank1, "prgBankRegister": core.prgBankRegister, "bankSelect": core.bankSelect, "prgMode": core.prgMode, "chrMode": core.chrMode, "prgRamEnabled": core.prgRamEnabled, "prgRamWriteProtected": core.prgRamWriteProtected, "irqLatch": core.irqLatch, "irqCounter": core.irqCounter, "irqReload": core.irqReload, "irqEnabled": core.irqEnabled, "irqPending": core.irqPending, "latchAddress": core.latchAddress, "chrWritable": core.chrWritable, "registers": state["registers"]
+    };
+}
+pub fct restore(state, value) {
+    var core << state["core"];
+    core.mirroring << value["mirroring"];
+    core.prgBank << value["prgBank"];
+    core.chrBank << value["chrBank"];
+    core.shiftValue << value["shiftValue"];
+    core.shiftCount << value["shiftCount"];
+    core.control << value["control"];
+    core.chrBank0 << value["chrBank0"];
+    core.chrBank1 << value["chrBank1"];
+    core.prgBankRegister << value["prgBankRegister"];
+    core.bankSelect << value["bankSelect"];
+    core.prgMode << value["prgMode"];
+    core.chrMode << value["chrMode"];
+    core.prgRamEnabled << value["prgRamEnabled"];
+    core.prgRamWriteProtected << value["prgRamWriteProtected"];
+    core.irqLatch << value["irqLatch"];
+    core.irqCounter << value["irqCounter"];
+    core.irqReload << value["irqReload"];
+    core.irqEnabled << value["irqEnabled"];
+    core.irqPending << value["irqPending"];
+    core.latchAddress << value["latchAddress"];
+    core.chrWritable << value["chrWritable"];
+    state["registers"] << value["registers"];
+    true;
 }

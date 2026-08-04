@@ -1,97 +1,143 @@
-# Validação Z22
+# Validação Z23
+
+## Baseline
+
+```text
+Zumbra: 0.14.3
+zumbra-nes: 0.5.0
+Linux: amd64
+```
 
 ## Gate completo
 
 ```bash
 cd ~/projects/zumbra-nes
 
-unset Z22_SKIP_NATIVE Z22_SKIP_PACKAGES ZUMBRA_BIN
+unset Z23_SKIP_NATIVE Z23_SKIP_PACKAGES ZUMBRA_BIN
 export ZUMBRA_BIN=/usr/local/bin/zumbra
 
 EXPECTED_ZUMBRA_VERSION=0.14.3 \
-  scripts/test-z22-playable.sh
+  scripts/test-z23-compatibility.sh
 ```
 
-Resultado esperado:
+Resultado obrigatório:
 
 ```text
+project test: 74 test file(s) executed
 Zumbra NES repository hygiene checks passed.
-Z22 playable emulator gate passed.
+Z23 compatibility, persistence and debugger gate passed.
 ```
 
-
-## Código somente Zumbra
-
-```bash
-find . -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print
-grep -R --include='*.zum' -n 'extern "C"' src tests
-```
-
-Os dois comandos devem ficar sem saída. C gerado dentro de `build/` é detalhe interno do backend C11 e não faz parte do código-fonte da aplicação.
-
-## Paridade VM/C11
+## Smoke VM/native
 
 ```bash
+cat build/vm-smoke.txt
+cat build/native-smoke.txt
 diff -u build/vm-smoke.txt build/native-smoke.txt
 ```
 
-O comando não deve imprimir diferenças.
+O `diff` deve ficar vazio.
 
-## Smoke desktop real
-
-Instale os requisitos de runtime disponíveis na distribuição:
+## Desktop headless
 
 ```bash
-sudo apt install libsqlite3-0 libsdl3-0 zenity
+ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes
+
+ZUMBRA_DESKTOP_HEADLESS=1 \
+  ./build/zumbra-nes fixtures/synthetic/mapper227-multicart.nes
 ```
 
-Execute com uma ROM própria Mapper 0/NROM:
+Ambos devem terminar com:
+
+```text
+Z23 desktop session complete
+2
+```
+
+Mapper incompatível:
 
 ```bash
-./build/zumbra-nes /caminho/rom-propria.nes
+ZUMBRA_DESKTOP_HEADLESS=1 \
+  ./build/zumbra-nes fixtures/synthetic/unsupported-mapper5.nes
+
+echo $?
 ```
 
-Validar manualmente:
+O processo deve falhar e informar:
 
-- janela, escala 1×–4×, redimensionamento e fullscreen;
-- vídeo sem distorção e com letterboxing;
-- áudio contínuo, volume e mute;
-- teclado, dois gamepads e hot-plug;
-- remapeamento dos dois jogadores;
-- pause/reset/frame advance/fechar ROM;
-- VSync, modo ilimitado e FPS;
-- abertura por seletor e ROM recente;
-- banco em `~/.local/share/zumbra-nes/zumbra-nes.sqlite3`;
-- sessões, exportação/importação e notificações de conquista.
+```text
+ROM incompatível: mapper 5
+```
 
-## Pacotes
+## Validação visual
 
 ```bash
-scripts/package-z22-linux.sh
+./build/zumbra-nes fixtures/synthetic/z23-visible-frame.nes
 ```
 
-Verifique:
+Confirmar:
+
+- janela aberta;
+- padrão visual estável;
+- ausência de panic;
+- pausa, reset e frame advance;
+- seleção de slots `0`–`9`;
+- `Q` salva e `E` restaura;
+- `F` abre o debugger e `C` executa uma instrução.
+
+## ROM Mapper 227 do usuário
+
+A implementação é testada com uma fixture sintética Mapper 227 de 512 KiB. A ROM comercial `1200-in-1.nes` não faz parte do repositório nem da suíte automatizada. Na máquina do usuário:
 
 ```bash
-ZUMBRA_DESKTOP_HEADLESS=1 dist/zumbra-nes-0.4.0-linux-amd64.AppDir/AppRun
-
-dpkg-deb --info dist/zumbra-nes_0.4.0_amd64.deb
-dpkg-deb --contents dist/zumbra-nes_0.4.0_amd64.deb
+./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
 ```
 
-Instalação real do `.deb`:
+Validar menu, seleção de bancos, mirroring e estabilidade. Falhas específicas podem indicar variante de placa, dump incorreto ou dependência de opcode não oficial.
+
+## SRAM
+
+Para uma ROM com battery flag:
 
 ```bash
-sudo apt install ./dist/zumbra-nes_0.4.0_amd64.deb
-ZUMBRA_DESKTOP_HEADLESS=1 zumbra-nes
-sudo apt remove zumbra-nes
+find ~/.local/share/zumbra-nes/saves -type f -name '*.sav' -ls
 ```
 
-## AppImage
+O nome deve usar o SHA-256 da ROM. Reabrir o jogo deve restaurar a PRG RAM.
 
-Instale ou disponibilize `appimagetool` em `PATH`, `tools/appimagetool` ou `tools/appimagetool-x86_64.AppImage`, então execute novamente o script de empacotamento e valide o arquivo gerado em modo headless e visual.
+## Save states
 
+```bash
+find ~/.local/share/zumbra-nes/states -type f -name '*.zst' -ls
+```
 
-## Regressão de inicialização desktop
+Confirmar slots diferentes e rejeição ao tentar restaurar um estado de outra ROM.
 
-O gate Z22 usa `fixtures/synthetic/z22-playable-loop.nes`, uma ROM sintética com loop 6502 válido e vetores definidos. O smoke desktop executa `runFrame`, não apenas os clocks de PPU/APU. Iniciar sem argumento abre o seletor de ROM e não executa automaticamente fixtures de teste.
+## Pacotes Linux
+
+```bash
+scripts/package-z23-linux.sh
+
+dpkg-deb --info dist/zumbra-nes_0.5.0_amd64.deb
+dpkg-deb --contents dist/zumbra-nes_0.5.0_amd64.deb
+
+ZUMBRA_DESKTOP_HEADLESS=1 \
+  dist/zumbra-nes-0.5.0-linux-amd64.AppDir/AppRun
+```
+
+AppImage é opcional e requer `appimagetool`.
+
+## Segurança e higiene
+
+```bash
+find . \
+  -path './build' -prune -o \
+  -path './dist' -prune -o \
+  -type f \( -name '*.c' -o -name '*.h' \) \
+  -print
+
+grep -R --include='*.zum' -n 'extern "C"' src tests
+scripts/check-repository-hygiene.sh
+```
+
+Os dois primeiros comandos não devem produzir saída, e o último deve passar.

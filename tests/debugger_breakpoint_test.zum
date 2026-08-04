@@ -1,0 +1,15 @@
+import "../src/core/bus.zum" as bus;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/debugger/debugger.zum" as debugger;
+import "../src/testing/assert.zum" as test;
+var machine << console.create(cartridge.load("fixtures/synthetic/z22-playable-loop.nes"));
+var debug << debugger.create(machine);
+debugger.addWriteBreakpoint(debug, 0x0004);
+bus.write(machine["bus"], 0x0004, 0x55u8);
+test.assertBool(machine["bus"]["debug"]["triggered"], "write breakpoint triggered");
+test.assertInt(machine["bus"]["debug"]["lastAddress"], 4, "breakpoint address");
+test.assertString(machine["bus"]["debug"]["lastKind"], "write", "breakpoint kind");
+debugger.clearBreakpoints(debug);
+test.assertBool(!machine["bus"]["debug"]["triggered"], "breakpoints cleared");
+show("debugger_breakpoint_test: ok");

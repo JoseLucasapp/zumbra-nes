@@ -1,0 +1,18 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/persistence/save_ram.zum" as saveRam;
+import "../src/testing/assert.zum" as test;
+var raw << readBytes("fixtures/synthetic/nrom-128-horizontal.nes");
+raw[6] << u8(toInt(raw[6]) bor 0x02);
+var cart << cartridge.fromBytes(raw, "battery-test.nes");
+var machine << console.create(cart);
+machine["bus"]["prgRam"][3] << 0x5Au8;
+machine["bus"]["prgRamDirty"] << true;
+var directory << "build/save-ram-test";
+test.assertBool(saveRam.flush(machine, directory), "dirty SRAM flushed");
+test.assertBool(fileExists(saveRam.pathFor(directory, cart["info"].digest)), "SRAM file exists");
+var restored << console.create(cart);
+test.assertBool(saveRam.load(restored, directory), "SRAM loaded");
+test.assertInt(toInt(restored["bus"]["prgRam"][3]), 0x5A, "SRAM byte restored");
+test.assertBool(!saveRam.flush(restored, directory), "clean SRAM not rewritten");
+show("save_ram_test: ok");

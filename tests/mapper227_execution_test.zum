@@ -1,0 +1,9 @@
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/testing/assert.zum" as test;
+var machine << console.create(cartridge.load("fixtures/synthetic/mapper227-multicart.nes"));
+console.runFrame(machine, 200000);
+test.assertU64(machine["core"].frames, 1u64, "Mapper227 frame executed");
+test.assertBool(!machine["cpu"].halted, "Mapper227 CPU remains active");
+test.assertBool(machine["cpu"].instructions > 1000, "Mapper227 program executed");
+show("mapper227_execution_test: ok");
