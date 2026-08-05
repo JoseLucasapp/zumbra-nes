@@ -16,9 +16,13 @@ fct component(index) {
     COLORS3[index - 144];
 }
 
-/// Converts PPU palette indices into byte-ordered RGBA pixels.
-pub fct rgba(framebuffer) {
-    var output << bytes(sizeOf(framebuffer) * 4);
+/// Allocates one reusable byte-ordered RGBA output buffer for a framebuffer.
+pub fct rgbaBuffer(framebuffer) {
+    bytes(sizeOf(framebuffer) * 4);
+}
+
+/// Converts PPU palette indices into an existing byte-ordered RGBA pixel buffer.
+pub fct writeRgba(framebuffer, output) {
     var index << 0;
     while (index < sizeOf(framebuffer)) {
         var color << toInt(framebuffer[index]) band 0x3F;
@@ -31,6 +35,11 @@ pub fct rgba(framebuffer) {
         index << index + 1;
     }
     output;
+}
+
+/// Converts PPU palette indices into byte-ordered RGBA pixels.
+pub fct rgba(framebuffer) {
+    writeRgba(framebuffer, rgbaBuffer(framebuffer));
 }
 
 /// Returns one RGB triplet for diagnostics and tests.

@@ -1,8 +1,14 @@
+# zumbra-nes 0.5.21
+
+**0.5.21 safe shell:** corrige o crash ao abrir sem ROM, troca a intro para o bitmap `assets/zumbra-nes.bmp` e coloca Mapper 227 atrás de uma pausa de segurança para não travar o PC.
+
 # Zumbra NES
+
+A versão **0.5.21** exige o patch de performance do backend C11 nativo da Zumbra 0.14.3 e corrige a causa real do delay extremo no Mapper 227: o emulador precisava rodar rápido o bastante para a ROM consumir os botões em tempo útil.
 
 Emulador NES/Famicom local-first escrito em **Zumbra 0.14.3**. O repositório da aplicação contém somente código `.zum`; vídeo, áudio, teclado, gamepads e integração desktop são fornecidos pelas APIs oficiais do runtime Zumbra.
 
-A versão **0.5.8** corrige a latência de input do Mapper 227 na ROM real `1200-in-1.nes` com fatias cooperativas e sem idle agressivo. A versão **0.5.0** concluiu a **Z23**: adiciona uma arquitetura mutável de mappers, suporte aos mappers 1, 2, 3, 4, 7 e 227, SRAM persistente, dez slots de save state, debugger, fixture visual e diagnósticos explícitos de compatibilidade.
+A versão **0.5.21** corrige a latência de input do Mapper 227 na ROM real `1200-in-1.nes` com fatias cooperativas e sem idle agressivo. A versão **0.5.0** concluiu a **Z23**: adiciona uma arquitetura mutável de mappers, suporte aos mappers 1, 2, 3, 4, 7 e 227, SRAM persistente, dez slots de save state, debugger, fixture visual e diagnósticos explícitos de compatibilidade.
 
 ## Compatibilidade
 
@@ -209,8 +215,8 @@ scripts/package-z23-linux.sh
 Artefatos principais:
 
 ```text
-dist/zumbra-nes-0.5.8-linux-amd64.AppDir/
-dist/zumbra-nes_0.5.8_amd64.deb
+dist/zumbra-nes-0.5.21-linux-amd64.AppDir/
+dist/zumbra-nes_0.5.21_amd64.deb
 dist/SHA256SUMS-Z23.txt
 ```
 
@@ -220,7 +226,7 @@ dist/SHA256SUMS-Z23.txt
 - Z20 / `0.2.0`: CPU 6502;
 - Z21 / `0.3.0`: PPU, APU, controles e sincronização;
 - Z22 / `0.4.0`: desktop, SQLite e conquistas locais;
-- Z23 hotfix / `0.5.8`: latência de input Mapper 227 reduzida com fatias cooperativas sem idle agressivo.
+- Z23 hotfix / `0.5.21`: latência de input Mapper 227 reduzida com fatias cooperativas sem idle agressivo.
 - Z23 hotfix / `0.5.6`: splash inicial, input Mapper 227 mais responsivo e áudio Mapper 227 desativado por segurança.
 - Z23 / `0.5.0`: mappers, SRAM, save states, debugger e compatibilidade.
 
@@ -232,6 +238,6 @@ O próximo marco deve priorizar validação de compatibilidade com homebrew/test
 The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
 
 
-## 0.5.8 controles ouvidos no PC
+## 0.5.21 controles ouvidos no PC
 
 Jogador 1: Start = Enter/Space/keypad Enter; Select = Right Shift/Left Shift/Tab/Backspace; direcional = setas/WASD; A = Z/J; B = X/K; Esc fecha o emulador. Gamepad: A=0, B=1, Select=4, Start=6, D-pad=11-14.

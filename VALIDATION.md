@@ -1,10 +1,14 @@
+## 0.5.21 validation
+
+Run `EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh`, then `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
+
 # Validação Z23
 
 ## Baseline
 
 ```text
 Zumbra: 0.14.3
-zumbra-nes: 0.5.8
+zumbra-nes: 0.5.21
 Linux: amd64
 ```
 
@@ -118,11 +122,11 @@ Confirmar slots diferentes e rejeição ao tentar restaurar um estado de outra R
 ```bash
 scripts/package-z23-linux.sh
 
-dpkg-deb --info dist/zumbra-nes_0.5.8_amd64.deb
-dpkg-deb --contents dist/zumbra-nes_0.5.8_amd64.deb
+dpkg-deb --info dist/zumbra-nes_0.5.21_amd64.deb
+dpkg-deb --contents dist/zumbra-nes_0.5.21_amd64.deb
 
 ZUMBRA_DESKTOP_HEADLESS=1 \
-  dist/zumbra-nes-0.5.8-linux-amd64.AppDir/AppRun
+  dist/zumbra-nes-0.5.21-linux-amd64.AppDir/AppRun
 ```
 
 AppImage é opcional e requer `appimagetool`.
@@ -148,7 +152,7 @@ Os dois primeiros comandos não devem produzir saída, e o último deve passar.
 The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
 
 
-## 0.5.8 manual Mapper 227 input validation
+## 0.5.21 manual Mapper 227 input validation
 
 1. Run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
 2. Click the emulator window once.

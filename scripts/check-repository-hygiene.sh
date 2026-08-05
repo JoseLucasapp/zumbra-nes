@@ -26,8 +26,8 @@ while IFS= read -r rom; do
     fi
 done < <(find fixtures/synthetic -type f -iname '*.nes' -print)
 
-grep -q '^version = "0.5.8"$' zumbra.toml
-grep -q '^version = "0.5.8"$' zumbra-app.toml
+grep -q '^version = "0.5.21"$' zumbra.toml
+grep -q '^version = "0.5.21"$' zumbra-app.toml
 if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | grep -q .; then
     echo "Project-local C/C headers are forbidden; use the official Zumbra runtime." >&2
     exit 1
@@ -44,6 +44,7 @@ test -f src/persistence/save_ram.zum
 test -f src/persistence/save_state.zum
 test -f src/debugger/debugger.zum
 test -x scripts/test-z23-compatibility.sh
+test -x scripts/check-zumbra-native-performance.sh
 test -x scripts/package-z23-linux.sh
 test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 75
 

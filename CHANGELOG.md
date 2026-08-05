@@ -1,4 +1,56 @@
-## 0.5.8 — Z23 Mapper 227 low-latency input hotfix
+## 0.5.21 — safe no-ROM shell, bitmap intro and hard Mapper 227 guard
+
+- Avoids the experimental UI panel path that crashed with `field access requires a struct or enum type` when launching without a ROM.
+- Uses `assets/zumbra-nes.bmp` for the startup intro so the logo is not misspelled by block-glyph rendering.
+- Starts Mapper 227 ROMs paused in safe mode and requires explicit unpause, reducing the chance of freezing the desktop.
+
+# Changelog
+
+## 0.5.21 — safe shell, input guard and Mapper 227 throttle
+
+- Replaces synthetic controller hold with direct live input to stop infinite auto-scroll.
+- Adds a startup menu panel covering ROM open, controls, video/GPU, CPU/execution and library shortcuts.
+- Simplifies the intro to a still Zumbra logo screen.
+- Starts without forcing the file picker when no ROM argument is provided.
+- Runs Mapper 227 in a strict host-safe scheduler with a no-frame watchdog and mandatory yield.
+- Prioritizes keeping the PC responsive over brute-forcing the 1200-in-1 black-screen path.
+
+## 0.5.21
+
+- Requires the Zumbra 0.14.3 native method hot-loop compiler patch.
+- Adds a gate check for direct method dispatch in generated C.
+- Keeps Mapper 227 under a conservative cooperative scheduler to avoid desktop lockups.
+- Documents the 1200-in-1 stability fix path.
+
+## 0.5.21 — Mapper 227 OOM guard and reusable framebuffer
+
+- Reused the desktop RGBA framebuffer to avoid repeated 256x240x4 allocations.
+- Added allocation-light `console.runFrameSliceCode` for the desktop hot loop.
+- Added a black-screen guard for Mapper 227 internal game launches.
+- Added a lightweight startup intro before command-line ROM execution.
+- Kept mapper 10 unsupported; Z23 supports mappers 0, 1, 2, 3, 4, 7 and 227.
+
+## 0.5.21
+
+- Removes the desktop splash framebuffer path that could trigger `value is not callable` in real SDL command-line ROM launches.
+- Tightens Mapper 227 cooperative scheduler budget to keep the host responsive while internal games boot.
+
+## 0.5.21 — Z23 desktop runtime callable fix and safe splash inline
+
+- Fixes a desktop-only runtime failure after the gate passed: `zumbra runtime error: value is not callable`.
+- Removes the module-level splash call from the interactive hot path and inlines the splash renderer in `desktop.zum`.
+- Keeps the 0.5.11 cooperative Mapper 227 scheduler so the host keeps processing SDL events while the multicart is running.
+- Does not change Zumbra-lang; this version expects Zumbra 0.14.3 with the native hot-loop safe fix.
+
+## 0.5.11 — Z23 Mapper 227 cooperative scheduler and freeze guard
+
+- Substitui o burst monolítico de 240.000 instruções do Mapper 227 por fatias cooperativas menores com orçamento de host por iteração.
+- O frontend agora drena eventos SDL entre microfatias, evitando que a janela e o desktop sejam marcados como travados.
+- Mantém botões retidos por mais tempo, mas reavalia input durante a execução, reduzindo perda de Start/Select/D-pad.
+- Não apresenta frames uniformes pretos/cinzas do Mapper 227; mantém splash/intro até haver framebuffer visível real.
+- Adiciona validação manual específica contra regressão de tela preta e congelamento no `1200-in-1.nes`.
+
+## 0.5.10 — Z23 Mapper 227 low-latency input hotfix
 
 - Removed the automatic Mapper 227 idle path that starved real multicart menus.
 - Replaced huge input-boost slices with short cooperative slices so SDL polling runs frequently.
@@ -6,16 +58,15 @@
 - Extended short key taps so the ROM has enough controller-read windows to observe them.
 - Documented the exact keyboard/gamepad buttons heard by the desktop frontend.
 
-# Changelog
 
-## 0.5.8
+## 0.5.10
 
 - Mapper 227 performance/input hotfix for the real `1200-in-1.nes` menu.
 - Disabled Mapper 227 APU ticking while audio remains muted.
 - Added PPU render skipping for intermediate Mapper 227 frames while preserving timing/NMI.
 
 
-## 0.5.8 — Z23 responsiveness hotfix
+## 0.5.10 — Z23 responsiveness hotfix
 
 - Added cooperative desktop emulation slices so SDL events are drained while a frame is being emulated.
 - Added bounded event draining and short host yields to prevent the window manager from marking the emulator as not responding.

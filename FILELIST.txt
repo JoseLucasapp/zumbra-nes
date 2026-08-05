@@ -23,6 +23,10 @@ docs/release-0.3.0.md
 docs/release-0.4.0.md
 docs/release-0.5.0.md
 docs/release-0.5.1.md
+docs/release-0.5.10.md
+docs/release-0.5.11.md
+docs/release-0.5.20.md
+docs/release-0.5.21.md
 docs/release-0.5.3.md
 docs/release-0.5.4.md
 docs/release-0.5.5.md
@@ -51,6 +55,7 @@ packaging/linux/dev.zumbra.nes.metainfo.xml
 scripts/__pycache__/generate-synthetic-fixtures.cpython-313.pyc
 scripts/__pycache__/verify-cpu-table.cpython-313.pyc
 scripts/check-repository-hygiene.sh
+scripts/check-zumbra-native-performance.sh
 scripts/generate-synthetic-fixtures.py
 scripts/package-z22-linux.sh
 scripts/package-z23-linux.sh
@@ -172,4 +177,3 @@ tests/store_save_state_test.zum
 tests/visible_frame_test.zum
 zumbra-app.toml
 zumbra.toml
-docs/release-0.5.8.md

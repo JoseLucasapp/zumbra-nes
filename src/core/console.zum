@@ -127,6 +127,24 @@ pub fct runFrameSlice(machine, instructionLimit) {
     };
 }
 
+/// Runs a desktop hot-loop slice without allocating a result dictionary per micro-slice.
+/// Positive return value: frame not complete. Negative return value: frame complete.
+pub fct runFrameSliceCode(machine, instructionLimit) {
+    var ppuState << machine["bus"]["ppu"];
+    if (ppuState["core"].frameComplete) {
+        ppu.clearFrameComplete(ppuState);
+    }
+    var executed << 0;
+    while (!ppuState["core"].frameComplete and executed < instructionLimit and!machine["cpu"].halted) {
+        stepInstruction(machine);
+        executed << executed + 1;
+    }
+    if (ppuState["core"].frameComplete) {
+        return 0 - executed;
+    }
+    executed;
+}
+
 /// Enables or disables expensive visible PPU rendering while preserving PPU timing.
 pub fct setVideoOutput(machine, enabled) {
     ppu.setRenderOutput(machine["bus"]["ppu"], enabled);

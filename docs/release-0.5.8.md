@@ -1,4 +1,4 @@
-# Zumbra NES 0.5.8 — Mapper 227 low-latency performance hotfix
+# Zumbra NES 0.5.10 — Mapper 227 low-latency performance hotfix
 
 This hotfix targets the real `1200-in-1.nes` Mapper 227 menu on Linux desktop.
 

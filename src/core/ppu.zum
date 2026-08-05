@@ -422,6 +422,59 @@ fct renderScanline(state, y) {
     renderSpritesLine(state, y);
 }
 
+/// Advances PPU timing in large jumps when visible rendering is disabled.
+///
+/// This is intentionally used only by the Mapper 227 desktop fast path. It keeps
+/// VBlank, NMI and frame-complete edges moving without paying the per-dot Zumbra
+/// overhead of the full renderer. The normal tick() path remains the reference
+/// implementation for tests, visible frames and accuracy-sensitive mappers.
+pub fct tickFast(state, dots) {
+    var core << state["core"];
+    var remaining << dots;
+    var dotsPerFrame << constants.PPU_DOTS_PER_SCANLINE * 262;
+    var clearAt << 1;
+    var vblankAt <<(242 * constants.PPU_DOTS_PER_SCANLINE) + 1;
+    while (remaining > 0) {
+        var current <<((core.scanline + 1) * constants.PPU_DOTS_PER_SCANLINE) + core.dot;
+        var nextEvent << dotsPerFrame;
+        if (current < clearAt) {
+            nextEvent << clearAt;
+        } else {
+            if (current < vblankAt) {
+                nextEvent << vblankAt;
+            }
+        }
+        var delta << nextEvent - current;
+        if (delta <= 0) {
+            delta << 1;
+        }
+        if (delta > remaining) {
+            delta << remaining;
+        }
+        current << current + delta;
+        core.cycles << u64(core.cycles + u64(delta));
+        remaining << remaining - delta;
+        if (current >= dotsPerFrame) {
+            current << current - dotsPerFrame;
+            core.frame << u64(core.frame + 1u64);
+            core.frameComplete << true;
+            core.oddFrame <<!core.oddFrame;
+        }
+        core.scanline <<(current / constants.PPU_DOTS_PER_SCANLINE) - 1;
+        core.dot << current % constants.PPU_DOTS_PER_SCANLINE;
+        if (current == clearAt) {
+            core.status << core.status band 0x1F;
+            core.nmiPending << false;
+            updateNmi(core);
+        }
+        if (current == vblankAt) {
+            core.status << core.status bor 0x80;
+            updateNmi(core);
+        }
+    }
+    core.frameComplete;
+}
+
 /// Advances one PPU dot and returns true when a new frame completes.
 pub fct tick(state) {
     var core << state["core"];

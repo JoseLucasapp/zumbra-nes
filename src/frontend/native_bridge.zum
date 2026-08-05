@@ -49,7 +49,7 @@ pub fct create(title, scale, vsync, fullscreen, requestedHeadless) {
         backend << "headless";
     }
     var app << desktopApp({
-        "name": "Zumbra NES", "version": "0.5.8", "identifier": "dev.zumbra.nes", "backend": backend, "quitOnLastWindow": true, "closeOnRequest": true
+        "name": "Zumbra NES", "version": "0.5.21", "identifier": "dev.zumbra.nes", "backend": backend, "quitOnLastWindow": true, "closeOnRequest": true
     });
     var window << desktopWindow(app, {
         "title": title, "width": 256 * scale, "height": 240 * scale, "resizable": true, "highDPI": true, "fullscreen": fullscreen
@@ -77,11 +77,11 @@ pub fct poll(context) {
     var event << desktopPoll(context["app"], 0);
     if (toString(event) == "null") {
         return false;
-    }
-    var kind << event["type"];
-    if (kind == "quit" or kind == "terminating" or kind == "window_close_requested" or kind == "window_closed") {
-        context["closed"] << true;
-    }
+    } // 0.5.21: do not index desktop event payloads in the release frontend.
+    // On the real SDL backend some window events arrive as non-dictionary runtime
+    // values; reading event["type"] aborts with "field access requires a struct or
+    // enum type" before the menu or ROM can open. The close condition is still
+    // handled by desktopWindowOpen() in shouldClose() and by Esc in desktop.zum.
     true;
 }
 
@@ -142,9 +142,11 @@ pub fct setStatus(context, status) {
     true;
 }
 pub fct notify(context, title, message) {
-    desktopNotify(context["app"], {
-        "title": title, "body": message, "urgency": "normal"
-    });
+    // 0.5.21: keep notifications on the stable window-title path. The platform
+    // notification bridge is not required for emulation and should never be able
+    // to crash the emulator shell.
+    desktopWindowSetTitle(context["window"], "Zumbra NES — " + title + ": " + message);
+    true;
 }
 pub fct ticks(context) {
     context;
@@ -166,10 +168,12 @@ pub fct initialRom() {
     "";
 }
 pub fct dataPath(context) {
-    var paths << desktopPaths(context["app"]);
-    var path << paths["data"] + "/zumbra-nes";
-    createFile(path + "/.zumbra-runtime", "0.5.8");
-    path;
+    context;
+    // 0.5.21: avoid desktopPaths() in the safety build. The live SDL backend can
+    // return a platform-specific value that is not safe for string-field indexing
+    // in native mode. Use the current project directory until the desktop bridge
+    // exposes a typed path object.
+    ".";
 }
 pub fct pickRom(context) {
     var selected << desktopPickFile(context["app"], {
@@ -181,20 +185,11 @@ pub fct pickRom(context) {
     selected[0];
 }
 pub fct showPanel(context, title, body) {
-    var panel << desktopWindow(context["app"], {
-        "title": title, "width": 640, "height": 480, "resizable": true, "highDPI": true
-    });
-    var content << uiColumn({
-        "padding": 24, "gap": 12, "overflowY": "auto"
-    },[uiText({
-        "text": title, "fontSize": 24, "fontWeight": "bold"
-    },[]), uiText({
-        "text": body, "fontSize": 15, "wrap": true
-    },[])]);
-    uiMount(context["app"], panel, content, {
-        "theme": uiTheme("dark")
-    });
-    desktopWindowShow(panel);
+    body;
+    // 0.5.21: the release shell must not open experimental panels or platform
+    // notifications at startup. Keep the command non-fatal and expose the current
+    // section in the title bar only.
+    desktopWindowSetTitle(context["window"], "Zumbra NES — " + title);
     true;
 }
 fct anyKeyDown(context) {

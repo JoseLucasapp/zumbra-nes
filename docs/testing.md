@@ -1,3 +1,7 @@
+## 0.5.21 desktop runtime check
+
+The real SDL command-line ROM launch must not raise `zumbra runtime error: value is not callable`.
+
 # Testes Z23
 
 Todas as ROMs versionadas são sintéticas e legalmente redistribuíveis.
@@ -59,7 +63,7 @@ Etapas:
 1. checksums das fixtures;
 2. tabela dos 151 opcodes;
 3. formatter e linter;
-4. versão `0.5.8`;
+4. versão `0.5.21`;
 5. project check;
 6. 75 testes pela VM;
 7. documentação;
@@ -85,7 +89,7 @@ Z23 compatibility, persistence and debugger gate passed.
 The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
 
 
-## 0.5.8 Mapper 227 low-latency input hotfix
+## 0.5.21 Mapper 227 low-latency input hotfix
 
 Manual validation target: run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`, click the window once, then verify Start, Select and D-pad taps are processed without multi-second delay.
 

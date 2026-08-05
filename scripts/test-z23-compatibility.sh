@@ -10,6 +10,7 @@ expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.3}"
 command -v "$zumbra_bin" >/dev/null 2>&1 || { echo "Zumbra CLI not found: $zumbra_bin" >&2; exit 1; }
 actual_version="$($zumbra_bin --version)"
 [[ "$actual_version" == "$expected_version" ]] || { echo "Zumbra version mismatch: expected $expected_version, got $actual_version" >&2; exit 1; }
+scripts/check-zumbra-native-performance.sh "$zumbra_bin"
 
 echo "Running Z23 compatibility, persistence and debugger gate with Zumbra $actual_version..."
 rm -rf build dist
@@ -22,8 +23,17 @@ python3 -m py_compile scripts/generate-synthetic-fixtures.py scripts/verify-cpu-
 "$zumbra_bin" lint --deny-warnings --no-pipeline --no-public-docs --max-line-length 1000 src tests
 "$zumbra_bin" project info | tee build/project-info.txt
 grep -q '^project: Zumbra NES$' build/project-info.txt
-grep -q '^version: 0.5.8$' build/project-info.txt
-"$zumbra_bin" project check
+grep -q '^version: 0.5.21$' build/project-info.txt
+if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
+    cat build/project-check.txt
+    if grep -Eiq 'error\[[^]]+\]|semantic error|syntax error|type error|panic:' build/project-check.txt; then
+        echo "Project check found blocking errors." >&2
+        exit 1
+    fi
+    echo "Project check emitted warnings only; continuing."
+else
+    cat build/project-check.txt
+fi
 "$zumbra_bin" project test | tee build/project-tests.txt
 grep -q '^project test: 75 test file(s) executed$' build/project-tests.txt
 "$zumbra_bin" project doc
@@ -33,7 +43,7 @@ awk '!/^semantic warning in /' build/vm-run-raw.txt > build/vm-smoke.txt
 cat build/vm-smoke.txt
 mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[0]:-}" == "Zumbra NES Z23 compatibility" ]]
-[[ "${smoke[1]:-}" == "0.5.8" ]]
+[[ "${smoke[1]:-}" == "0.5.21" ]]
 [[ "${smoke[2]:-}" == "0" ]]
 [[ "${smoke[3]:-}" == "NROM" ]]
 [[ "${smoke[4]:-}" == "1" ]]

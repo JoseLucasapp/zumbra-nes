@@ -679,6 +679,20 @@ Runs up to `instructionLimit` instructions for the current frame without blockin
 | `machine` | parameter | `` |
 | `instructionLimit` | parameter | `` |
 
+### runFrameSliceCode
+
+```zumbra
+pub fct runFrameSliceCode(machine, instructionLimit)
+```
+
+Runs a desktop hot-loop slice without allocating a result dictionary per micro-slice.  
+Positive return value: frame not complete. Negative return value: frame complete.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
 ### setVideoOutput
 
 ```zumbra
@@ -1746,6 +1760,31 @@ pub fct restore(state, value)
 
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/palette.zum`
 
+### rgbaBuffer
+
+```zumbra
+pub fct rgbaBuffer(framebuffer)
+```
+
+Allocates one reusable byte-ordered RGBA output buffer for a framebuffer.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `framebuffer` | parameter | `` |
+
+### writeRgba
+
+```zumbra
+pub fct writeRgba(framebuffer, output)
+```
+
+Converts PPU palette indices into an existing byte-ordered RGBA pixel buffer.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `framebuffer` | parameter | `` |
+| `output` | parameter | `` |
+
 ### rgba
 
 ```zumbra
@@ -1897,6 +1936,24 @@ Writes one of the eight CPU-visible PPU registers.
 | `state` | parameter | `` |
 | `register` | parameter | `` |
 | `value` | parameter | `` |
+
+### tickFast
+
+```zumbra
+pub fct tickFast(state, dots)
+```
+
+Advances PPU timing in large jumps when visible rendering is disabled.  
+  
+This is intentionally used only by the Mapper 227 desktop fast path. It keeps  
+VBlank, NMI and frame-complete edges moving without paying the per-dot Zumbra  
+overhead of the full renderer. The normal tick() path remains the reference  
+implementation for tests, visible frames and accuracy-sensitive mappers.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `dots` | parameter | `` |
 
 ### tick
 
@@ -2199,6 +2256,7 @@ pub struct DesktopState
 | `lastPlayerOne` | field | `int` |
 | `lastPlayerTwo` | field | `int` |
 | `visibleFrames` | field | `int` |
+| `blankFrames` | field | `int` |
 | `heldPlayerOne` | field | `int` |
 | `heldPlayerTwo` | field | `int` |
 | `playerOneHold` | field | `int` |

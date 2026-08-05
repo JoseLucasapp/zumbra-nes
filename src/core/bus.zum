@@ -16,7 +16,7 @@ pub fct create(cart) {
         audioEnabled << false;
     }
     {
-        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(prgRamBytes), "prgRamDirty": false, "cart": cart, "mapper": mapperState, "ppu": ppu.createWithMapper(cart, mapperState), "apu": apu.create(), "audioEnabled": audioEnabled, "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8, "debugEnabled": false, "debug": {
+        "ram": bytes(constants.CPU_RAM_BYTES), "apuIo": bytes(constants.APU_IO_BYTES), "prgRam": bytes(prgRamBytes), "prgRamDirty": false, "cart": cart, "mapper": mapperState, "ppu": ppu.createWithMapper(cart, mapperState), "apu": apu.create(), "audioEnabled": audioEnabled, "fastPpu": false, "controller1": controller.create(), "controller2": controller.create(), "dmaPending": false, "dmaPage": 0, "openBus": 0u8, "debugEnabled": false, "debug": {
             "enabled": false, "readBreakpoints":[], "writeBreakpoints":[], "triggered": false, "lastAddress":-1, "lastKind": ""
         }
     };
