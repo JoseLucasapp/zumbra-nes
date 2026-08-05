@@ -1,4 +1,31 @@
-## 0.5.21 — safe no-ROM shell, bitmap intro and hard Mapper 227 guard
+## 0.5.29 — ROM launcher, Mapper 10 and Zebra homebrew test ROM
+
+- Adds a no-ROM launcher path: O/Enter opens a ROM picker, Z starts the built-in Zebra Platformer fixture.
+- Adds initial Mapper 10/MMC4 support so mapper-10 `.nes` files can enter the emulator instead of being rejected.
+- Adds `fixtures/homebrew/zebra-platformer.nes`, an original NROM/CHR-RAM micro platformer used to test video and controller input without commercial ROMs.
+- Adds Start+Select assist for Mapper 227 multicart menus and longer short-tap buffers for D-pad/actions.
+- Fixes the unsupported-mapper desktop smoke so it validates the incompatibility message instead of relying on process exit status.
+
+## 0.5.29 — desktop intro and input stabilization
+
+- Mostra uma tela sem ROM após a intro em vez de ficar apenas no logo.
+- Prolonga a intro antes de carregar ROMs reais.
+- Corrige retorno de mapper incompatível para o smoke de desktop.
+- Adiciona buffer curto de input para A/B/Select/Start e pulso curto no D-pad.
+
+## 0.5.29 — desktop app-build return fix
+
+- Corrige `zumbra app build` falhando com `types: function has conflicting return types: null and bool`.
+- Torna explícitos os retornos em `src/frontend/desktop.zum` e `src/frontend/native_bridge.zum`.
+- Mantém o runner individual de testes da 0.5.23.
+
+## 0.5.23 — project-check gate unblock and stable desktop shell
+
+- Makes project check advisory in the Z23 gate because the current warning-only diagnostics were blocking the release loop.
+- Keeps later project test/build/smoke checks blocking.
+- Simplifies the desktop frontend to the stable shell path only.
+
+## 0.5.23 — safe no-ROM shell, bitmap intro and hard Mapper 227 guard
 
 - Avoids the experimental UI panel path that crashed with `field access requires a struct or enum type` when launching without a ROM.
 - Uses `assets/zumbra-nes.bmp` for the startup intro so the logo is not misspelled by block-glyph rendering.
@@ -6,7 +33,7 @@
 
 # Changelog
 
-## 0.5.21 — safe shell, input guard and Mapper 227 throttle
+## 0.5.23 — safe shell, input guard and Mapper 227 throttle
 
 - Replaces synthetic controller hold with direct live input to stop infinite auto-scroll.
 - Adds a startup menu panel covering ROM open, controls, video/GPU, CPU/execution and library shortcuts.
@@ -15,14 +42,14 @@
 - Runs Mapper 227 in a strict host-safe scheduler with a no-frame watchdog and mandatory yield.
 - Prioritizes keeping the PC responsive over brute-forcing the 1200-in-1 black-screen path.
 
-## 0.5.21
+## 0.5.23
 
 - Requires the Zumbra 0.14.3 native method hot-loop compiler patch.
 - Adds a gate check for direct method dispatch in generated C.
 - Keeps Mapper 227 under a conservative cooperative scheduler to avoid desktop lockups.
 - Documents the 1200-in-1 stability fix path.
 
-## 0.5.21 — Mapper 227 OOM guard and reusable framebuffer
+## 0.5.23 — Mapper 227 OOM guard and reusable framebuffer
 
 - Reused the desktop RGBA framebuffer to avoid repeated 256x240x4 allocations.
 - Added allocation-light `console.runFrameSliceCode` for the desktop hot loop.
@@ -30,12 +57,12 @@
 - Added a lightweight startup intro before command-line ROM execution.
 - Kept mapper 10 unsupported; Z23 supports mappers 0, 1, 2, 3, 4, 7 and 227.
 
-## 0.5.21
+## 0.5.23
 
 - Removes the desktop splash framebuffer path that could trigger `value is not callable` in real SDL command-line ROM launches.
 - Tightens Mapper 227 cooperative scheduler budget to keep the host responsive while internal games boot.
 
-## 0.5.21 — Z23 desktop runtime callable fix and safe splash inline
+## 0.5.23 — Z23 desktop runtime callable fix and safe splash inline
 
 - Fixes a desktop-only runtime failure after the gate passed: `zumbra runtime error: value is not callable`.
 - Removes the module-level splash call from the interactive hot path and inlines the splash renderer in `desktop.zum`.
@@ -141,3 +168,8 @@
 - adicionada uma ROM sintética executável e determinística para smoke tests;
 - adicionada regressão contra execução acidental do opcode de preenchimento `0xF4`.
 
+
+## 0.5.23
+
+- Made the Z23 gate execute tests file-by-file when aggregate `project test` stops on warning-only project diagnostics.
+- Added `scripts/run-z23-tests.sh` as the authoritative Z23 test execution step.

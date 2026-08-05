@@ -1,145 +1,8 @@
-import "../achievements/catalog.zum" as catalog;
-import "../achievements/engine.zum" as achievements;
-import "../core/audio_output.zum" as audioOutput;
 import "../core/cartridge.zum" as cartridge;
 import "../core/console.zum" as console;
 import "../core/mapper.zum" as mapper;
-import "../debugger/debugger.zum" as debug;
-import "../persistence/save_ram.zum" as saveRam;
-import "../persistence/save_state.zum" as saveState;
 import "../core/palette.zum" as palette;
-import "../persistence/store.zum" as store;
-import "input.zum" as input;
 import "native_bridge.zum" as native;
-pub struct DesktopState {
-    paused: bool;
-    frameAdvance: bool;
-    fullscreen: bool;
-    muted: bool;
-    frames: u64;
-    sessionStarted: u64;
-    lastSecond: u64;
-    fpsFrames: int;
-    fps: int;
-    saveSlot: int;
-    running: bool;
-    pendingFrame: bool;
-    lastPresent: u64;
-    inputBoost: int;
-    lastPlayerOne: int;
-    lastPlayerTwo: int;
-    visibleFrames: int;
-    blankFrames: int;
-    heldPlayerOne: int;
-    heldPlayerTwo: int;
-    playerOneHold: int;
-    playerTwoHold: int;
-}
-fct noResult() {
-}
-fct libraryText(db) {
-    var rows << store.recentRoms(db, 20);
-    var text << "ROMs recentes\n\n";
-    var index << 0;
-    while (index < sizeOf(rows)) {
-        text << text + toString(index + 1) + ". " + rows[index]["path"] + "\n";
-        text << text + "   mapper " + toString(rows[index]["mapper"]) + " | " + toString(rows[index]["play_seconds"]) + "s | " + toString(rows[index]["sessions"]) + " sessões\n";
-        index << index + 1;
-    }
-    if (sizeOf(rows) == 0) {
-        text << text + "Nenhuma ROM registrada.\n";
-    }
-    text;
-}
-fct achievementText(db, game) {
-    if (!game["ok"]) {
-        return "Nenhum jogo carregado.";
-    }
-    var rows << store.achievementRows(db, game["info"].digest);
-    var text << "Conquistas locais\n\n";
-    var index << 0;
-    while (index < sizeOf(rows)) {
-        var marker << "[ ]";
-        if (rows[index]["unlocked"] == 1) {
-            marker << "[x]";
-        }
-        text << text + marker + " " + rows[index]["title"] + "\n";
-        text << text + "    " + rows[index]["description"] + " (" + toString(rows[index]["progress"]) + "/" + toString(rows[index]["target"]) + ")\n";
-        index << index + 1;
-    }
-    text;
-}
-fct debuggerText(game) {
-    if (!game["ok"]) {
-        return "Nenhum jogo carregado.";
-    }
-    var text << debug.summary(game["debugger"]) + "\n\nPróximas instruções:\n";
-    var lines << debug.disassemble(game["debugger"], game["machine"]["cpu"].pc, 12);
-    var index << 0;
-    while (index < sizeOf(lines)) {
-        text << text + lines[index]["text"] + "\n";
-        index << index + 1;
-    }
-    text;
-}
-fct statePath(game, dataDirectory, slot) {
-    dataDirectory + "/states/" + game["info"].digest + "-slot" + toString(slot) + ".zst";
-}
-fct capture(context, prompt, current) {
-    var next << native.captureKey(context, prompt);
-    if (next >= 0) {
-        return next;
-    }
-    current;
-}
-fct remapControllers(context, preferences) {
-    native.notify(context, "Remapeamento", "Pressione as teclas solicitadas. Esc cancela cada campo.");
-    preferences.p1A << capture(context, "Jogador 1: pressione A", preferences.p1A);
-    preferences.p1B << capture(context, "Jogador 1: pressione B", preferences.p1B);
-    preferences.p1Select << capture(context, "Jogador 1: pressione Select", preferences.p1Select);
-    preferences.p1Start << capture(context, "Jogador 1: pressione Start", preferences.p1Start);
-    preferences.p1Up << capture(context, "Jogador 1: pressione Cima", preferences.p1Up);
-    preferences.p1Down << capture(context, "Jogador 1: pressione Baixo", preferences.p1Down);
-    preferences.p1Left << capture(context, "Jogador 1: pressione Esquerda", preferences.p1Left);
-    preferences.p1Right << capture(context, "Jogador 1: pressione Direita", preferences.p1Right);
-    preferences.p2A << capture(context, "Jogador 2: pressione A", preferences.p2A);
-    preferences.p2B << capture(context, "Jogador 2: pressione B", preferences.p2B);
-    preferences.p2Select << capture(context, "Jogador 2: pressione Select", preferences.p2Select);
-    preferences.p2Start << capture(context, "Jogador 2: pressione Start", preferences.p2Start);
-    preferences.p2Up << capture(context, "Jogador 2: pressione Cima", preferences.p2Up);
-    preferences.p2Down << capture(context, "Jogador 2: pressione Baixo", preferences.p2Down);
-    preferences.p2Left << capture(context, "Jogador 2: pressione Esquerda", preferences.p2Left);
-    preferences.p2Right << capture(context, "Jogador 2: pressione Direita", preferences.p2Right);
-    true;
-} // 0.5.21: keep the Mapper 227 desktop path free from additional helper-call indirection.
-// The real desktop runtime was still aborting with "value is not callable" only when
-// the command-line Mapper 227 ROM entered the interactive loop. The affected path was
-// the set of small Mapper 227/splash helper calls introduced after 0.5.10, not the
-// headless smoke path. Inline the scheduler decisions in run() and present the
-// framebuffer directly.
-fct visibleFramebuffer(framebuffer) {
-    if (sizeOf(framebuffer) == 0) {
-        return false;
-    }
-    var first << toInt(framebuffer[0]) band 0x3F;
-    var index << 0;
-    var nonZero << 0;
-    var different << 0;
-    while (index < sizeOf(framebuffer)) {
-        var color << toInt(framebuffer[index]) band 0x3F;
-        if (color != 0) {
-            nonZero << nonZero + 1;
-        }
-        if (color != first) {
-            different << different + 1;
-        }
-        if (nonZero >= 32 and different >= 8) {
-            return true;
-        }
-        index << index + 257;
-    }
-    false;
-}
 fct introRect(output, x, y, width, height, red, green, blue) {
     var yy << y;
     while (yy < y + height) {
@@ -156,74 +19,166 @@ fct introRect(output, x, y, width, height, red, green, blue) {
         }
         yy << yy + 1;
     }
-    true;
-}
-fct drawBlockZ(output, x, y, scale, red, green, blue) {
-    introRect(output, x, y, 26 * scale, 4 * scale, red, green, blue);
-    introRect(output, x, y + 22 * scale, 26 * scale, 4 * scale, red, green, blue);
-    var step << 0;
-    while (step < 6) {
-        introRect(output, x +(20 - step * 4) * scale, y +(4 + step * 3) * scale, 6 * scale, 4 * scale, red, green, blue);
-        step << step + 1;
-    }
-    true;
-}
-fct drawBlockU(output, x, y, scale, red, green, blue) {
-    introRect(output, x, y, 4 * scale, 23 * scale, red, green, blue);
-    introRect(output, x + 20 * scale, y, 4 * scale, 23 * scale, red, green, blue);
-    introRect(output, x + 4 * scale, y + 22 * scale, 16 * scale, 4 * scale, red, green, blue);
-    true;
-}
-fct drawBlockM(output, x, y, scale, red, green, blue) {
-    introRect(output, x, y, 4 * scale, 26 * scale, red, green, blue);
-    introRect(output, x + 22 * scale, y, 4 * scale, 26 * scale, red, green, blue);
-    introRect(output, x + 5 * scale, y + 4 * scale, 5 * scale, 6 * scale, red, green, blue);
-    introRect(output, x + 11 * scale, y + 8 * scale, 5 * scale, 6 * scale, red, green, blue);
-    introRect(output, x + 17 * scale, y + 4 * scale, 5 * scale, 6 * scale, red, green, blue);
-    true;
-}
-fct drawBlockB(output, x, y, scale, red, green, blue) {
-    introRect(output, x, y, 4 * scale, 26 * scale, red, green, blue);
-    introRect(output, x, y, 18 * scale, 4 * scale, red, green, blue);
-    introRect(output, x, y + 11 * scale, 19 * scale, 4 * scale, red, green, blue);
-    introRect(output, x, y + 22 * scale, 18 * scale, 4 * scale, red, green, blue);
-    introRect(output, x + 18 * scale, y + 4 * scale, 4 * scale, 7 * scale, red, green, blue);
-    introRect(output, x + 19 * scale, y + 15 * scale, 4 * scale, 7 * scale, red, green, blue);
-    true;
-}
-fct drawBlockR(output, x, y, scale, red, green, blue) {
-    drawBlockB(output, x, y, scale, red, green, blue);
-    introRect(output, x + 12 * scale, y + 15 * scale, 5 * scale, 5 * scale, red, green, blue);
-    introRect(output, x + 17 * scale, y + 19 * scale, 5 * scale, 7 * scale, red, green, blue);
-    true;
-}
-fct drawBlockA(output, x, y, scale, red, green, blue) {
-    introRect(output, x, y + 6 * scale, 4 * scale, 20 * scale, red, green, blue);
-    introRect(output, x + 20 * scale, y + 6 * scale, 4 * scale, 20 * scale, red, green, blue);
-    introRect(output, x + 4 * scale, y, 16 * scale, 5 * scale, red, green, blue);
-    introRect(output, x + 4 * scale, y + 12 * scale, 16 * scale, 4 * scale, red, green, blue);
-    true;
-}
-fct drawZumbraWord(output) {
-    var red << 226;
-    var green << 235;
-    var blue << 255;
-    var scale << 1;
-    var x << 28;
-    var y << 100;
-    drawBlockZ(output, x, y, scale, red, green, blue);
-    drawBlockU(output, x + 31, y, scale, red, green, blue);
-    drawBlockM(output, x + 61, y, scale, red, green, blue);
-    drawBlockB(output, x + 93, y, scale, red, green, blue);
-    drawBlockR(output, x + 122, y, scale, red, green, blue);
-    drawBlockA(output, x + 151, y, scale, red, green, blue);
-    true;
+    return true;
 }
 fct le16(data, offset) {
-    toInt(data[offset]) +(toInt(data[offset + 1]) shl 8);
+    return toInt(data[offset]) +(toInt(data[offset + 1]) shl 8);
 }
 fct le32(data, offset) {
-    toInt(data[offset]) +(toInt(data[offset + 1]) shl 8) +(toInt(data[offset + 2]) shl 16) +(toInt(data[offset + 3]) shl 24);
+    return toInt(data[offset]) +(toInt(data[offset + 1]) shl 8) +(toInt(data[offset + 2]) shl 16) +(toInt(data[offset + 3]) shl 24);
+}
+fct fillIntroFallback(output) {
+    var y << 0;
+    while (y < 240) {
+        var x << 0;
+        while (x < 256) {
+            var destination <<(y * 256 + x) * 4;
+            output[destination] << 17u8;
+            output[destination + 1] << 19u8;
+            output[destination + 2] << 24u8;
+            output[destination + 3] << 255u8;
+            x << x + 1;
+        }
+        y << y + 1;
+    }
+    introRect(output, 42, 82, 172, 76, 30, 36, 58);
+    introRect(output, 48, 88, 160, 64, 226, 235, 255);
+    introRect(output, 54, 94, 148, 52, 30, 36, 58);
+    return true;
+}
+fct glyphCell(output, baseX, baseY, scale, column, row, red, green, blue) {
+    introRect(output, baseX + column * scale, baseY + row * scale, scale - 1, scale - 1, red, green, blue);
+    return true;
+}
+fct glyphN(output, x, y, scale, red, green, blue) {
+    var row << 0;
+    while (row < 7) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        glyphCell(output, x, y, scale, 4, row, red, green, blue);
+        row << row + 1;
+    }
+    glyphCell(output, x, y, scale, 1, 1, red, green, blue);
+    glyphCell(output, x, y, scale, 2, 2, red, green, blue);
+    glyphCell(output, x, y, scale, 3, 3, red, green, blue);
+    return true;
+}
+fct glyphO(output, x, y, scale, red, green, blue) {
+    var column << 0;
+    while (column < 5) {
+        glyphCell(output, x, y, scale, column, 0, red, green, blue);
+        glyphCell(output, x, y, scale, column, 6, red, green, blue);
+        column << column + 1;
+    }
+    var row << 1;
+    while (row < 6) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        glyphCell(output, x, y, scale, 4, row, red, green, blue);
+        row << row + 1;
+    }
+    return true;
+}
+fct glyphR(output, x, y, scale, red, green, blue) {
+    var row << 0;
+    while (row < 7) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        row << row + 1;
+    }
+    var column << 1;
+    while (column < 4) {
+        glyphCell(output, x, y, scale, column, 0, red, green, blue);
+        glyphCell(output, x, y, scale, column, 3, red, green, blue);
+        column << column + 1;
+    }
+    glyphCell(output, x, y, scale, 4, 1, red, green, blue);
+    glyphCell(output, x, y, scale, 4, 2, red, green, blue);
+    glyphCell(output, x, y, scale, 2, 4, red, green, blue);
+    glyphCell(output, x, y, scale, 3, 5, red, green, blue);
+    glyphCell(output, x, y, scale, 4, 6, red, green, blue);
+    return true;
+}
+fct glyphM(output, x, y, scale, red, green, blue) {
+    var row << 0;
+    while (row < 7) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        glyphCell(output, x, y, scale, 4, row, red, green, blue);
+        row << row + 1;
+    }
+    glyphCell(output, x, y, scale, 1, 1, red, green, blue);
+    glyphCell(output, x, y, scale, 2, 2, red, green, blue);
+    glyphCell(output, x, y, scale, 3, 1, red, green, blue);
+    return true;
+}
+fct glyphE(output, x, y, scale, red, green, blue) {
+    var row << 0;
+    while (row < 7) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        row << row + 1;
+    }
+    var column << 1;
+    while (column < 5) {
+        glyphCell(output, x, y, scale, column, 0, red, green, blue);
+        glyphCell(output, x, y, scale, column, 3, red, green, blue);
+        glyphCell(output, x, y, scale, column, 6, red, green, blue);
+        column << column + 1;
+    }
+    return true;
+}
+fct glyphS(output, x, y, scale, red, green, blue) {
+    var column << 0;
+    while (column < 5) {
+        glyphCell(output, x, y, scale, column, 0, red, green, blue);
+        glyphCell(output, x, y, scale, column, 3, red, green, blue);
+        glyphCell(output, x, y, scale, column, 6, red, green, blue);
+        column << column + 1;
+    }
+    glyphCell(output, x, y, scale, 0, 1, red, green, blue);
+    glyphCell(output, x, y, scale, 0, 2, red, green, blue);
+    glyphCell(output, x, y, scale, 4, 4, red, green, blue);
+    glyphCell(output, x, y, scale, 4, 5, red, green, blue);
+    return true;
+}
+fct glyphC(output, x, y, scale, red, green, blue) {
+    var column << 0;
+    while (column < 5) {
+        glyphCell(output, x, y, scale, column, 0, red, green, blue);
+        glyphCell(output, x, y, scale, column, 6, red, green, blue);
+        column << column + 1;
+    }
+    var row << 1;
+    while (row < 6) {
+        glyphCell(output, x, y, scale, 0, row, red, green, blue);
+        row << row + 1;
+    }
+    return true;
+}
+fct paintNoRomShell(output) {
+    var y << 0;
+    while (y < 240) {
+        var x << 0;
+        while (x < 256) {
+            var destination <<(y * 256 + x) * 4;
+            output[destination] << 10u8;
+            output[destination + 1] << 12u8;
+            output[destination + 2] << 18u8;
+            output[destination + 3] << 255u8;
+            x << x + 1;
+        }
+        y << y + 1;
+    }
+    introRect(output, 14, 14, 228, 4, 114, 232, 179);
+    introRect(output, 14, 222, 228, 4, 114, 232, 179);
+    introRect(output, 14, 14, 4, 212, 114, 232, 179);
+    introRect(output, 238, 14, 4, 212, 114, 232, 179);
+    glyphN(output, 32, 68, 6, 114, 232, 179);
+    glyphO(output, 68, 68, 6, 114, 232, 179);
+    glyphR(output, 116, 68, 6, 114, 232, 179);
+    glyphO(output, 152, 68, 6, 114, 232, 179);
+    glyphM(output, 188, 68, 6, 114, 232, 179);
+    glyphE(output, 70, 152, 3, 226, 235, 255);
+    glyphS(output, 91, 152, 3, 226, 235, 255);
+    glyphC(output, 112, 152, 3, 226, 235, 255);
+    introRect(output, 142, 162, 44, 3, 226, 235, 255);
+    return output;
 }
 fct paintIntroBitmap(output, path) {
     if (!fileExists(path)) {
@@ -254,149 +209,93 @@ fct paintIntroBitmap(output, path) {
             var sourceX << x + cropX;
             var source << pixelOffset + sourceY * rowStride + sourceX * 3;
             var destination <<(y * 256 + x) * 4;
-            output[destination] << data[source + 2];
-            output[destination + 1] << data[source + 1];
-            output[destination + 2] << data[source];
-            output[destination + 3] << 255u8;
+            if (source + 2 < sizeOf(data)) {
+                output[destination] << data[source + 2];
+                output[destination + 1] << data[source + 1];
+                output[destination + 2] << data[source];
+                output[destination + 3] << 255u8;
+            } else {
+                output[destination] << 17u8;
+                output[destination + 1] << 19u8;
+                output[destination + 2] << 24u8;
+                output[destination + 3] << 255u8;
+            }
             x << x + 1;
         }
         y << y + 1;
     }
-    true;
+    return true;
 }
-fct paintIntroRgba(output, phase) {
-    phase;
-    // 0.5.21: prefer the bundled icon/photo-like bitmap. The previous hand-drawn
-    // block letters could read as "Zumbba" because the R glyph looked like B.
+fct paintIntroRgba(output) {
     if (paintIntroBitmap(output, "assets/zumbra-nes.bmp")) {
         return output;
     }
-    var y << 0;
-    while (y < 240) {
-        var x << 0;
-        while (x < 256) {
-            var destination <<(y * 256 + x) * 4;
-            output[destination] << 20u8;
-            output[destination + 1] << 22u8;
-            output[destination + 2] << 28u8;
-            output[destination + 3] << 255u8;
-            x << x + 1;
-        }
-        y << y + 1;
-    } // Fallback: do not attempt to spell the word with ambiguous block letters.
-    introRect(output, 48, 100, 160, 40, 38, 44, 70);
-    introRect(output, 56, 108, 144, 24, 226, 235, 255);
-    output;
+    fillIntroFallback(output);
+    return output;
 }
 fct showStartupIntro(context, headlessMode) {
     if (headlessMode) {
         return true;
     }
     var pixels << bytes(256 * 240 * 4);
-    paintIntroRgba(pixels, 0);
+    paintIntroRgba(pixels);
+    var started << native.ticks(context);
+    while (!native.shouldClose(context) and native.ticks(context) - started < 1200u64) {
+        native.present(context, pixels);
+        native.pollAll(context, 32);
+        native.delay(context, 50);
+        started << started;
+    }
+    return true;
+}
+fct stableShell(context, headlessMode) {
+    var pixels << bytes(256 * 240 * 4);
+    paintNoRomShell(pixels);
     native.present(context, pixels);
-    native.pollAll(context, 64);
-    native.delay(context, 550);
-    true;
-}
-fct emptyGame(message) {
-    {
-        "ok": false, "message": message, "path": ""
+    native.setStatus(context, "Zumbra NES 0.5.29 | O/Enter abrir ROM | Z demo Zebra | Esc sair");
+    var running << true;
+    var frames << 0u64;
+    var lastPresent << native.ticks(context);
+    var selectedPath << "";
+    var lastOpen << false;
+    var lastDemo << false;
+    while (running and!native.shouldClose(context)) {
+        native.pollAll(context, 32);
+        if (native.keyDown(context, 41)) {
+            running << false;
+        }
+        var openNow << native.keyDown(context, 18) or native.keyDown(context, 40) or native.keyDown(context, 44);
+        if (openNow and!lastOpen and!headlessMode) {
+            selectedPath << native.pickRom(context);
+            if (selectedPath != "") {
+                running << false;
+            } else {
+                native.setStatus(context, "Zumbra NES 0.5.29 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
+            }
+        }
+        lastOpen << openNow;
+        var demoNow << native.keyDown(context, 29);
+        if (demoNow and!lastDemo and!headlessMode and fileExists("fixtures/homebrew/zebra-platformer.nes")) {
+            selectedPath << "fixtures/homebrew/zebra-platformer.nes";
+            running << false;
+        }
+        lastDemo << demoNow;
+        var nowTicks << native.ticks(context);
+        if (nowTicks - lastPresent >= 250u64) {
+            native.present(context, pixels);
+            lastPresent << nowTicks;
+        }
+        native.delay(context, 16);
+        if (headlessMode) {
+            frames << frames + 1u64;
+            if (frames >= 2u64) {
+                running << false;
+            }
+        }
+    }
+    return {
+        "frames": frames, "path": selectedPath
     };
-}
-fct openGame(path, db, timestamp, dataDirectory) {
-    if (path == "" or!fileExists(path)) {
-        return {
-            "ok": false, "message": "ROM file not found", "path": path
-        };
-    }
-    var data << readBytes(path);
-    var inspection << cartridge.inspectImage(data);
-    if (!inspection.ok) {
-        return {
-            "ok": false, "message": inspection.message, "path": path
-        };
-    }
-    var cart << cartridge.fromBytes(data, path);
-    var info << cart["info"];
-    var compatibility << mapper.compatibility(info.header.mapper);
-    if (!compatibility["ok"]) {
-        return {
-            "ok": false, "message": compatibility["message"], "path": path
-        };
-    }
-    var machine << console.create(cart);
-    saveRam.load(machine, dataDirectory);
-    var debuggerState << debug.create(machine);
-    store.recordRom(db, info, timestamp);
-    store.seedAchievements(db, info.digest, catalog.defaults());
-    var sessionId << store.beginSession(db, info.digest, timestamp);
-    {
-        "ok": true, "message": "ok", "path": path, "cart": cart, "machine": machine, "info": info, "sessionId": sessionId, "audioCursor": audioOutput.createCursor(), "debugger": debuggerState, "dataDirectory": dataDirectory, "rgba": palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"])
-    };
-}
-fct closeSession(db, game, state, timestamp, dataDirectory) {
-    if (game["ok"]) {
-        saveRam.flush(game["machine"], dataDirectory);
-        var seconds << toInt(timestamp - state.sessionStarted);
-        store.finishSession(db, game["sessionId"], game["info"].digest, timestamp, seconds, state.frames);
-    }
-}
-fct chooseInitialRom(context, db, headlessMode) {
-    var path << native.initialRom();
-    if (path != "") {
-        return path;
-    }
-    if (headlessMode and fileExists("fixtures/synthetic/z23-visible-frame.nes")) {
-        return "fixtures/synthetic/z23-visible-frame.nes";
-    }
-    if (!headlessMode) {
-        return "";
-    }
-    "";
-}
-fct updateStatus(context, game, state, preferences) {
-    if (!game["ok"]) {
-        native.setStatus(context, game["message"]);
-        return;
-    }
-    var mode << "running";
-    if (state.paused) {
-        mode << "paused";
-    }
-    var status << game["path"] + " | mapper " + toString(game["info"].header.mapper) + " | slot " + toString(state.saveSlot) + " | " + mode;
-    if (preferences.showFps) {
-        status << status + " | " + toString(state.fps) + " FPS";
-    }
-    native.setStatus(context, status);
-}
-fct mainMenuText(db, game, preferences) {
-    var text << "Zumbra NES\n\n";
-    text << text + "Jogos\n";
-    text << text + "  O: abrir ROM NES/Famicom\n";
-    text << text + "  F5: fechar ROM atual\n";
-    text << text + "  R: resetar ROM atual\n\n";
-    text << text + "Controles\n";
-    text << text + "  Setas/WASD: direcional\n";
-    text << text + "  Z/J: A | X/K: B | Enter/Espaco: Start | Shift/Tab/Backspace: Select\n";
-    text << text + "  F3: remapear teclado/gamepad\n\n";
-    text << text + "GPU/Video\n";
-    text << text + "  F6/F7: escala | F11: fullscreen | F12: VSync\n\n";
-    text << text + "CPU/Execucao\n";
-    text << text + "  P: pausar/continuar | F4: turbo seguro | F: frame advance\n";
-    text << text + "  Estado atual: escala " + toString(preferences.scale) + " | volume " + toString(preferences.volume) + " | turbo " + toString(preferences.unlimited) + " | vsync " + toString(preferences.vsync) + "\n";
-    text << text + "  Esc: sair\n\n";
-    text << text + "Biblioteca recente\n";
-    text << text + libraryText(db);
-    if (game["ok"]) {
-        text << text + "\nROM atual: " + game["path"] + " | mapper " + toString(game["info"].header.mapper) + "\n";
-    }
-    text << text + "\nObservacao: Mapper 227 roda em modo seguro para nao travar o PC. Se a ROM parar em tela preta, a emulacao pausa em vez de continuar consumindo CPU.";
-    text;
-}
-fct showMainMenu(context, db, game, preferences) {
-    native.showPanel(context, "Menu Zumbra NES", mainMenuText(db, game, preferences));
-    true;
 }
 fct openGameRuntime(path) {
     if (path == "" or!fileExists(path)) {
@@ -413,104 +312,117 @@ fct openGameRuntime(path) {
     }
     var cart << cartridge.fromBytes(data, path);
     var info << cart["info"];
-    var compatibility << mapper.compatibility(info.header.mapper);
+    var mapperId << info.header.mapper;
+    var compatibility << mapper.compatibility(mapperId);
     if (!compatibility["ok"]) {
         return {
             "ok": false, "message": compatibility["message"], "path": path
         };
     }
     var machine << console.create(cart);
-    {
-        "ok": true, "message": "ok", "path": path, "machine": machine, "info": info, "rgba": palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"])
+    return {
+        "ok": true, "message": "ok", "path": path, "machine": machine, "mapper": mapperId, "rgba": palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"])
     };
 }
 fct stableKey(context, code) {
     if (code < 0) {
         return false;
     }
-    native.keyDown(context, code);
+    return native.keyDown(context, code);
 }
 fct stablePlayerOneMask(context) {
     var mask << 0;
-    if (stableKey(context, 29) or stableKey(context, 13)) {
+    if (stableKey(context, 29) or stableKey(context, 13) or stableKey(context, 122) or stableKey(context, 106)) {
         mask << mask bor 0x01;
     }
-    if (stableKey(context, 27) or stableKey(context, 14)) {
+    if (stableKey(context, 27) or stableKey(context, 14) or stableKey(context, 120) or stableKey(context, 107)) {
         mask << mask bor 0x02;
     }
-    if (stableKey(context, 229) or stableKey(context, 225) or stableKey(context, 43) or stableKey(context, 42)) {
+    if (stableKey(context, 229) or stableKey(context, 225) or stableKey(context, 43) or stableKey(context, 42) or stableKey(context, 9) or stableKey(context, 8)) {
         mask << mask bor 0x04;
     }
-    if (stableKey(context, 40) or stableKey(context, 44) or stableKey(context, 88)) {
+    if (stableKey(context, 40) or stableKey(context, 44) or stableKey(context, 88) or stableKey(context, 13) or stableKey(context, 10) or stableKey(context, 32)) {
         mask << mask bor 0x08;
     }
-    if (stableKey(context, 82) or stableKey(context, 26)) {
+    if (stableKey(context, 82) or stableKey(context, 26) or stableKey(context, 119)) {
         mask << mask bor 0x10;
     }
-    if (stableKey(context, 81) or stableKey(context, 22)) {
+    if (stableKey(context, 81) or stableKey(context, 22) or stableKey(context, 115)) {
         mask << mask bor 0x20;
     }
-    if (stableKey(context, 80) or stableKey(context, 4)) {
+    if (stableKey(context, 80) or stableKey(context, 4) or stableKey(context, 97)) {
         mask << mask bor 0x40;
     }
-    if (stableKey(context, 79) or stableKey(context, 7)) {
+    if (stableKey(context, 79) or stableKey(context, 7) or stableKey(context, 100)) {
         mask << mask bor 0x80;
     }
-    mask;
+    return mask;
 }
-fct stableShell(context, headlessMode) {
-    var pixels << bytes(256 * 240 * 4);
-    paintIntroRgba(pixels, 0);
-    native.present(context, pixels);
-    native.setStatus(context, "Zumbra | O abrir ROM depois | Esc sair");
-    var running << true;
-    var frames << 0u64;
-    var lastPresent << native.ticks(context);
-    while (running and!native.shouldClose(context)) {
-        native.pollAll(context, 32);
-        if (native.keyDown(context, 41)) {
-            running << false;
-        }
-        var nowTicks << native.ticks(context);
-        if (nowTicks - lastPresent >= 250u64) {
-            native.present(context, pixels);
-            lastPresent << nowTicks;
-        }
-        native.delay(context, 16);
-        if (headlessMode) {
-            frames << frames + 1u64;
-            if (frames >= 2u64) {
-                running << false;
-            }
-        }
+fct maskEdge(current, previous, bit) {
+    return(current band bit) != 0 and(previous band bit) == 0;
+}
+fct edgeBits(current, previous, bits) {
+    var edges << 0;
+    if ((bits band 0x01) != 0 and maskEdge(current, previous, 0x01)) {
+        edges << edges bor 0x01;
     }
-    frames;
+    if ((bits band 0x02) != 0 and maskEdge(current, previous, 0x02)) {
+        edges << edges bor 0x02;
+    }
+    if ((bits band 0x04) != 0 and maskEdge(current, previous, 0x04)) {
+        edges << edges bor 0x04;
+    }
+    if ((bits band 0x08) != 0 and maskEdge(current, previous, 0x08)) {
+        edges << edges bor 0x08;
+    }
+    if ((bits band 0x10) != 0 and maskEdge(current, previous, 0x10)) {
+        edges << edges bor 0x10;
+    }
+    if ((bits band 0x20) != 0 and maskEdge(current, previous, 0x20)) {
+        edges << edges bor 0x20;
+    }
+    if ((bits band 0x40) != 0 and maskEdge(current, previous, 0x40)) {
+        edges << edges bor 0x40;
+    }
+    if ((bits band 0x80) != 0 and maskEdge(current, previous, 0x80)) {
+        edges << edges bor 0x80;
+    }
+    return edges;
 }
 
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.21", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.29", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
-        panic(native.error(context));
+        show(native.error(context));
+        return true;
     }
-    native.pollAll(context, 8);
+    native.pollAll(context, 4);
     showStartupIntro(context, headlessMode);
     var initialPath << native.initialRom();
+    if (initialPath == "--zebra") {
+        initialPath << "fixtures/homebrew/zebra-platformer.nes";
+    }
     if (initialPath == "" and headlessMode and fileExists("fixtures/synthetic/z23-visible-frame.nes")) {
         initialPath << "fixtures/synthetic/z23-visible-frame.nes";
     }
     if (initialPath == "") {
-        var shellFrames << stableShell(context, headlessMode);
-        native.destroy(context);
-        show("Z23 desktop session complete");
-        show(shellFrames);
-        return true;
+        var shellResult << stableShell(context, headlessMode);
+        initialPath << shellResult["path"];
+        if (initialPath == "") {
+            native.destroy(context);
+            show("Z23 desktop session complete");
+            show(shellResult["frames"]);
+            return true;
+        }
+        showStartupIntro(context, headlessMode);
     }
     var game << openGameRuntime(initialPath);
     if (!game["ok"]) {
         native.destroy(context);
-        panic(game["message"]);
+        show(game["message"]);
+        return false;
     }
     var running << true;
     var paused << false;
@@ -518,11 +430,16 @@ pub fct run() {
     var pendingFrame << true;
     var lastPresent << native.ticks(context);
     var lastP << false;
-    var mapperId << game["info"].header.mapper;
-    native.setStatus(context, "Zumbra | mapper " + toString(mapperId) + " | P pausa | Esc sair");
+    var mapperId << game["mapper"];
+    var previousPlayerOneMask << 0;
+    var bufferedActionMask << 0;
+    var bufferedActionFrames << 0;
+    var bufferedDirectionMask << 0;
+    var bufferedDirectionFrames << 0;
+    native.setStatus(context, "Zumbra NES 0.5.29 | mapper " + toString(mapperId) + " | Enter/Space Start | Shift/Tab Select | setas/WASD | Esc sair");
     while (running and!native.shouldClose(context)) {
         var frameStart << native.ticks(context);
-        native.pollAll(context, 32);
+        native.pollAll(context, 16);
         if (native.keyDown(context, 41)) {
             running << false;
         }
@@ -531,8 +448,38 @@ pub fct run() {
             paused <<!paused;
         }
         lastP << pNow;
-        var playerOne << stablePlayerOneMask(context);
-        console.setController(game["machine"], 1, playerOne);
+        var rawPlayerOneMask << stablePlayerOneMask(context);
+        var actionEdges << edgeBits(rawPlayerOneMask, previousPlayerOneMask, 0x0F);
+        var directionEdges << edgeBits(rawPlayerOneMask, previousPlayerOneMask, 0xF0);
+        if (actionEdges != 0) {
+            bufferedActionMask << bufferedActionMask bor actionEdges;
+            bufferedActionFrames << 18;
+            if (mapperId == 227 and((actionEdges band 0x08) != 0 or(actionEdges band 0x04) != 0)) {
+                bufferedActionMask << bufferedActionMask bor 0x0C;
+                bufferedActionFrames << 24;
+            }
+        }
+        if (directionEdges != 0) {
+            bufferedDirectionMask << directionEdges;
+            bufferedDirectionFrames << 8;
+        }
+        var playerOneMask << rawPlayerOneMask;
+        if (bufferedActionFrames > 0) {
+            playerOneMask << playerOneMask bor bufferedActionMask;
+            bufferedActionFrames << bufferedActionFrames - 1;
+            if (bufferedActionFrames <= 0) {
+                bufferedActionMask << 0;
+            }
+        }
+        if (bufferedDirectionFrames > 0) {
+            playerOneMask << playerOneMask bor bufferedDirectionMask;
+            bufferedDirectionFrames << bufferedDirectionFrames - 1;
+            if (bufferedDirectionFrames <= 0) {
+                bufferedDirectionMask << 0;
+            }
+        }
+        previousPlayerOneMask << rawPlayerOneMask;
+        console.setController(game["machine"], 1, playerOneMask);
         console.setController(game["machine"], 2, 0);
         if (!paused) {
             if (pendingFrame) {
@@ -541,18 +488,18 @@ pub fct run() {
             }
             var frameCompleteNow << false;
             var loops << 0;
-            var sliceLimit << 512;
+            var sliceLimit << 256;
             if (mapperId == 227 and!headlessMode) {
-                sliceLimit << 96;
+                sliceLimit << 48;
             }
-            while (!frameCompleteNow and!native.shouldClose(context) and loops < 6 and native.ticks(context) - frameStart <= 10u64) {
+            while (!frameCompleteNow and!native.shouldClose(context) and loops < 4 and native.ticks(context) - frameStart <= 8u64) {
                 console.setVideoOutput(game["machine"], true);
                 var code << console.runFrameSliceCode(game["machine"], sliceLimit);
                 if (code < 0) {
                     frameCompleteNow << true;
                 }
                 loops << loops + 1;
-                native.pollAll(context, 8);
+                native.pollAll(context, 4);
             }
             if (frameCompleteNow) {
                 pendingFrame << true;
@@ -562,7 +509,8 @@ pub fct run() {
                 native.present(context, rgba);
                 lastPresent << native.ticks(context);
             } else {
-                native.delay(context, 2);
+                native.delay(context, 3);
+                pendingFrame << pendingFrame;
             }
         } else {
             var pausedTicks << native.ticks(context);
@@ -572,21 +520,25 @@ pub fct run() {
                 lastPresent << pausedTicks;
             }
             native.delay(context, 16);
+            paused << paused;
         }
         if (headlessMode and frames >= 2u64) {
             running << false;
         }
         if (!headlessMode and mapperId == 227) {
-            native.delay(context, 8);
+            native.delay(context, 10);
+            mapperId << mapperId;
         } else {
             var elapsed << native.ticks(context) - frameStart;
             if (elapsed < 16u64) {
                 native.delay(context, toInt(16u64 - elapsed));
+                elapsed << elapsed;
             }
+            elapsed << elapsed;
         }
     }
     native.destroy(context);
     show("Z23 desktop session complete");
     show(frames);
-    true;
+    return true;
 }

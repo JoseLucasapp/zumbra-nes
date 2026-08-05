@@ -1,4 +1,43 @@
-## 0.5.21 validation
+## 0.5.29 validation
+
+Critérios de aprovação:
+
+1. `EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh` passa até `Z23 compatibility, persistence and debugger gate passed.`
+2. `./build/zumbra-nes` abre a tela `NO ROM` e permite abrir ROM por `O`/`Enter`/`Space`.
+3. `./build/zumbra-nes --zebra` abre a ROM homebrew Zebra Platformer.
+4. Na Zebra, setas/WASD movem o personagem e `Z`/`J` pulam.
+5. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"` não trava o PC e Enter/Space enviam Start+Select assistido para o menu.
+6. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"` não deve mais rejeitar por mapper 10; se falhar, a falha deve ser de execução/renderização, não de compatibilidade.
+
+## 0.5.29 validation
+
+A etapa é aprovada quando o gate completo passa, o desktop sem ROM sai da tela de logo para o shell "NO ROM", e a ROM 1200-in-1 aceita teclado no menu.
+
+## 0.5.29 validation
+
+A etapa bloqueante nova é o build desktop nativo. O erro `types: function has conflicting return types: null and bool` não pode aparecer.
+
+## 0.5.23 validation
+
+Run:
+
+```bash
+EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh
+./build/zumbra-nes
+taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
+```
+
+Expected gate lines:
+
+```text
+Zumbra NES Z23 compatibility
+0.5.23
+Project check is advisory in Z23 0.5.23; continuing to project test/build.
+Built release desktop application:
+Z23 compatibility, persistence and debugger gate passed.
+```
+
+## 0.5.23 validation
 
 Run `EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh`, then `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
 
@@ -8,7 +47,7 @@ Run `EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh`, then `./
 
 ```text
 Zumbra: 0.14.3
-zumbra-nes: 0.5.21
+zumbra-nes: 0.5.23
 Linux: amd64
 ```
 
@@ -122,11 +161,11 @@ Confirmar slots diferentes e rejeição ao tentar restaurar um estado de outra R
 ```bash
 scripts/package-z23-linux.sh
 
-dpkg-deb --info dist/zumbra-nes_0.5.21_amd64.deb
-dpkg-deb --contents dist/zumbra-nes_0.5.21_amd64.deb
+dpkg-deb --info dist/zumbra-nes_0.5.23_amd64.deb
+dpkg-deb --contents dist/zumbra-nes_0.5.23_amd64.deb
 
 ZUMBRA_DESKTOP_HEADLESS=1 \
-  dist/zumbra-nes-0.5.21-linux-amd64.AppDir/AppRun
+  dist/zumbra-nes-0.5.23-linux-amd64.AppDir/AppRun
 ```
 
 AppImage é opcional e requer `appimagetool`.
@@ -152,7 +191,7 @@ Os dois primeiros comandos não devem produzir saída, e o último deve passar.
 The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
 
 
-## 0.5.21 manual Mapper 227 input validation
+## 0.5.23 manual Mapper 227 input validation
 
 1. Run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
 2. Click the emulator window once.
@@ -161,3 +200,13 @@ The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path.
 5. Press arrows or WASD for menu movement.
 6. Confirm inputs are processed without multi-second delay.
 
+
+## 0.5.23 validation
+
+Run:
+
+```bash
+EXPECTED_ZUMBRA_VERSION=0.14.3 scripts/test-z23-compatibility.sh
+```
+
+The `project check` and aggregate `project test` diagnostics are advisory for Z23 0.5.23. The gate must execute all 75 test files through `scripts/run-z23-tests.sh` before building native and desktop artifacts.

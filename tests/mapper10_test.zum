@@ -1,0 +1,17 @@
+import "../src/core/mapper.zum" as mapper;
+import "../src/testing/assert.zum" as test;
+var state << mapper.create(10u16, 0u8, 262144, 131072, false, "vertical");
+mapper.cpuWrite(state, 0xA000, 3, 262144);
+test.assertInt(mapper.cpuRead(state, 0x8000, 262144).offset, 3 * 16384, "MMC4 switchable PRG bank");
+test.assertInt(mapper.cpuRead(state, 0xC000, 262144).offset, 15 * 16384, "MMC4 fixed PRG bank");
+mapper.cpuWrite(state, 0xB000, 4, 262144);
+mapper.cpuWrite(state, 0xC000, 5, 262144);
+mapper.cpuWrite(state, 0xD000, 6, 262144);
+mapper.cpuWrite(state, 0xE000, 7, 262144);
+test.assertInt(mapper.ppuRead(state, 0x0FD8, 131072).offset, 4 * 4096 + 0x0FD8, "MMC4 lower FD latch");
+test.assertInt(mapper.ppuRead(state, 0x0FE8, 131072).offset, 5 * 4096 + 0x0FE8, "MMC4 lower FE latch");
+test.assertInt(mapper.ppuRead(state, 0x1FD8, 131072).offset, 6 * 4096 + 0x0FD8, "MMC4 upper FD latch");
+test.assertInt(mapper.ppuRead(state, 0x1FE8, 131072).offset, 7 * 4096 + 0x0FE8, "MMC4 upper FE latch");
+mapper.cpuWrite(state, 0xF000, 1, 262144);
+test.assertString(mapper.mirroring(state, "vertical"), "horizontal", "MMC4 mirroring register");
+show("mapper10_test: ok");

@@ -26,7 +26,7 @@ docs/release-0.5.1.md
 docs/release-0.5.10.md
 docs/release-0.5.11.md
 docs/release-0.5.20.md
-docs/release-0.5.21.md
+docs/release-0.5.23.md
 docs/release-0.5.3.md
 docs/release-0.5.4.md
 docs/release-0.5.5.md
@@ -59,6 +59,7 @@ scripts/check-zumbra-native-performance.sh
 scripts/generate-synthetic-fixtures.py
 scripts/package-z22-linux.sh
 scripts/package-z23-linux.sh
+scripts/run-z23-tests.sh
 scripts/test-z19-foundation.sh
 scripts/test-z20-cpu.sh
 scripts/test-z21-hardware.sh
@@ -177,3 +178,7 @@ tests/store_save_state_test.zum
 tests/visible_frame_test.zum
 zumbra-app.toml
 zumbra.toml
+docs/release-0.5.29.md
+fixtures/homebrew/zebra-platformer.nes
+scripts/generate-zebra-platformer-rom.py
+tests/mapper10_test.zum

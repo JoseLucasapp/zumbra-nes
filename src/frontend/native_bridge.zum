@@ -39,7 +39,7 @@ fct commandStates() {
         addToArrayEnd(values, false);
         index << index + 1;
     }
-    values;
+    return values;
 }
 
 /// Creates the official Zumbra desktop application and window.
@@ -49,40 +49,41 @@ pub fct create(title, scale, vsync, fullscreen, requestedHeadless) {
         backend << "headless";
     }
     var app << desktopApp({
-        "name": "Zumbra NES", "version": "0.5.21", "identifier": "dev.zumbra.nes", "backend": backend, "quitOnLastWindow": true, "closeOnRequest": true
+        "name": "Zumbra NES", "version": "0.5.29", "identifier": "dev.zumbra.nes", "backend": backend, "quitOnLastWindow": true, "closeOnRequest": true
     });
     var window << desktopWindow(app, {
         "title": title, "width": 256 * scale, "height": 240 * scale, "resizable": true, "highDPI": true, "fullscreen": fullscreen
     });
     desktopWindowSetVSync(window, vsync);
-    {
+    return {
         "app": app, "window": window, "closed": false, "commands": commandStates(), "volume": 80, "muted": false, "headless": desktopBackend(app) == "headless"
     };
 }
 pub fct headless(context) {
-    context["headless"];
+    return context["headless"];
 }
 pub fct valid(context) {
-    desktopWindowOpen(context["window"]);
+    return desktopWindowOpen(context["window"]);
 }
 pub fct error(context) {
     context;
-    "desktop runtime initialization failed";
+    return "desktop runtime initialization failed";
 }
 pub fct destroy(context) {
     desktopWindowClose(context["window"]);
     desktopClose(context["app"]);
+    return true;
 }
 pub fct poll(context) {
     var event << desktopPoll(context["app"], 0);
     if (toString(event) == "null") {
         return false;
-    } // 0.5.21: do not index desktop event payloads in the release frontend.
+    } // 0.5.29: do not index desktop event payloads in the release frontend.
     // On the real SDL backend some window events arrive as non-dictionary runtime
     // values; reading event["type"] aborts with "field access requires a struct or
     // enum type" before the menu or ROM can open. The close condition is still
     // handled by desktopWindowOpen() in shouldClose() and by Esc in desktop.zum.
-    true;
+    return true;
 }
 
 /// Drains a bounded batch of pending desktop events so the WM never marks the emulator as hung.
@@ -91,89 +92,91 @@ pub fct pollAll(context, maxEvents) {
     while (handled < maxEvents and poll(context)) {
         handled << handled + 1;
     }
-    handled;
+    return handled;
 }
 pub fct shouldClose(context) {
-    context["closed"] or!desktopWindowOpen(context["window"]);
+    return context["closed"] or!desktopWindowOpen(context["window"]);
 }
 pub fct keyDown(context, scancode) {
-    desktopKeyDown(context["app"], scancode);
+    return desktopKeyDown(context["app"], scancode);
 }
 pub fct gamepadButton(context, player, button) {
-    desktopGamepadButton(context["app"], player, button);
+    return desktopGamepadButton(context["app"], player, button);
 }
 pub fct commandPressed(context, command, scancode) {
     var current << keyDown(context, scancode);
     var previous << context["commands"][command];
     context["commands"][command] << current;
-    current and!previous;
+    return current and!previous;
 }
 pub fct present(context, pixels) {
     desktopWindowPresentRGBA(context["window"], pixels, 256, 240);
+    return true;
 }
 pub fct queueAudio(context, samples) {
     desktopAudioQueue(context["app"], samples, context["volume"], context["muted"]);
+    return true;
 }
 pub fct audioQueued(context) {
-    desktopAudioQueued(context["app"]);
+    return desktopAudioQueued(context["app"]);
 }
 pub fct setVolume(context, volume) {
     context["volume"] << volume;
-    true;
+    return true;
 }
 pub fct setScale(context, scale) {
     desktopWindowSetSize(context["window"], 256 * scale, 240 * scale);
-    true;
+    return true;
 }
 pub fct setVsync(context, vsync) {
     desktopWindowSetVSync(context["window"], vsync);
-    true;
+    return true;
 }
 pub fct setMuted(context, muted) {
     context["muted"] << muted;
-    true;
+    return true;
 }
 pub fct setFullscreen(context, fullscreen) {
     desktopWindowSetFullscreen(context["window"], fullscreen);
-    true;
+    return true;
 }
 pub fct setStatus(context, status) {
     desktopWindowSetTitle(context["window"], "Zumbra NES — " + status);
-    true;
+    return true;
 }
 pub fct notify(context, title, message) {
-    // 0.5.21: keep notifications on the stable window-title path. The platform
+    // 0.5.29: keep notifications on the stable window-title path. The platform
     // notification bridge is not required for emulation and should never be able
     // to crash the emulator shell.
     desktopWindowSetTitle(context["window"], "Zumbra NES — " + title + ": " + message);
-    true;
+    return true;
 }
 pub fct ticks(context) {
     context;
-    profileNowNs() / 1000000u64;
+    return profileNowNs() / 1000000u64;
 }
 pub fct delay(context, milliseconds) {
     context;
     sleepMs(milliseconds);
-    true;
+    return true;
 }
 pub fct unixSeconds() {
-    unixTimeSeconds();
+    return unixTimeSeconds();
 }
 pub fct initialRom() {
     var args << processArgs();
     if (sizeOf(args) > 1) {
         return args[1];
     }
-    "";
+    return "";
 }
 pub fct dataPath(context) {
     context;
-    // 0.5.21: avoid desktopPaths() in the safety build. The live SDL backend can
+    // 0.5.29: avoid desktopPaths() in the safety build. The live SDL backend can
     // return a platform-specific value that is not safe for string-field indexing
     // in native mode. Use the current project directory until the desktop bridge
     // exposes a typed path object.
-    ".";
+    return ".";
 }
 pub fct pickRom(context) {
     var selected << desktopPickFile(context["app"], {
@@ -182,15 +185,15 @@ pub fct pickRom(context) {
     if (sizeOf(selected) == 0) {
         return "";
     }
-    selected[0];
+    return selected[0];
 }
 pub fct showPanel(context, title, body) {
     body;
-    // 0.5.21: the release shell must not open experimental panels or platform
+    // 0.5.29: the release shell must not open experimental panels or platform
     // notifications at startup. Keep the command non-fatal and expose the current
     // section in the title bar only.
     desktopWindowSetTitle(context["window"], "Zumbra NES — " + title);
-    true;
+    return true;
 }
 fct anyKeyDown(context) {
     var code << 0;
@@ -200,7 +203,7 @@ fct anyKeyDown(context) {
         }
         code << code + 1;
     }
-    - 1;
+    return-1;
 }
 pub fct captureKey(context, prompt) {
     notify(context, "Remapeamento", prompt);
@@ -223,5 +226,5 @@ pub fct captureKey(context, prompt) {
         }
         sleepMs(10);
     }
-    - 1;
+    return-1;
 }

@@ -1,4 +1,25 @@
-## 0.5.21 desktop runtime check
+## 0.5.29 desktop/input/homebrew check
+
+Comandos manuais principais:
+
+```bash
+./build/zumbra-nes
+./build/zumbra-nes --zebra
+taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
+taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"
+```
+
+A ROM `fixtures/homebrew/zebra-platformer.nes` é original do projeto e existe para testar input e renderização sem ROM comercial.
+
+## 0.5.29 desktop intro/input check
+
+Validar `./build/zumbra-nes` sem ROM e `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`. A intro deve aparecer antes do menu da ROM, e Enter/Space/Shift/Tab/setas/WASD/Z/X/J/K devem ser capturados pela janela.
+
+## 0.5.29 desktop app-build check
+
+A 0.5.29 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
+
+## 0.5.23 desktop runtime check
 
 The real SDL command-line ROM launch must not raise `zumbra runtime error: value is not callable`.
 
@@ -63,7 +84,7 @@ Etapas:
 1. checksums das fixtures;
 2. tabela dos 151 opcodes;
 3. formatter e linter;
-4. versão `0.5.21`;
+4. versão `0.5.23`;
 5. project check;
 6. 75 testes pela VM;
 7. documentação;
@@ -89,8 +110,12 @@ Z23 compatibility, persistence and debugger gate passed.
 The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
 
 
-## 0.5.21 Mapper 227 low-latency input hotfix
+## 0.5.23 Mapper 227 low-latency input hotfix
 
 Manual validation target: run `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`, click the window once, then verify Start, Select and D-pad taps are processed without multi-second delay.
 
 Keyboard aliases heard by player 1: Enter/Space/keypad Enter for Start, Right Shift/Left Shift/Tab/Backspace for Select, arrows/WASD for D-pad, Z/J for A, X/K for B, Esc to quit.
+
+## Z23 0.5.23 test execution
+
+`zumbra project check` and aggregate `zumbra project test` can emit unused-symbol diagnostics before executing test files. For Z23 0.5.23, the compatibility gate records those diagnostics and then runs `scripts/run-z23-tests.sh`, which executes every `tests/*_test.zum` file directly. The gate still requires `project test: 75 test file(s) executed` before native and desktop builds.

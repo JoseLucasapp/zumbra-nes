@@ -1,6 +1,6 @@
 [app]
 name = "Zumbra NES"
-version = "0.5.21"
+version = "0.5.29"
 identifier = "dev.zumbra.nes"
 entry = "src/desktop_main.zum"
 icon = "assets/zumbra-nes.png"
@@ -24,7 +24,7 @@ dependencies = ["libc6", "libsqlite3-0", "libsdl3-0"]
 recommends = ["zenity"]
 
 [assets]
-include = ["assets/**", "fixtures/synthetic/**", "docs/**"]
+include = ["assets/**", "fixtures/synthetic/**", "fixtures/homebrew/**", "docs/**"]
 exclude = ["**/*.tmp"]
 max_file_bytes = 16_777_216
 max_total_bytes = 67_108_864

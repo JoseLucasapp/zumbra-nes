@@ -40,7 +40,7 @@ jobs:
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
-          name: zumbra-nes-0.5.21-linux-amd64
+          name: zumbra-nes-0.5.29-linux-amd64
           path: |
             dist/*.deb
             dist/*.AppDir/**

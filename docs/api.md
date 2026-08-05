@@ -2231,37 +2231,6 @@ pub fct summary(debugger)
 
 ## `/home/joselucasapp/projects/zumbra-nes/src/frontend/desktop.zum`
 
-### DesktopState
-
-```zumbra
-pub struct DesktopState
-```
-
-| Member | Kind | Type / Signature |
-|---|---|---|
-| `paused` | field | `bool` |
-| `frameAdvance` | field | `bool` |
-| `fullscreen` | field | `bool` |
-| `muted` | field | `bool` |
-| `frames` | field | `u64` |
-| `sessionStarted` | field | `u64` |
-| `lastSecond` | field | `u64` |
-| `fpsFrames` | field | `int` |
-| `fps` | field | `int` |
-| `saveSlot` | field | `int` |
-| `running` | field | `bool` |
-| `pendingFrame` | field | `bool` |
-| `lastPresent` | field | `u64` |
-| `inputBoost` | field | `int` |
-| `lastPlayerOne` | field | `int` |
-| `lastPlayerTwo` | field | `int` |
-| `visibleFrames` | field | `int` |
-| `blankFrames` | field | `int` |
-| `heldPlayerOne` | field | `int` |
-| `heldPlayerTwo` | field | `int` |
-| `playerOneHold` | field | `int` |
-| `playerTwoHold` | field | `int` |
-
 ### run
 
 ```zumbra

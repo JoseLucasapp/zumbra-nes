@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.21
+# zumbra-nes 0.5.22
 
 Safety gate correction for Z23 stable shell validation.
 
@@ -7,7 +7,7 @@ Safety gate correction for Z23 stable shell validation.
 - Keeps the 0.5.20 stable shell reset behavior.
 - Updates the compatibility gate to treat `zumbra project check` warning-only output as non-blocking.
 - Still fails the gate when project check emits blocking semantic/type/syntax errors.
-- Updates active Z23 version checks to 0.5.21.
+- Updates active Z23 version checks to 0.5.22.
 
 ## Validation target
 

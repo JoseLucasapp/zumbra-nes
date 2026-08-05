@@ -1,5 +1,5 @@
 import "frontend/desktop.zum" as desktop;
 fct main() {
-    desktop.run();
+    return desktop.run();
 }
 main();
