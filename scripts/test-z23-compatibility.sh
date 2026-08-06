@@ -67,7 +67,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[9]:-}" == "4" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
-[[ "${smoke[12]:-}" == "7" ]]
+[[ "${smoke[12]:-}" == "8" ]]
 [[ "${smoke[13]:-}" == "1" ]]
 
 if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then

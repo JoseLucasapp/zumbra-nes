@@ -105,11 +105,11 @@ pub fct write(state, address, value) {
         return true;
     }
     if (normalized <= 0x3FFF) {
-        return ppu.cpuWrite(state["ppu"], normalized band 0x0007, byteValue);
+        return ppu.cpuWrite(state["ppu"], normalized band 0x0007, byteValue) == true;
     }
     if (normalized >= 0x4000 and normalized <= 0x4013) {
         state["apuIo"][normalized - 0x4000] << u8(byteValue);
-        return apu.cpuWrite(state["apu"], normalized, byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue) == true;
     }
     if (normalized == 0x4014) {
         state["apuIo"][0x14] << u8(byteValue);
@@ -119,7 +119,7 @@ pub fct write(state, address, value) {
     }
     if (normalized == 0x4015) {
         state["apuIo"][0x15] << u8(byteValue);
-        return apu.cpuWrite(state["apu"], normalized, byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue) == true;
     }
     if (normalized == 0x4016) {
         state["apuIo"][0x16] << u8(byteValue);
@@ -129,7 +129,7 @@ pub fct write(state, address, value) {
     }
     if (normalized == 0x4017) {
         state["apuIo"][0x17] << u8(byteValue);
-        return apu.cpuWrite(state["apu"], normalized, byteValue);
+        return apu.cpuWrite(state["apu"], normalized, byteValue) == true;
     }
     if (normalized >= 0x4018 and normalized <= 0x401F) {
         state["apuIo"][normalized - 0x4000] << u8(byteValue);
