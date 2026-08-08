@@ -5,15 +5,15 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 for forbidden in .env '*.key' '*.pem' '*.p12' '*.pfx' '*.sqlite' '*.sqlite3' '*.db' '*.sav' '*.zst'; do
-    if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -name "$forbidden" -print | grep -q .; then
+    if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -path './zumbra-nes.sqlite3' -prune -o -name "$forbidden" -print | grep -q .; then
         echo "Forbidden secret or generated persistence file found: $forbidden" >&2
         exit 1
     fi
 done
 
-unexpected_roms="$(find . -path './.git' -prune -o \( -iname '*.nes' -o -iname '*.fds' -o -iname '*.unf' -o -iname '*.unif' \) -type f ! -path './fixtures/synthetic/*' -print)"
+unexpected_roms="$(find . -path './.git' -prune -o \( -iname '*.nes' -o -iname '*.fds' -o -iname '*.unf' -o -iname '*.unif' \) -type f ! -path './fixtures/synthetic/*' ! -path './fixtures/homebrew/*' -print)"
 if [[ -n "$unexpected_roms" ]]; then
-    echo "ROM images are allowed only under fixtures/synthetic:" >&2
+    echo "ROM images are allowed only under fixtures/synthetic or fixtures/homebrew:" >&2
     printf '%s\n' "$unexpected_roms" >&2
     exit 1
 fi
@@ -24,10 +24,10 @@ while IFS= read -r rom; do
         echo "Synthetic ROM is unexpectedly large: $rom ($size bytes)" >&2
         exit 1
     fi
-done < <(find fixtures/synthetic -type f -iname '*.nes' -print)
+done < <(find fixtures/synthetic fixtures/homebrew -type f -iname '*.nes' -print)
 
-grep -q '^version = "0.5.29"$' zumbra.toml
-grep -q '^version = "0.5.29"$' zumbra-app.toml
+grep -q '^version = "0.5.30"$' zumbra.toml
+grep -q '^version = "0.5.30"$' zumbra-app.toml
 if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | grep -q .; then
     echo "Project-local C/C headers are forbidden; use the official Zumbra runtime." >&2
     exit 1
@@ -47,7 +47,7 @@ test -x scripts/test-z23-compatibility.sh
 test -x scripts/check-zumbra-native-performance.sh
 test -x scripts/run-z23-tests.sh
 test -x scripts/package-z23-linux.sh
-test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 75
+test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 76
 
 if [[ -d .git ]]; then
     tracked_generated="$(git ls-files 'build/**' 'dist/**' '.zumbra/**')"

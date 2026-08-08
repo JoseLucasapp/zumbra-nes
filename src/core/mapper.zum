@@ -66,6 +66,11 @@ pub fct supportedIds() {
     [0, 1, 2, 3, 4, 7, 10, 227];
 }
 
+/// Allocation-free count used by reports and release gates.
+pub fct supportedCount() {
+    8;
+}
+
 /// Human-readable mapper compatibility list used by the desktop frontend.
 pub fct supportedText() {
     "0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 10 (MMC4), 227 (multicart)";

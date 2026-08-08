@@ -3,6 +3,7 @@ dist/
 .zumbra/
 *.prof
 *.tmp
+*.sqlite3
 .DS_Store
 Thumbs.db
 __pycache__/

@@ -173,3 +173,10 @@
 
 - Made the Z23 gate execute tests file-by-file when aggregate `project test` stops on warning-only project diagnostics.
 - Added `scripts/run-z23-tests.sh` as the authoritative Z23 test execution step.
+## 0.5.30 — scheduler de frame, ajuda e CI por versão
+
+- Substitui o teto de 1.024 instruções por um scheduler limitado por tempo capaz de completar frames NES em velocidade útil.
+- Mantém Mapper 227 cooperativo, com fatias menores e polling frequente do SDL.
+- Adiciona ajuda de controles em C/H e documenta o mapa oficial da versão.
+- Ativa CI em `main`, pull requests, tags versionadas e execução manual.
+- Corrige os gates de oito mappers, 76 testes, ROM homebrew e SQLite local ignorado.

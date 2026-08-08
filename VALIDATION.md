@@ -1,4 +1,4 @@
-## 0.5.29 validation
+## 0.5.30 validation
 
 Critérios de aprovação:
 
@@ -9,11 +9,11 @@ Critérios de aprovação:
 5. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"` não trava o PC e Enter/Space enviam Start+Select assistido para o menu.
 6. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"` não deve mais rejeitar por mapper 10; se falhar, a falha deve ser de execução/renderização, não de compatibilidade.
 
-## 0.5.29 validation
+## 0.5.30 validation
 
 A etapa é aprovada quando o gate completo passa, o desktop sem ROM sai da tela de logo para o shell "NO ROM", e a ROM 1200-in-1 aceita teclado no menu.
 
-## 0.5.29 validation
+## 0.5.30 validation
 
 A etapa bloqueante nova é o build desktop nativo. O erro `types: function has conflicting return types: null and bool` não pode aparecer.
 

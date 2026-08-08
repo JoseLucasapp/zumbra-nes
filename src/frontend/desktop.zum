@@ -252,13 +252,14 @@ fct stableShell(context, headlessMode) {
     var pixels << bytes(256 * 240 * 4);
     paintNoRomShell(pixels);
     native.present(context, pixels);
-    native.setStatus(context, "Zumbra NES 0.5.29 | O/Enter abrir ROM | Z demo Zebra | Esc sair");
+    native.setStatus(context, "Zumbra NES 0.5.30 | O/Enter abrir ROM | Z demo Zebra | Esc sair");
     var running << true;
     var frames << 0u64;
     var lastPresent << native.ticks(context);
     var selectedPath << "";
     var lastOpen << false;
     var lastDemo << false;
+    var lastHelp << false;
     while (running and!native.shouldClose(context)) {
         native.pollAll(context, 32);
         if (native.keyDown(context, 41)) {
@@ -270,7 +271,7 @@ fct stableShell(context, headlessMode) {
             if (selectedPath != "") {
                 running << false;
             } else {
-                native.setStatus(context, "Zumbra NES 0.5.29 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
+                native.setStatus(context, "Zumbra NES 0.5.30 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
                 running << running;
             }
         }
@@ -281,6 +282,12 @@ fct stableShell(context, headlessMode) {
             running << false;
         }
         lastDemo << demoNow;
+        var helpNow << native.keyDown(context, 6) or native.keyDown(context, 11);
+        if (helpNow and!lastHelp) {
+            native.setStatus(context, "AJUDA | O/Enter abrir ROM | Z demo | setas/WASD mover | J/Z=A | K/X=B | Shift/Tab Select | Space/Enter Start | P pausa | Esc sair");
+            running << running;
+        }
+        lastHelp << helpNow;
         var nowTicks << native.ticks(context);
         if (nowTicks - lastPresent >= 250u64) {
             native.present(context, pixels);
@@ -393,7 +400,7 @@ fct edgeBits(current, previous, bits) {
 
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.29", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.30", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -437,12 +444,15 @@ pub fct run() {
     var bufferedActionFrames << 0;
     var bufferedDirectionMask << 0;
     var bufferedDirectionFrames << 0;
-    native.setStatus(context, "Zumbra NES 0.5.29 | mapper " + toString(mapperId) + " | Enter/Space Start | Shift/Tab Select | setas/WASD | Esc sair");
+    native.setStatus(context, "Zumbra NES 0.5.30 | mapper " + toString(mapperId) + " | C/H ajuda | P pausa | Esc sair");
     while (running and!native.shouldClose(context)) {
         var frameStart << native.ticks(context);
         native.pollAll(context, 16);
         if (native.keyDown(context, 41)) {
             running << false;
+        }
+        if (native.keyDown(context, 6) or native.keyDown(context, 11)) {
+            native.setStatus(context, "CONTROLES | setas/WASD mover | J/Z=A | K/X=B | Shift/Tab Select | Space/Enter Start | P pausa | Esc sair");
         }
         var pNow << native.keyDown(context, 19);
         if (pNow and!lastP) {
@@ -489,11 +499,13 @@ pub fct run() {
             }
             var frameCompleteNow << false;
             var loops << 0;
-            var sliceLimit << 256;
+            // A frame needs tens of thousands of CPU instructions. Host time,
+            // not a four-slice cap, is the responsiveness guard.
+            var sliceLimit << 4096;
             if (mapperId == 227 and!headlessMode) {
-                sliceLimit << 48;
+                sliceLimit << 2048;
             }
-            while (!frameCompleteNow and!native.shouldClose(context) and loops < 4 and native.ticks(context) - frameStart <= 8u64) {
+            while (!frameCompleteNow and!native.shouldClose(context) and loops < 32 and native.ticks(context) - frameStart <= 10u64) {
                 console.setVideoOutput(game["machine"], true);
                 var code << console.runFrameSliceCode(game["machine"], sliceLimit);
                 if (code < 0) {
@@ -527,7 +539,7 @@ pub fct run() {
             running << false;
         }
         if (!headlessMode and mapperId == 227) {
-            native.delay(context, 10);
+            native.delay(context, 2);
             mapperId << mapperId;
         } else {
             var elapsed << native.ticks(context) - frameStart;

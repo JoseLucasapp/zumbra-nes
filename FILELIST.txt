@@ -28,6 +28,7 @@ docs/release-0.5.11.md
 docs/release-0.5.20.md
 docs/release-0.5.23.md
 docs/release-0.5.3.md
+docs/release-0.5.30.md
 docs/release-0.5.4.md
 docs/release-0.5.5.md
 docs/release-0.5.6.md
@@ -178,7 +179,7 @@ tests/store_save_state_test.zum
 tests/visible_frame_test.zum
 zumbra-app.toml
 zumbra.toml
-docs/release-0.5.29.md
+docs/release-0.5.30.md
 fixtures/homebrew/zebra-platformer.nes
 scripts/generate-zebra-platformer-rom.py
 tests/mapper10_test.zum

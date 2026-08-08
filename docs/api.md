@@ -1529,6 +1529,14 @@ Returns whether the mapper is implemented by Z23.
 pub fct supportedIds()
 ```
 
+### supportedCount
+
+```zumbra
+pub fct supportedCount()
+```
+
+Allocation-free count used by reports and release gates.
+
 ### supportedText
 
 ```zumbra

@@ -2,7 +2,12 @@ name: Z23 compatibility, persistence and debugger
 
 on:
   push:
+    branches:
+      - main
+    tags:
+      - "v*"
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,6 +40,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run Z23 gate
+        env:
+          EXPECTED_ZUMBRA_VERSION: "0.14.3"
         run: scripts/test-z23-compatibility.sh
 
       - name: Upload Linux packages

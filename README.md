@@ -1,6 +1,18 @@
-# zumbra-nes 0.5.29
+# zumbra-nes 0.5.30
 
-**0.5.29 desktop/runtime fix:** adiciona launcher sem ROM com seletor de arquivo, inclui a ROM homebrew `fixtures/homebrew/zebra-platformer.nes`, adiciona Mapper 10/MMC4 inicial e melhora o input para menus multicart.
+## Controles rápidos
+
+- `O` ou `Enter`: abrir uma ROM na tela inicial.
+- `Z`: iniciar a ROM homebrew de demonstração na tela inicial.
+- `C` ou `H`: mostrar a ajuda completa no título da janela.
+- Setas ou `WASD`: direcional.
+- `J` ou `Z`: botão A; `K` ou `X`: botão B.
+- `Shift` ou `Tab`: Select; `Space` ou `Enter`: Start.
+- `P`: pausar; `Esc`: sair.
+
+O remapeamento persistente ainda não faz parte da 0.5.30; os atalhos acima são o mapa oficial desta versão.
+
+**0.5.30 desktop/runtime fix:** adiciona launcher sem ROM com seletor de arquivo, inclui a ROM homebrew `fixtures/homebrew/zebra-platformer.nes`, adiciona Mapper 10/MMC4 inicial e melhora o input para menus multicart.
 
 **0.5.23 safe shell:** corrige o crash ao abrir sem ROM, troca a intro para o bitmap `assets/zumbra-nes.bmp` e coloca Mapper 227 atrás de uma pausa de segurança para não travar o PC.
 
