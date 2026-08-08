@@ -82,7 +82,7 @@ pub fct createWithMapper(cart, mapperState) {
         vramBytes << constants.FOUR_SCREEN_NAMETABLE_BYTES;
     }
     {
-        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "mapper": mapperState, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES), "backgroundOpaque": bytes(constants.PPU_WIDTH), "lineSprites": bytes(8), "lineSpriteCount": 0, "renderOutput": true
+        "core": PpuCore(0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0,-1, 0, 0u64, 0u64, false, false, false, false, 0), "cart": cart, "mapper": mapperState, "vram": bytes(vramBytes), "palette": bytes(constants.PALETTE_BYTES), "oam": bytes(constants.OAM_BYTES), "framebuffer": bytes(constants.FRAMEBUFFER_BYTES), "backgroundOpaque": bytes(constants.PPU_WIDTH), "lineSprites": bytes(8), "lineSpriteCount": 0, "renderOutput": true, "fastTiming": false
     };
 }
 
@@ -118,11 +118,11 @@ pub fct write(state, address, value) {
     if (normalized < 0x2000) {
         var cart << state["cart"];
         var info << cart["info"];
-        var mapping << mapper.ppuWrite(state["mapper"], normalized, sizeOf(cart["chrMemory"]), info.chrIsRam);
-        if (!mapping.writable) {
+        var offset << mapper.ppuReadOffset(state["mapper"], normalized, sizeOf(cart["chrMemory"]));
+        if (!mapper.ppuWriteWritable(state["mapper"], offset, info.chrIsRam)) {
             return false;
         }
-        cart["chrMemory"][mapping.offset] << byteValue;
+        cart["chrMemory"][offset] << byteValue;
         return true;
     }
     if (normalized < 0x3F00) {
@@ -422,28 +422,90 @@ fct renderScanline(state, y) {
     renderSpritesLine(state, y);
 }
 
-/// Advances PPU timing in large jumps when visible rendering is disabled.
+/// Converts a linear dot position to the PPU core scanline/dot fields.
+fct setCorePosition(core, position) {
+    core.scanline <<(position / constants.PPU_DOTS_PER_SCANLINE) - 1;
+    core.dot << position % constants.PPU_DOTS_PER_SCANLINE;
+}
+
+/// Returns the next PPU event that must be observed by the fast desktop path.
+fct nextFastEventPosition(state, current) {
+    var core << state["core"];
+    var dotsPerFrame << constants.PPU_DOTS_PER_SCANLINE * 262;
+    var best << dotsPerFrame;
+    var clearAt << 1;
+    var vblankAt <<(242 * constants.PPU_DOTS_PER_SCANLINE) + 1;
+    if (current < clearAt and clearAt < best) {
+        best << clearAt;
+    }
+    if (current < vblankAt and vblankAt < best) {
+        best << vblankAt;
+    }
+    var baseLine <<(current / constants.PPU_DOTS_PER_SCANLINE) - 1;
+    if (baseLine < 0) {
+        baseLine << 0;
+    }
+    if (baseLine < 240) {
+        var renderLine << baseLine;
+        var renderAt <<((renderLine + 1) * constants.PPU_DOTS_PER_SCANLINE) + 1;
+        if (renderAt <= current) {
+            renderLine << renderLine + 1;
+            renderAt <<((renderLine + 1) * constants.PPU_DOTS_PER_SCANLINE) + 1;
+        }
+        if (renderLine < 240 and renderAt < best) {
+            best << renderAt;
+        }
+        var irqLine << baseLine;
+        var irqAt <<((irqLine + 1) * constants.PPU_DOTS_PER_SCANLINE) + 260;
+        if (irqAt <= current) {
+            irqLine << irqLine + 1;
+            irqAt <<((irqLine + 1) * constants.PPU_DOTS_PER_SCANLINE) + 260;
+        }
+        if (irqLine < 240 and irqAt < best) {
+            best << irqAt;
+        }
+    }
+    return best;
+}
+
+/// Applies the visible PPU event reached by the fast desktop path.
+fct applyFastEvent(state, position) {
+    var core << state["core"];
+    setCorePosition(core, position);
+    if (core.scanline ==-1 and core.dot == 1) {
+        core.status << core.status band 0x1F;
+        core.nmiPending << false;
+        updateNmi(core);
+        return;
+    }
+    if (core.scanline >= 0 and core.scanline < 240) {
+        if (core.dot == 1 and state["renderOutput"]) {
+            renderScanline(state, core.scanline);
+        }
+        if (core.dot == 260 and renderingEnabled(core)) {
+            mapper.clockScanline(state["mapper"]);
+        }
+        return;
+    }
+    if (core.scanline == 241 and core.dot == 1) {
+        core.status << core.status bor 0x80;
+        updateNmi(core);
+        return;
+    }
+}
+
+/// Advances PPU timing in scanline-sized jumps for the desktop fast path.
 ///
-/// This is intentionally used only by the Mapper 227 desktop fast path. It keeps
-/// VBlank, NMI and frame-complete edges moving without paying the per-dot Zumbra
-/// overhead of the full renderer. The normal tick() path remains the reference
-/// implementation for tests, visible frames and accuracy-sensitive mappers.
+/// Unlike the older snapshot path, this still renders visible scanlines and
+/// clocks mapper IRQ/latch points at stable positions. This avoids slideshow
+/// frameskip and reduces the lower-screen flicker observed in MMC4/MMC games.
 pub fct tickFast(state, dots) {
     var core << state["core"];
     var remaining << dots;
     var dotsPerFrame << constants.PPU_DOTS_PER_SCANLINE * 262;
-    var clearAt << 1;
-    var vblankAt <<(242 * constants.PPU_DOTS_PER_SCANLINE) + 1;
+    var current <<((core.scanline + 1) * constants.PPU_DOTS_PER_SCANLINE) + core.dot;
     while (remaining > 0) {
-        var current <<((core.scanline + 1) * constants.PPU_DOTS_PER_SCANLINE) + core.dot;
-        var nextEvent << dotsPerFrame;
-        if (current < clearAt) {
-            nextEvent << clearAt;
-        } else {
-            if (current < vblankAt) {
-                nextEvent << vblankAt;
-            }
-        }
+        var nextEvent << nextFastEventPosition(state, current);
         var delta << nextEvent - current;
         if (delta <= 0) {
             delta << 1;
@@ -460,23 +522,19 @@ pub fct tickFast(state, dots) {
             core.frameComplete << true;
             core.oddFrame <<!core.oddFrame;
         }
-        core.scanline <<(current / constants.PPU_DOTS_PER_SCANLINE) - 1;
-        core.dot << current % constants.PPU_DOTS_PER_SCANLINE;
-        if (current == clearAt) {
-            core.status << core.status band 0x1F;
-            core.nmiPending << false;
-            updateNmi(core);
-        }
-        if (current == vblankAt) {
-            core.status << core.status bor 0x80;
-            updateNmi(core);
+        setCorePosition(core, current);
+        if (remaining > 0 or current == nextEvent) {
+            applyFastEvent(state, current);
         }
     }
-    core.frameComplete;
+    return core.frameComplete;
 }
 
 /// Advances one PPU dot and returns true when a new frame completes.
 pub fct tick(state) {
+    if (state["fastTiming"]) {
+        return tickFast(state, 1);
+    }
     var core << state["core"];
     if (core.scanline ==-1 and core.dot == 1) {
         core.status << core.status band 0x1F;
@@ -525,6 +583,28 @@ pub fct tick(state) {
 pub fct setRenderOutput(state, enabled) {
     state["renderOutput"] << enabled;
     true;
+}
+
+/// Enables coarse PPU timing for the desktop fast path.
+///
+/// The full tick() path remains the test/reference implementation. When fast
+/// timing is active, the frontend renders a whole snapshot explicitly after the
+/// frame edge instead of paying per-dot renderer overhead during CPU stepping.
+pub fct setFastTiming(state, enabled) {
+    state["fastTiming"] << enabled;
+    true;
+}
+
+/// Renders the current PPU state into the framebuffer once, after fast timing
+/// has advanced to the frame boundary. This trades cycle-level scroll effects
+/// for desktop playability while preserving the reference renderer for tests.
+pub fct renderFrameSnapshot(state) {
+    var y << 0;
+    while (y < constants.PPU_HEIGHT) {
+        renderScanline(state, y);
+        y << y + 1;
+    }
+    return true;
 }
 
 /// Returns and clears the edge-triggered PPU NMI request.

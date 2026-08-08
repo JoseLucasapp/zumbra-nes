@@ -1,4 +1,4 @@
-## 0.5.30 desktop/input/homebrew check
+## 0.5.35 desktop/input/homebrew check
 
 Comandos manuais principais:
 
@@ -11,13 +11,13 @@ taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"
 
 A ROM `fixtures/homebrew/zebra-platformer.nes` é original do projeto e existe para testar input e renderização sem ROM comercial.
 
-## 0.5.30 desktop intro/input check
+## 0.5.35 desktop intro/input check
 
 Validar `./build/zumbra-nes` sem ROM e `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`. A intro deve aparecer antes do menu da ROM, e Enter/Space/Shift/Tab/setas/WASD/Z/X/J/K devem ser capturados pela janela.
 
-## 0.5.30 desktop app-build check
+## 0.5.35 desktop app-build check
 
-A 0.5.30 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
+A 0.5.35 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
 
 ## 0.5.23 desktop runtime check
 
@@ -75,7 +75,7 @@ Todas as ROMs versionadas são sintéticas e legalmente redistribuíveis.
 ## Gate
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.3 \
+EXPECTED_ZUMBRA_VERSION=0.14.5 \
   scripts/test-z23-compatibility.sh
 ```
 
@@ -119,3 +119,14 @@ Keyboard aliases heard by player 1: Enter/Space/keypad Enter for Start, Right Sh
 ## Z23 0.5.23 test execution
 
 `zumbra project check` and aggregate `zumbra project test` can emit unused-symbol diagnostics before executing test files. For Z23 0.5.23, the compatibility gate records those diagnostics and then runs `scripts/run-z23-tests.sh`, which executes every `tests/*_test.zum` file directly. The gate still requires `project test: 75 test file(s) executed` before native and desktop builds.
+
+
+## Zebra Zum Adventure smoke
+
+Run the original homebrew platformer fixture:
+
+```bash
+./build/zumbra-nes --zebra
+```
+
+Expected behavior: the ROM waits for Start, then the zebra can move and jump, there are visible platforms, collectible coin sprites, a flag sprite, background tiles and a simple pulse tone.

@@ -252,7 +252,7 @@ fct stableShell(context, headlessMode) {
     var pixels << bytes(256 * 240 * 4);
     paintNoRomShell(pixels);
     native.present(context, pixels);
-    native.setStatus(context, "Zumbra NES 0.5.30 | O/Enter abrir ROM | Z demo Zebra | Esc sair");
+    native.setStatus(context, "Zumbra NES 0.5.35 | O/Enter abrir ROM | Z demo Zebra | Esc sair");
     var running << true;
     var frames << 0u64;
     var lastPresent << native.ticks(context);
@@ -271,7 +271,7 @@ fct stableShell(context, headlessMode) {
             if (selectedPath != "") {
                 running << false;
             } else {
-                native.setStatus(context, "Zumbra NES 0.5.30 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
+                native.setStatus(context, "Zumbra NES 0.5.35 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
                 running << running;
             }
         }
@@ -400,7 +400,7 @@ fct edgeBits(current, previous, bits) {
 
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.30", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.35", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -432,6 +432,7 @@ pub fct run() {
         show(game["message"]);
         return false;
     }
+    console.setPerformanceMode(game["machine"], true);
     var running << true;
     var paused << false;
     var frames << 0u64;
@@ -444,7 +445,9 @@ pub fct run() {
     var bufferedActionFrames << 0;
     var bufferedDirectionMask << 0;
     var bufferedDirectionFrames << 0;
-    native.setStatus(context, "Zumbra NES 0.5.30 | mapper " + toString(mapperId) + " | C/H ajuda | P pausa | Esc sair");
+    native.setStatus(context, "Zumbra NES 0.5.35 | mapper " + toString(mapperId) + " | C/H ajuda | P pausa | Esc sair");
+    var loopMemoryMark << runtimeMemoryMark();
+    runtimeMemoryResetPeak();
     while (running and!native.shouldClose(context)) {
         var frameStart << native.ticks(context);
         native.pollAll(context, 16);
@@ -499,21 +502,33 @@ pub fct run() {
             }
             var frameCompleteNow << false;
             var loops << 0;
-            // A frame needs tens of thousands of CPU instructions. Host time,
-            // not a four-slice cap, is the responsiveness guard.
-            var sliceLimit << 4096;
-            if (mapperId == 227 and!headlessMode) {
-                sliceLimit << 2048;
+            // 0.5.35: run toward a real NES frame instead of advancing only a
+            // few tiny slices per host frame. The PPU fast-timing path keeps
+            // VBlank/NMI moving without per-dot rendering overhead.
+            var sliceLimit << 262144;
+            var sliceCap << 192;
+            if (mapperId == 10 and!headlessMode) {
+                sliceLimit << 393216;
+                sliceCap << 224;
             }
-            while (!frameCompleteNow and!native.shouldClose(context) and loops < 32 and native.ticks(context) - frameStart <= 10u64) {
-                console.setVideoOutput(game["machine"], true);
-                var code << console.runFrameSliceCode(game["machine"], sliceLimit);
+            if (mapperId == 227 and!headlessMode) {
+                sliceLimit << 196608;
+                sliceCap << 160;
+            }
+            while (!frameCompleteNow and!native.shouldClose(context) and loops < sliceCap) {
+                var code << console.runFrameSliceCodeFast(game["machine"], sliceLimit);
                 if (code < 0) {
                     frameCompleteNow << true;
                 }
                 loops << loops + 1;
-                native.pollAll(context, 4);
+                if ((loops % 16) == 0) {
+                    native.pollAll(context, 2);
+                }
+                if ((loops % 64) == 0) {
+                    runtimeMemoryReset(loopMemoryMark);
+                }
             }
+            runtimeMemoryReset(loopMemoryMark);
             if (frameCompleteNow) {
                 pendingFrame << true;
                 frames << frames + 1u64;
@@ -521,16 +536,19 @@ pub fct run() {
                 var rgba << palette.writeRgba(framebuffer, game["rgba"]);
                 native.present(context, rgba);
                 lastPresent << native.ticks(context);
+                runtimeMemoryReset(loopMemoryMark);
             } else {
-                native.delay(context, 3);
+                native.delay(context, 1);
                 pendingFrame << pendingFrame;
             }
         } else {
             var pausedTicks << native.ticks(context);
             if (pausedTicks - lastPresent >= 100u64) {
+                console.renderFrameSnapshot(game["machine"]);
                 var pausedRgba << palette.writeRgba(game["machine"]["bus"]["ppu"]["framebuffer"], game["rgba"]);
                 native.present(context, pausedRgba);
                 lastPresent << pausedTicks;
+                runtimeMemoryReset(loopMemoryMark);
             }
             native.delay(context, 16);
             paused << paused;
@@ -538,17 +556,11 @@ pub fct run() {
         if (headlessMode and frames >= 2u64) {
             running << false;
         }
-        if (!headlessMode and mapperId == 227) {
-            native.delay(context, 2);
-            mapperId << mapperId;
-        } else {
-            var elapsed << native.ticks(context) - frameStart;
-            if (elapsed < 16u64) {
-                native.delay(context, toInt(16u64 - elapsed));
-                elapsed << elapsed;
-            }
-            elapsed << elapsed;
+        var elapsed << native.ticks(context) - frameStart;
+        if (elapsed < 1u64) {
+            native.delay(context, 1);
         }
+        elapsed << elapsed;
     }
     native.destroy(context);
     show("Z23 desktop session complete");

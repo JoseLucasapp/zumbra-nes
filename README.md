@@ -1,4 +1,8 @@
-# zumbra-nes 0.5.30
+# zumbra-nes 0.5.35
+
+**0.5.35 smooth-frame fix:** requires Zumbra 0.14.5 native static string literals, removes the artificial render stride that made Mapper 10 look like a slideshow, and changes the fast PPU path to render visible scanlines at scanline boundaries instead of doing a late full-frame snapshot. Audio remains disabled in desktop performance mode until the CPU/PPU path is consistently smooth enough for clean mixing.
+
+**0.5.35 runtime memory fix:** removes allocated `Mapping` values from the live CPU/PPU hot path, uses Zumbra runtime memory marks/resets around desktop frame slices, and adds a sustained native memory gate.
 
 ## Controles rápidos
 
@@ -10,17 +14,17 @@
 - `Shift` ou `Tab`: Select; `Space` ou `Enter`: Start.
 - `P`: pausar; `Esc`: sair.
 
-O remapeamento persistente ainda não faz parte da 0.5.30; os atalhos acima são o mapa oficial desta versão.
+O remapeamento persistente ainda não faz parte da 0.5.35; os atalhos acima são o mapa oficial desta versão.
 
-**0.5.30 desktop/runtime fix:** adiciona launcher sem ROM com seletor de arquivo, inclui a ROM homebrew `fixtures/homebrew/zebra-platformer.nes`, adiciona Mapper 10/MMC4 inicial e melhora o input para menus multicart.
+**0.5.35 desktop/runtime fix:** adiciona launcher sem ROM com seletor de arquivo, inclui a ROM homebrew `fixtures/homebrew/zebra-platformer.nes`, adiciona Mapper 10/MMC4 inicial e melhora o input para menus multicart.
 
 **0.5.23 safe shell:** corrige o crash ao abrir sem ROM, troca a intro para o bitmap `assets/zumbra-nes.bmp` e coloca Mapper 227 atrás de uma pausa de segurança para não travar o PC.
 
 # Zumbra NES
 
-A versão **0.5.23** exige o patch de performance do backend C11 nativo da Zumbra 0.14.3 e corrige a causa real do delay extremo no Mapper 227: o emulador precisava rodar rápido o bastante para a ROM consumir os botões em tempo útil.
+A versão **0.5.23** exige o patch de performance do backend C11 nativo da Zumbra 0.14.5 e corrige a causa real do delay extremo no Mapper 227: o emulador precisava rodar rápido o bastante para a ROM consumir os botões em tempo útil.
 
-Emulador NES/Famicom local-first escrito em **Zumbra 0.14.3**. O repositório da aplicação contém somente código `.zum`; vídeo, áudio, teclado, gamepads e integração desktop são fornecidos pelas APIs oficiais do runtime Zumbra.
+Emulador NES/Famicom local-first escrito em **Zumbra 0.14.5**. O repositório da aplicação contém somente código `.zum`; vídeo, áudio, teclado, gamepads e integração desktop são fornecidos pelas APIs oficiais do runtime Zumbra.
 
 A versão **0.5.23** corrige a latência de input do Mapper 227 na ROM real `1200-in-1.nes` com fatias cooperativas e sem idle agressivo. A versão **0.5.0** concluiu a **Z23**: adiciona uma arquitetura mutável de mappers, suporte aos mappers 1, 2, 3, 4, 7, 10 e 227, SRAM persistente, dez slots de save state, debugger, fixture visual e diagnósticos explícitos de compatibilidade.
 
@@ -193,7 +197,7 @@ Atalhos:
 ## Testes
 
 ```bash
-EXPECTED_ZUMBRA_VERSION=0.14.3 \
+EXPECTED_ZUMBRA_VERSION=0.14.5 \
   scripts/test-z23-compatibility.sh
 ```
 

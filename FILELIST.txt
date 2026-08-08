@@ -5,6 +5,7 @@ FILELIST.txt
 LICENSE-APACHE
 README.md
 VALIDATION.md
+VERSION
 assets/zumbra-nes.bmp
 assets/zumbra-nes.png
 docs/api.md
@@ -28,7 +29,7 @@ docs/release-0.5.11.md
 docs/release-0.5.20.md
 docs/release-0.5.23.md
 docs/release-0.5.3.md
-docs/release-0.5.30.md
+docs/release-0.5.33.md
 docs/release-0.5.4.md
 docs/release-0.5.5.md
 docs/release-0.5.6.md
@@ -41,6 +42,7 @@ docs/z21-completion.md
 docs/z22-completion.md
 docs/z23-completion.md
 fixtures/SHA256SUMS
+fixtures/homebrew/zebra-platformer.nes
 fixtures/synthetic/invalid-magic.bin
 fixtures/synthetic/mapper227-multicart.nes
 fixtures/synthetic/nes2-linear-header.bin
@@ -56,11 +58,15 @@ packaging/linux/dev.zumbra.nes.metainfo.xml
 scripts/__pycache__/generate-synthetic-fixtures.cpython-313.pyc
 scripts/__pycache__/verify-cpu-table.cpython-313.pyc
 scripts/check-repository-hygiene.sh
+scripts/check-z23-fast-frame-loop.sh
+scripts/check-z23-sustained-memory.sh
 scripts/check-zumbra-native-performance.sh
 scripts/generate-synthetic-fixtures.py
+scripts/generate-zebra-platformer-rom.py
 scripts/package-z22-linux.sh
 scripts/package-z23-linux.sh
 scripts/run-z23-tests.sh
+scripts/tag-release-0.5.33.sh
 scripts/test-z19-foundation.sh
 scripts/test-z20-cpu.sh
 scripts/test-z21-hardware.sh
@@ -143,6 +149,7 @@ tests/header_test.zum
 tests/headless_test.zum
 tests/invalid_header_test.zum
 tests/mapper0_test.zum
+tests/mapper10_test.zum
 tests/mapper1_test.zum
 tests/mapper227_cartridge_test.zum
 tests/mapper227_execution_test.zum
@@ -179,7 +186,6 @@ tests/store_save_state_test.zum
 tests/visible_frame_test.zum
 zumbra-app.toml
 zumbra.toml
-docs/release-0.5.30.md
-fixtures/homebrew/zebra-platformer.nes
-scripts/generate-zebra-platformer-rom.py
-tests/mapper10_test.zum
+
+docs/release-0.5.35.md
+scripts/tag-release-0.5.35.sh

@@ -505,6 +505,19 @@ pub fct prgRamDirty(state)
 |---|---|---|
 | `state` | parameter | `` |
 
+### setAudioOutput
+
+```zumbra
+pub fct setAudioOutput(state, enabled)
+```
+
+Enables or disables APU ticking for performance-sensitive desktop play.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `enabled` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/cartridge.zum`
 
 ### Cartridge
@@ -653,6 +666,20 @@ Runs one CPU instruction and all associated PPU/APU/DMA/DMC cycles.
 |---|---|---|
 | `machine` | parameter | `` |
 
+### stepInstructionFast
+
+```zumbra
+pub fct stepInstructionFast(machine)
+```
+
+Desktop-only fast instruction step. Performance mode keeps audio disabled and  
+PPU timing batched, so this avoids the redundant pre-step interrupt probe in  
+the hottest path while still applying the post-cycle NMI/IRQ update.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+
 ### runHardwareCycles
 
 ```zumbra
@@ -693,6 +720,20 @@ Positive return value: frame not complete. Negative return value: frame complete
 | `machine` | parameter | `` |
 | `instructionLimit` | parameter | `` |
 
+### runFrameSliceCodeFast
+
+```zumbra
+pub fct runFrameSliceCodeFast(machine, instructionLimit)
+```
+
+Same return contract as runFrameSliceCode, but optimized for the desktop  
+performance path where fast PPU timing and disabled APU are already active.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `instructionLimit` | parameter | `` |
+
 ### setVideoOutput
 
 ```zumbra
@@ -705,6 +746,58 @@ Enables or disables expensive visible PPU rendering while preserving PPU timing.
 |---|---|---|
 | `machine` | parameter | `` |
 | `enabled` | parameter | `` |
+
+### setFastVideoTiming
+
+```zumbra
+pub fct setFastVideoTiming(machine, enabled)
+```
+
+Enables the desktop fast PPU path. This is intentionally separated from  
+setVideoOutput so tests and reference runs can keep exact per-dot timing.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `enabled` | parameter | `` |
+
+### setAudioOutput
+
+```zumbra
+pub fct setAudioOutput(machine, enabled)
+```
+
+Enables or disables APU ticking in the desktop pipeline.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `enabled` | parameter | `` |
+
+### setPerformanceMode
+
+```zumbra
+pub fct setPerformanceMode(machine, enabled)
+```
+
+Enables the low-overhead desktop pipeline used for interactive play.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
+| `enabled` | parameter | `` |
+
+### renderFrameSnapshot
+
+```zumbra
+pub fct renderFrameSnapshot(machine)
+```
+
+Renders one full frame snapshot after fast timing reaches a frame edge.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `machine` | parameter | `` |
 
 ### frameComplete
 
@@ -1633,13 +1726,28 @@ Maps one CPU-visible PRG ROM address.
 | `address` | parameter | `` |
 | `prgBytes` | parameter | `` |
 
+### cpuWriteInPlace
+
+```zumbra
+pub fct cpuWriteInPlace(state, address, value, prgBytes)
+```
+
+Handles mapper register writes in the CPU $8000-$FFFF range without allocating.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `address` | parameter | `` |
+| `value` | parameter | `` |
+| `prgBytes` | parameter | `` |
+
 ### cpuWrite
 
 ```zumbra
 pub fct cpuWrite(state, address, value, prgBytes)
 ```
 
-Handles mapper register writes in the CPU $8000-$FFFF range.
+Compatibility wrapper for tests and debugger code that still expect a Mapping value.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -1675,6 +1783,20 @@ Maps a PPU pattern-table read.
 | `state` | parameter | `` |
 | `address` | parameter | `` |
 | `chrBytes` | parameter | `` |
+
+### ppuWriteWritable
+
+```zumbra
+pub fct ppuWriteWritable(state, offset, chrIsRam)
+```
+
+Returns whether a CHR write mapped by ppuReadOffset is writable without allocating.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `offset` | parameter | `` |
+| `chrIsRam` | parameter | `` |
 
 ### ppuWrite
 
@@ -1951,12 +2073,11 @@ Writes one of the eight CPU-visible PPU registers.
 pub fct tickFast(state, dots)
 ```
 
-Advances PPU timing in large jumps when visible rendering is disabled.  
+Advances PPU timing in scanline-sized jumps for the desktop fast path.  
   
-This is intentionally used only by the Mapper 227 desktop fast path. It keeps  
-VBlank, NMI and frame-complete edges moving without paying the per-dot Zumbra  
-overhead of the full renderer. The normal tick() path remains the reference  
-implementation for tests, visible frames and accuracy-sensitive mappers.
+Unlike the older snapshot path, this still renders visible scanlines and  
+clocks mapper IRQ/latch points at stable positions. This avoids slideshow  
+frameskip and reduces the lower-screen flicker observed in MMC4/MMC games.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -1987,6 +2108,37 @@ Enables or disables expensive visible scanline rendering while keeping timing/NM
 |---|---|---|
 | `state` | parameter | `` |
 | `enabled` | parameter | `` |
+
+### setFastTiming
+
+```zumbra
+pub fct setFastTiming(state, enabled)
+```
+
+Enables coarse PPU timing for the desktop fast path.  
+  
+The full tick() path remains the test/reference implementation. When fast  
+timing is active, the frontend renders a whole snapshot explicitly after the  
+frame edge instead of paying per-dot renderer overhead during CPU stepping.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `enabled` | parameter | `` |
+
+### renderFrameSnapshot
+
+```zumbra
+pub fct renderFrameSnapshot(state)
+```
+
+Renders the current PPU state into the framebuffer once, after fast timing  
+has advanced to the frame boundary. This trades cycle-level scroll effects  
+for desktop playability while preserving the reference renderer for tests.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
 
 ### takeNmi
 

@@ -5,7 +5,12 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 zumbra_bin="${ZUMBRA_BIN:-zumbra}"
-expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.3}"
+expected_version="${EXPECTED_ZUMBRA_VERSION:-0.14.5}"
+
+# Local release builds are tuned for the developer workstation. Disable or change
+# these exports before creating a generic binary for another machine.
+export ZUMBRA_NATIVE_TUNE="${ZUMBRA_NATIVE_TUNE:-native}"
+export ZUMBRA_NATIVE_LTO="${ZUMBRA_NATIVE_LTO:-thin}"
 
 command -v "$zumbra_bin" >/dev/null 2>&1 || { echo "Zumbra CLI not found: $zumbra_bin" >&2; exit 1; }
 actual_version="$($zumbra_bin --version)"
@@ -24,27 +29,27 @@ python3 -m py_compile scripts/generate-synthetic-fixtures.py scripts/generate-ze
 "$zumbra_bin" lint --deny-warnings --no-pipeline --no-public-docs --max-line-length 1000 src tests
 "$zumbra_bin" project info | tee build/project-info.txt
 grep -q '^project: Zumbra NES$' build/project-info.txt
-grep -q '^version: 0.5.30$' build/project-info.txt
+grep -q '^version: 0.5.35$' build/project-info.txt
 # Z23 intentionally keeps many modules available for the next desktop/menu pass.
-# Current Zumbra 0.14.3 returns a non-zero status for `project check` in this
+# Current Zumbra 0.14.5 returns a non-zero status for `project check` in this
 # repository when diagnostics are warning-only/unused-symbol reports. Do not let
 # that command block this gate; the authoritative checks below are fmt, lint,
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z23 0.5.30; continuing to test/build."
+    echo "Project check is advisory in Z23 0.5.35; continuing to test/build."
 else
     cat build/project-check.txt
 fi
 
-# Current Zumbra 0.14.3 may stop `project test` during the aggregate
+# Current Zumbra 0.14.5 may stop `project test` during the aggregate
 # project-wide diagnostic precheck even when the project can execute its tests
 # file-by-file. Z23 keeps the aggregate command as a diagnostic trace, but the
 # release gate uses the explicit test runner below as the authoritative test
 # execution step.
 if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
     cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z23 0.5.30; running tests individually."
+    echo "Project test aggregate precheck is advisory in Z23 0.5.35; running tests individually."
 else
     cat build/project-test-aggregate.txt
 fi
@@ -57,7 +62,7 @@ awk '!/^semantic warning in /' build/vm-run-raw.txt > build/vm-smoke.txt
 cat build/vm-smoke.txt
 mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[0]:-}" == "Zumbra NES Z23 compatibility" ]]
-[[ "${smoke[1]:-}" == "0.5.30" ]]
+[[ "${smoke[1]:-}" == "0.5.35" ]]
 [[ "${smoke[2]:-}" == "0" ]]
 [[ "${smoke[3]:-}" == "NROM" ]]
 [[ "${smoke[4]:-}" == "1" ]]
@@ -74,6 +79,9 @@ if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then
     "$zumbra_bin" project build -o build/zumbra-nes-headless
     ./build/zumbra-nes-headless > build/native-smoke.txt
     diff -u build/vm-smoke.txt build/native-smoke.txt
+
+    scripts/check-z23-sustained-memory.sh "$zumbra_bin"
+    scripts/check-z23-fast-frame-loop.sh "$zumbra_bin"
 
     "$zumbra_bin" app doctor --manifest zumbra-app.toml --target linux --arch amd64 --format appdir --json > build/app-doctor.json 2> build/app-doctor.err || true
     cat build/app-doctor.json

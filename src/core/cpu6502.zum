@@ -26,6 +26,22 @@ pub struct AddressResult {
     pageCrossed: bool;
 }
 
+/// Packs an address and its page-cross penalty into one integer so the CPU hot loop
+/// does not allocate AddressResult structs for every indexed load/store.
+fct packedAddress(address, pageCrossed) {
+    var value << address band 0xFFFF;
+    if (pageCrossed) {
+        value << value bor 0x10000;
+    }
+    return value;
+}
+fct packedAddressValue(value) {
+    return value band 0xFFFF;
+}
+fct packedAddressPageCrossed(value) {
+    return(value band 0x10000) != 0;
+}
+
 /// Stable metadata for one opcode in the official NMOS 6502 table.
 pub struct OpcodeInfo {
     opcode: int;
@@ -581,32 +597,32 @@ pub struct Cpu6502 {
         low bor(high shl 8);
     }
     fct addressZeroPage(systemBus) {
-        AddressResult(self.fetchByte(systemBus), false);
+        packedAddress(self.fetchByte(systemBus), false);
     }
     fct addressZeroPageX(systemBus) {
-        AddressResult((self.fetchByte(systemBus) + self.x) band 0xFF, false);
+        packedAddress((self.fetchByte(systemBus) + self.x) band 0xFF, false);
     }
     fct addressZeroPageY(systemBus) {
-        AddressResult((self.fetchByte(systemBus) + self.y) band 0xFF, false);
+        packedAddress((self.fetchByte(systemBus) + self.y) band 0xFF, false);
     }
     fct addressAbsolute(systemBus) {
-        AddressResult(self.fetchWord(systemBus), false);
+        packedAddress(self.fetchWord(systemBus), false);
     }
     fct addressAbsoluteX(systemBus) {
         var base << self.fetchWord(systemBus);
         var address <<(base + self.x) band 0xFFFF;
-        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+        packedAddress(address,(base band 0xFF00) !=(address band 0xFF00));
     }
     fct addressAbsoluteY(systemBus) {
         var base << self.fetchWord(systemBus);
         var address <<(base + self.y) band 0xFFFF;
-        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+        packedAddress(address,(base band 0xFF00) !=(address band 0xFF00));
     }
     fct addressIndexedIndirect(systemBus) {
         var pointer <<(self.fetchByte(systemBus) + self.x) band 0xFF;
         var low << self.read(systemBus, pointer);
         var high << self.read(systemBus,(pointer + 1) band 0xFF);
-        AddressResult(low bor(high shl 8), false);
+        packedAddress(low bor(high shl 8), false);
     }
     fct addressIndirectIndexed(systemBus) {
         var pointer << self.fetchByte(systemBus);
@@ -614,7 +630,7 @@ pub struct Cpu6502 {
         var high << self.read(systemBus,(pointer + 1) band 0xFF);
         var base << low bor(high shl 8);
         var address <<(base + self.y) band 0xFFFF;
-        AddressResult(address,(base band 0xFF00) !=(address band 0xFF00));
+        packedAddress(address,(base band 0xFF00) !=(address band 0xFF00));
     }
     fct branch(systemBus, condition) {
         var offset << self.fetchByte(systemBus);
@@ -746,23 +762,23 @@ pub struct Cpu6502 {
             }
             case 0x01 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 6;
             }
             case 0x05 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 3;
             }
             case 0x06 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.asl(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 5;
             }
             case 0x08 {
@@ -781,16 +797,16 @@ pub struct Cpu6502 {
             }
             case 0x0D {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x0E {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.asl(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x10 {
@@ -798,27 +814,27 @@ pub struct Cpu6502 {
             }
             case 0x11 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x15 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x16 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.asl(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x18 {
@@ -827,31 +843,31 @@ pub struct Cpu6502 {
             }
             case 0x19 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x1D {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x1E {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.asl(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 7;
             }
             case 0x20 {
@@ -862,29 +878,29 @@ pub struct Cpu6502 {
             }
             case 0x21 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 6;
             }
             case 0x24 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.bit(value);
                 3;
             }
             case 0x25 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 3;
             }
             case 0x26 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.rol(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 5;
             }
             case 0x28 {
@@ -903,22 +919,22 @@ pub struct Cpu6502 {
             }
             case 0x2C {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.bit(value);
                 4;
             }
             case 0x2D {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x2E {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.rol(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x30 {
@@ -926,27 +942,27 @@ pub struct Cpu6502 {
             }
             case 0x31 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x35 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x36 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.rol(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x38 {
@@ -955,31 +971,31 @@ pub struct Cpu6502 {
             }
             case 0x39 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x3D {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a band value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x3E {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.rol(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 7;
             }
             case 0x40 {
@@ -989,23 +1005,23 @@ pub struct Cpu6502 {
             }
             case 0x41 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 6;
             }
             case 0x45 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 3;
             }
             case 0x46 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.lsr(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 5;
             }
             case 0x48 {
@@ -1028,16 +1044,16 @@ pub struct Cpu6502 {
             }
             case 0x4D {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x4E {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.lsr(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x50 {
@@ -1045,27 +1061,27 @@ pub struct Cpu6502 {
             }
             case 0x51 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x55 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0x56 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.lsr(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x58 {
@@ -1074,31 +1090,31 @@ pub struct Cpu6502 {
             }
             case 0x59 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x5D {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << self.a bxor value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x5E {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.lsr(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 7;
             }
             case 0x60 {
@@ -1107,21 +1123,21 @@ pub struct Cpu6502 {
             }
             case 0x61 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 6;
             }
             case 0x65 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 3;
             }
             case 0x66 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.ror(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 5;
             }
             case 0x68 {
@@ -1145,15 +1161,15 @@ pub struct Cpu6502 {
             }
             case 0x6D {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 4;
             }
             case 0x6E {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.ror(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x70 {
@@ -1161,25 +1177,25 @@ pub struct Cpu6502 {
             }
             case 0x71 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x75 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 4;
             }
             case 0x76 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.ror(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 6;
             }
             case 0x78 {
@@ -1188,49 +1204,49 @@ pub struct Cpu6502 {
             }
             case 0x79 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x7D {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.adc(value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0x7E {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value << self.ror(value);
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 7;
             }
             case 0x81 {
                 var target << self.addressIndexedIndirect(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 6;
             }
             case 0x84 {
                 var target << self.addressZeroPage(systemBus);
-                self.write(systemBus, target.address, self.y);
+                self.write(systemBus, packedAddressValue(target), self.y);
                 3;
             }
             case 0x85 {
                 var target << self.addressZeroPage(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 3;
             }
             case 0x86 {
                 var target << self.addressZeroPage(systemBus);
-                self.write(systemBus, target.address, self.x);
+                self.write(systemBus, packedAddressValue(target), self.x);
                 3;
             }
             case 0x88 {
@@ -1245,17 +1261,17 @@ pub struct Cpu6502 {
             }
             case 0x8C {
                 var target << self.addressAbsolute(systemBus);
-                self.write(systemBus, target.address, self.y);
+                self.write(systemBus, packedAddressValue(target), self.y);
                 4;
             }
             case 0x8D {
                 var target << self.addressAbsolute(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 4;
             }
             case 0x8E {
                 var target << self.addressAbsolute(systemBus);
-                self.write(systemBus, target.address, self.x);
+                self.write(systemBus, packedAddressValue(target), self.x);
                 4;
             }
             case 0x90 {
@@ -1263,22 +1279,22 @@ pub struct Cpu6502 {
             }
             case 0x91 {
                 var target << self.addressIndirectIndexed(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 6;
             }
             case 0x94 {
                 var target << self.addressZeroPageX(systemBus);
-                self.write(systemBus, target.address, self.y);
+                self.write(systemBus, packedAddressValue(target), self.y);
                 4;
             }
             case 0x95 {
                 var target << self.addressZeroPageX(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 4;
             }
             case 0x96 {
                 var target << self.addressZeroPageY(systemBus);
-                self.write(systemBus, target.address, self.x);
+                self.write(systemBus, packedAddressValue(target), self.x);
                 4;
             }
             case 0x98 {
@@ -1288,7 +1304,7 @@ pub struct Cpu6502 {
             }
             case 0x99 {
                 var target << self.addressAbsoluteY(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 5;
             }
             case 0x9A {
@@ -1297,7 +1313,7 @@ pub struct Cpu6502 {
             }
             case 0x9D {
                 var target << self.addressAbsoluteX(systemBus);
-                self.write(systemBus, target.address, self.a);
+                self.write(systemBus, packedAddressValue(target), self.a);
                 5;
             }
             case 0xA0 {
@@ -1308,7 +1324,7 @@ pub struct Cpu6502 {
             }
             case 0xA1 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 6;
@@ -1321,21 +1337,21 @@ pub struct Cpu6502 {
             }
             case 0xA4 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.y << value;
                 self.setZeroNegative(self.y);
                 3;
             }
             case 0xA5 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 3;
             }
             case 0xA6 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.x << value;
                 self.setZeroNegative(self.x);
                 3;
@@ -1358,21 +1374,21 @@ pub struct Cpu6502 {
             }
             case 0xAC {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.y << value;
                 self.setZeroNegative(self.y);
                 4;
             }
             case 0xAD {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0xAE {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.x << value;
                 self.setZeroNegative(self.x);
                 4;
@@ -1382,32 +1398,32 @@ pub struct Cpu6502 {
             }
             case 0xB1 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xB4 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.y << value;
                 self.setZeroNegative(self.y);
                 4;
             }
             case 0xB5 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 4;
             }
             case 0xB6 {
                 var target << self.addressZeroPageY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.x << value;
                 self.setZeroNegative(self.x);
                 4;
@@ -1418,11 +1434,11 @@ pub struct Cpu6502 {
             }
             case 0xB9 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
@@ -1434,33 +1450,33 @@ pub struct Cpu6502 {
             }
             case 0xBC {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.y << value;
                 self.setZeroNegative(self.y);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xBD {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.a << value;
                 self.setZeroNegative(self.a);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xBE {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.x << value;
                 self.setZeroNegative(self.x);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
@@ -1472,27 +1488,27 @@ pub struct Cpu6502 {
             }
             case 0xC1 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 6;
             }
             case 0xC4 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.y, value);
                 3;
             }
             case 0xC5 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 3;
             }
             case 0xC6 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value - 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 5;
             }
@@ -1513,21 +1529,21 @@ pub struct Cpu6502 {
             }
             case 0xCC {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.y, value);
                 4;
             }
             case 0xCD {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 4;
             }
             case 0xCE {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value - 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 6;
             }
@@ -1536,25 +1552,25 @@ pub struct Cpu6502 {
             }
             case 0xD1 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xD5 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 4;
             }
             case 0xD6 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value - 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 6;
             }
@@ -1564,29 +1580,29 @@ pub struct Cpu6502 {
             }
             case 0xD9 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xDD {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.a, value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xDE {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value - 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 7;
             }
@@ -1597,27 +1613,27 @@ pub struct Cpu6502 {
             }
             case 0xE1 {
                 var target << self.addressIndexedIndirect(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 6;
             }
             case 0xE4 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.x, value);
                 3;
             }
             case 0xE5 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 3;
             }
             case 0xE6 {
                 var target << self.addressZeroPage(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value + 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 5;
             }
@@ -1636,21 +1652,21 @@ pub struct Cpu6502 {
             }
             case 0xEC {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.compare(self.x, value);
                 4;
             }
             case 0xED {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 4;
             }
             case 0xEE {
                 var target << self.addressAbsolute(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value + 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 6;
             }
@@ -1659,25 +1675,25 @@ pub struct Cpu6502 {
             }
             case 0xF1 {
                 var target << self.addressIndirectIndexed(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 var resultCycles << 5;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xF5 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 4;
             }
             case 0xF6 {
                 var target << self.addressZeroPageX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value + 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 6;
             }
@@ -1687,29 +1703,29 @@ pub struct Cpu6502 {
             }
             case 0xF9 {
                 var target << self.addressAbsoluteY(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xFD {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 self.sbc(value);
                 var resultCycles << 4;
-                if (target.pageCrossed) {
+                if (packedAddressPageCrossed(target)) {
                     resultCycles << resultCycles + 1;
                 }
                 resultCycles;
             }
             case 0xFE {
                 var target << self.addressAbsoluteX(systemBus);
-                var value << self.read(systemBus, target.address);
+                var value << self.read(systemBus, packedAddressValue(target));
                 value <<(value + 1) band 0xFF;
-                self.write(systemBus, target.address, value);
+                self.write(systemBus, packedAddressValue(target), value);
                 self.setZeroNegative(value);
                 7;
             } else {

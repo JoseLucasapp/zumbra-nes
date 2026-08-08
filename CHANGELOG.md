@@ -1,3 +1,11 @@
+## 0.5.35 — smooth-frame fast PPU and Zumbra 0.14.5
+
+- Requires Zumbra 0.14.5 so native string literals use `z_string_static(...)` instead of allocating heap strings every time a literal is evaluated.
+- Removes the artificial desktop render stride for Mapper 10 and Mapper 227; completed frames are presented instead of intentionally skipped.
+- Changes the desktop fast PPU path to render visible scanlines at stable scanline boundaries.
+- Clocks mapper scanline/latch events inside the fast PPU path to reduce lower-screen flicker in MMC/MMC4-style games.
+- Keeps live APU ticking disabled in desktop performance mode while video throughput is stabilized.
+
 ## 0.5.29 — ROM launcher, Mapper 10 and Zebra homebrew test ROM
 
 - Adds a no-ROM launcher path: O/Enter opens a ROM picker, Z starts the built-in Zebra Platformer fixture.
@@ -173,7 +181,7 @@
 
 - Made the Z23 gate execute tests file-by-file when aggregate `project test` stops on warning-only project diagnostics.
 - Added `scripts/run-z23-tests.sh` as the authoritative Z23 test execution step.
-## 0.5.30 — scheduler de frame, ajuda e CI por versão
+## 0.5.35 — scheduler de frame, ajuda e CI por versão
 
 - Substitui o teto de 1.024 instruções por um scheduler limitado por tempo capaz de completar frames NES em velocidade útil.
 - Mantém Mapper 227 cooperativo, com fatias menores e polling frequente do SDL.

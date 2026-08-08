@@ -145,7 +145,7 @@ pub fct write(state, address, value) {
     }
     if (normalized >= 0x8000) {
         var cart << state["cart"];
-        mapper.cpuWrite(state["mapper"], normalized, byteValue, sizeOf(cart["prgRom"]));
+        mapper.cpuWriteInPlace(state["mapper"], normalized, byteValue, sizeOf(cart["prgRom"]));
         return true;
     }
     false;
@@ -226,4 +226,10 @@ pub fct clearPrgRamDirty(state) {
 }
 pub fct prgRamDirty(state) {
     state["prgRamDirty"];
+}
+
+/// Enables or disables APU ticking for performance-sensitive desktop play.
+pub fct setAudioOutput(state, enabled) {
+    state["audioEnabled"] << enabled;
+    true;
 }

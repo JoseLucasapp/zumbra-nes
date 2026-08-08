@@ -420,29 +420,27 @@ fct writeMmc4(state, address, value) {
     return true;
 }
 
-/// Handles mapper register writes in the CPU $8000-$FFFF range.
-pub fct cpuWrite(state, address, value, prgBytes) {
+/// Handles mapper register writes in the CPU $8000-$FFFF range without allocating.
+pub fct cpuWriteInPlace(state, address, value, prgBytes) {
     if (address < 0x8000) {
-        return Mapping(false,-1, false);
+        return false;
     }
     prgBytes;
     var byteValue << toInt(value) band 0xFF;
     var core << state["core"];
     if (core.id == 1u16) {
-        writeMmc1(state, address, byteValue);
-        return Mapping(false,-1, false);
+        return writeMmc1(state, address, byteValue);
     }
     if (core.id == 2u16) {
         core.prgBank << byteValue;
-        return Mapping(false,-1, false);
+        return true;
     }
     if (core.id == 3u16) {
         core.chrBank << byteValue;
-        return Mapping(false,-1, false);
+        return true;
     }
     if (core.id == 4u16) {
-        writeMmc3(state, address, byteValue);
-        return Mapping(false,-1, false);
+        return writeMmc3(state, address, byteValue);
     }
     if (core.id == 7u16) {
         core.prgBank << byteValue band 0x07;
@@ -451,11 +449,10 @@ pub fct cpuWrite(state, address, value, prgBytes) {
         } else {
             core.mirroring << "single-screen-upper";
         }
-        return Mapping(false,-1, false);
+        return true;
     }
     if (core.id == 10u16) {
-        writeMmc4(state, address, byteValue);
-        return Mapping(false,-1, false);
+        return writeMmc4(state, address, byteValue);
     }
     if (core.id == 227u16) {
         core.latchAddress << address band 0xFFFF;
@@ -465,8 +462,14 @@ pub fct cpuWrite(state, address, value, prgBytes) {
             core.mirroring << "horizontal";
         }
         core.chrWritable << state["battery"] or(address band 0x80) == 0;
-        return Mapping(false,-1, false);
+        return true;
     }
+    return false;
+}
+
+/// Compatibility wrapper for tests and debugger code that still expect a Mapping value.
+pub fct cpuWrite(state, address, value, prgBytes) {
+    cpuWriteInPlace(state, address, value, prgBytes);
     return Mapping(false,-1, false);
 }
 fct mmc1PpuOffset(state, address, chrBytes) {
@@ -568,14 +571,20 @@ pub fct ppuRead(state, address, chrBytes) {
     Mapping(offset >= 0, offset, false);
 }
 
-/// Maps a PPU pattern-table write, respecting CHR ROM/RAM and mapper protection.
-pub fct ppuWrite(state, address, chrBytes, chrIsRam) {
-    var offset << ppuReadOffset(state, address, chrBytes);
+/// Returns whether a CHR write mapped by ppuReadOffset is writable without allocating.
+pub fct ppuWriteWritable(state, offset, chrIsRam) {
     var writable << offset >= 0 and chrIsRam;
     if (state["core"].id == 227u16) {
         writable << writable and state["core"].chrWritable;
     }
-    Mapping(offset >= 0, offset, writable);
+    return writable;
+}
+
+/// Maps a PPU pattern-table write, respecting CHR ROM/RAM and mapper protection.
+pub fct ppuWrite(state, address, chrBytes, chrIsRam) {
+    var offset << ppuReadOffset(state, address, chrBytes);
+    var writable << ppuWriteWritable(state, offset, chrIsRam);
+    return Mapping(offset >= 0, offset, writable);
 }
 pub fct prgRamEnabled(state) {
     state["core"].prgRamEnabled;
