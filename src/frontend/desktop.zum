@@ -514,7 +514,7 @@ fct stableShell(context, headlessMode) {
     var pixels << bytes(256 * 240 * 4);
     paintNoRomShell(pixels);
     native.present(context, pixels);
-    native.setStatus(context, "Zumbra NES 0.5.43 | O/Enter abrir ROM | Z demo Zebra | Esc/F12 sair");
+    native.setStatus(context, "Zumbra NES 0.5.44 | O/Enter abrir ROM | Z demo Zebra | Esc/F12 sair");
     var running << true;
     var frames << 0u64;
     var lastPresent << native.ticks(context);
@@ -533,7 +533,7 @@ fct stableShell(context, headlessMode) {
             if (selectedPath != "") {
                 running << false;
             } else {
-                native.setStatus(context, "Zumbra NES 0.5.43 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
+                native.setStatus(context, "Zumbra NES 0.5.44 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
                 running << running;
             }
         }
@@ -901,7 +901,7 @@ fct edgeBits(current, previous, bits) {
 
 /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.43", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.44", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -934,7 +934,7 @@ pub fct run() {
         return false;
     }
     console.setPerformanceMode(game["machine"], true);
-    // 0.5.43: audio is opt-in after performance mode so the desktop queue receives
+    // 0.5.44: audio is opt-in after performance mode so the desktop queue receives
     // real APU samples. This is slower than silent fast mode, but avoids the
     // confusing "no sound" release behavior.
     console.setAudioOutput(game["machine"], true);
@@ -953,7 +953,7 @@ pub fct run() {
     var settingsVisible << false;
     var captureAction << "";
     var inputLock << 12;
-    native.setStatus(context, "Zumbra NES 0.5.43 | mapper " + toString(mapperId) + " | F1 settings | gamepad auto | P pausa | F12 sair");
+    native.setStatus(context, "Zumbra NES 0.5.44 | mapper " + toString(mapperId) + " | F1 settings | gamepad auto | P pausa | F12 sair");
     var loopMemoryMark << runtimeMemoryMark();
     runtimeMemoryResetPeak();
     while (running and!native.shouldClose(context)) {
@@ -965,7 +965,7 @@ pub fct run() {
                 paused << false;
                 captureAction << "";
                 inputLock << 10;
-                native.setStatus(context, "Zumbra NES 0.5.43 | mapper " + toString(mapperId) + " | F1 settings | F12 sair");
+                native.setStatus(context, "Zumbra NES 0.5.44 | mapper " + toString(mapperId) + " | F1 settings | F12 sair");
             }
         }
         if (native.keyDown(context, 69)) {
@@ -1013,7 +1013,7 @@ pub fct run() {
             rawPlayerOneMask << 0;
         }
         if (inputLock > 0) {
-            // 0.5.43: fixed cooldown, not "wait until every button is released".
+            // 0.5.44: fixed cooldown, not "wait until every button is released".
             // Holding Start/D-pad while a multicart changes banks should not lock
             // out controller input forever or make the title screen look frozen.
             inputLock << inputLock - 1;
@@ -1029,7 +1029,7 @@ pub fct run() {
             }
             var frameCompleteNow << false;
             var loops << 0;
-            // 0.5.43: run toward a real NES frame instead of advancing only a
+            // 0.5.44: run toward a real NES frame instead of advancing only a
             // few tiny slices per host frame. The PPU fast-timing path keeps
             // VBlank/NMI moving without per-dot rendering overhead.
             var sliceLimit << 262144;
@@ -1067,7 +1067,7 @@ pub fct run() {
                 native.present(context, rgba);
                 var audioSamples << audioOutput.drainClean(game["machine"]["bus"]["apu"], audioCursor);
                 var queuedAudioBytes << native.audioQueued(context);
-                // 0.5.43: low-latency queue guard. If the SDL queue is already
+                // 0.5.44: low-latency queue guard. If the SDL queue is already
                 // backed up, drop this frame's drained samples instead of adding
                 // late audio. This avoids the dirty/slow "buffer avalanche" sound
                 // while keeping the emulator responsive.

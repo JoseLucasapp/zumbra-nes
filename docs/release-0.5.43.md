@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.43
+# zumbra-nes 0.5.44
 
 Audio cleanup hotfix.
 

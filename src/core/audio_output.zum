@@ -58,7 +58,7 @@ pub fct drainClean(state, cursor) {
         var previous << toInt(raw[index - 1]);
         var current << toInt(raw[index]);
         var next << toInt(raw[index + 1]);
-        // 0.5.43: light cleanup. Keeps NES bite, but removes some static from
+        // 0.5.44: light cleanup. Keeps NES bite, but removes some static from
         // sharp frame-boundary transitions and raw noise-channel edges.
         var filtered <<(previous + current + current + next) / 4;
         output[index] << u8(clampByte(filtered));
