@@ -84,6 +84,30 @@ fct runHardwareCyclesInternal(machine, count, serviceDmcFetches) {
         updateInterruptLines(machine);
         return;
     }
+    if (systemBus["ppu"]["fastTiming"] and systemBus["audioEnabled"]) {
+        // 0.5.43: fast audio path. Audio must not force the whole desktop
+        // scheduler back into the per-CPU-cycle PPU/IRQ path; that made sound
+        // starve, crawl and crackle on real desktops. Keep fast PPU timing,
+        // clock the APU for the requested CPU-cycle span, and update IRQ/NMI
+        // once at the batch boundary.
+        var core << machine["core"];
+        var dots << count * 3;
+        ppu.tickFast(systemBus["ppu"], dots);
+        var audioIndex << 0;
+        while (audioIndex < count) {
+            apu.tick(systemBus["apu"]);
+            audioIndex << audioIndex + 1;
+        }
+        core.apuCycles << u64(core.apuCycles + u64(count));
+        core.ppuCycles << u64(core.ppuCycles + u64(dots));
+        core.cpuCycles << u64(core.cpuCycles + u64(count));
+        core.frames << systemBus["ppu"]["core"].frame;
+        updateInterruptLines(machine);
+        if (serviceDmcFetches) {
+            serviceDmc(machine);
+        }
+        return;
+    }
     var index << 0;
     while (index < count) {
         tickHardware(machine);

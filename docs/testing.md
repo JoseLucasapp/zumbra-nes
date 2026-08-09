@@ -1,4 +1,4 @@
-## 0.5.35 desktop/input/homebrew check
+## 0.5.43 desktop/input/homebrew check
 
 Comandos manuais principais:
 
@@ -11,13 +11,13 @@ taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"
 
 A ROM `fixtures/homebrew/zebra-platformer.nes` é original do projeto e existe para testar input e renderização sem ROM comercial.
 
-## 0.5.35 desktop intro/input check
+## 0.5.43 desktop intro/input check
 
 Validar `./build/zumbra-nes` sem ROM e `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`. A intro deve aparecer antes do menu da ROM, e Enter/Space/Shift/Tab/setas/WASD/Z/X/J/K devem ser capturados pela janela.
 
-## 0.5.35 desktop app-build check
+## 0.5.43 desktop app-build check
 
-A 0.5.35 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
+A 0.5.43 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
 
 ## 0.5.23 desktop runtime check
 

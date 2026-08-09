@@ -1,24 +1,8 @@
-# zumbra-nes 0.5.35
+**0.5.43 audio cleanup:** live desktop audio now uses a light cleanup filter and a slightly larger queue guard to reduce static without returning to dirty slow buffering.
 
-**0.5.35 smooth-frame fix:** requires Zumbra 0.14.5 native static string literals, removes the artificial render stride that made Mapper 10 look like a slideshow, and changes the fast PPU path to render visible scanlines at scanline boundaries instead of doing a late full-frame snapshot. Audio remains disabled in desktop performance mode until the CPU/PPU path is consistently smooth enough for clean mixing.
+# zumbra-nes 0.5.43
 
-**0.5.35 runtime memory fix:** removes allocated `Mapping` values from the live CPU/PPU hot path, uses Zumbra runtime memory marks/resets around desktop frame slices, and adds a sustained native memory gate.
-
-## Controles rápidos
-
-- `O` ou `Enter`: abrir uma ROM na tela inicial.
-- `Z`: iniciar a ROM homebrew de demonstração na tela inicial.
-- `C` ou `H`: mostrar a ajuda completa no título da janela.
-- Setas ou `WASD`: direcional.
-- `J` ou `Z`: botão A; `K` ou `X`: botão B.
-- `Shift` ou `Tab`: Select; `Space` ou `Enter`: Start.
-- `P`: pausar; `Esc`: sair.
-
-O remapeamento persistente ainda não faz parte da 0.5.35; os atalhos acima são o mapa oficial desta versão.
-
-**0.5.35 desktop/runtime fix:** adiciona launcher sem ROM com seletor de arquivo, inclui a ROM homebrew `fixtures/homebrew/zebra-platformer.nes`, adiciona Mapper 10/MMC4 inicial e melhora o input para menus multicart.
-
-**0.5.23 safe shell:** corrige o crash ao abrir sem ROM, troca a intro para o bitmap `assets/zumbra-nes.bmp` e coloca Mapper 227 atrás de uma pausa de segurança para não travar o PC.
+**0.5.43 input UX:** Settings now opens inside the emulator window with `F1`, `1`-`8` remap buttons only while that overlay is visible, `F2` resets mappings, keyboard mappings persist in `zumbra-nes-controls.json`, and Xbox-style gamepads are polled automatically. Startup/settings transitions now mute input until buttons are released to avoid stuck Enter/D-pad state.
 
 # Zumbra NES
 

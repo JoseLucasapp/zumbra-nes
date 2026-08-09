@@ -30,3 +30,48 @@ pub fct drain(state, cursor) {
     cursor.absolute << total;
     output;
 }
+fct clampByte(value) {
+    if (value < 0) {
+        return 0;
+    }
+    if (value > 255) {
+        return 255;
+    }
+    return value;
+}
+
+/// Drains audio for the live desktop path with a small cleanup filter.
+///
+/// The APU still produces deterministic 8-bit PCM, but direct square/noise edges
+/// can sound harsh in SDL when frame pacing jitters. This keeps latency low while
+/// applying a light 3-tap low-pass and tiny de-click ramp at chunk edges.
+pub fct drainClean(state, cursor) {
+    var raw << drain(state, cursor);
+    var count << sizeOf(raw);
+    if (count <= 2) {
+        return raw;
+    }
+    var output << bytes(count);
+    output[0] << raw[0];
+    var index << 1;
+    while (index < count - 1) {
+        var previous << toInt(raw[index - 1]);
+        var current << toInt(raw[index]);
+        var next << toInt(raw[index + 1]);
+        // 0.5.43: light cleanup. Keeps NES bite, but removes some static from
+        // sharp frame-boundary transitions and raw noise-channel edges.
+        var filtered <<(previous + current + current + next) / 4;
+        output[index] << u8(clampByte(filtered));
+        index << index + 1;
+    }
+    output[count - 1] << raw[count - 1];
+    // Tiny edge softening. This prevents the first/last two bytes of each
+    // queued chunk from popping when SDL drains buffers at uneven intervals.
+    if (count > 8) {
+        output[0] << u8((toInt(output[0]) + toInt(output[1])) / 2);
+        output[1] << u8((toInt(output[0]) + toInt(output[1]) + toInt(output[2])) / 3);
+        output[count - 2] << u8((toInt(output[count - 3]) + toInt(output[count - 2]) + toInt(output[count - 1])) / 3);
+        output[count - 1] << u8((toInt(output[count - 2]) + toInt(output[count - 1])) / 2);
+    }
+    output;
+}
