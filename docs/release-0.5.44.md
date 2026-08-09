@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.44
+# zumbra-nes 0.5.45
 
 Linux packaging CI fix.
 

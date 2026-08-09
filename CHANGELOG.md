@@ -1,29 +1,29 @@
-## 0.5.44 — audio cleanup
+## 0.5.45 — audio cleanup
 
 - Cleaned live desktop audio with a light 3-tap low-pass filter.
 - Softened chunk edges to reduce SDL queue pops/static.
 - Raised the queue guard from 8192 to 12288 bytes to reduce starvation.
 
-## 0.5.44 — in-window controls and Xbox gamepad
+## 0.5.45 — in-window controls and Xbox gamepad
 
 - Moves Settings from terminal output to an in-window overlay rendered over the emulator frame.
 - Remapping keys `1`-`8` now only works while Settings is open, preventing accidental freezes during gameplay.
 - Adds an input-release lock after ROM/start/settings transitions to avoid stuck Enter/D-pad state.
 - Adds automatic Xbox-style gamepad polling through the native desktop bridge.
 
-## 0.5.44
+## 0.5.45
 
 - Fix desktop Settings build failure caused by `data` module alias collision.
-- Preserve runtime-editable controller mapping from 0.5.44.
+- Preserve runtime-editable controller mapping from 0.5.45.
 
-# 0.5.44 - input settings hotfix
+# 0.5.45 - input settings hotfix
 
 - Added runtime controller settings in the desktop frontend.
 - F1 shows current bindings; 1-8 remap actions; F2 resets defaults.
 - Bindings persist in `zumbra-nes-controls.json`.
 - Removed hidden aliases/action buffering from the real emulator loop.
 
-## 0.5.44 — smooth-frame fast PPU and Zumbra 0.14.5
+## 0.5.45 — smooth-frame fast PPU and Zumbra 0.14.5
 
 - Requires Zumbra 0.14.5 so native string literals use `z_string_static(...)` instead of allocating heap strings every time a literal is evaluated.
 - Removes the artificial desktop render stride for Mapper 10 and Mapper 227; completed frames are presented instead of intentionally skipped.
@@ -206,7 +206,7 @@
 
 - Made the Z23 gate execute tests file-by-file when aggregate `project test` stops on warning-only project diagnostics.
 - Added `scripts/run-z23-tests.sh` as the authoritative Z23 test execution step.
-## 0.5.44 — scheduler de frame, ajuda e CI por versão
+## 0.5.45 — scheduler de frame, ajuda e CI por versão
 
 - Substitui o teto de 1.024 instruções por um scheduler limitado por tempo capaz de completar frames NES em velocidade útil.
 - Mantém Mapper 227 cooperativo, com fatias menores e polling frequente do SDL.

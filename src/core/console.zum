@@ -85,7 +85,7 @@ fct runHardwareCyclesInternal(machine, count, serviceDmcFetches) {
         return;
     }
     if (systemBus["ppu"]["fastTiming"] and systemBus["audioEnabled"]) {
-        // 0.5.44: fast audio path. Audio must not force the whole desktop
+        // 0.5.45: fast audio path. Audio must not force the whole desktop
         // scheduler back into the per-CPU-cycle PPU/IRQ path; that made sound
         // starve, crawl and crackle on real desktops. Keep fast PPU timing,
         // clock the APU for the requested CPU-cycle span, and update IRQ/NMI

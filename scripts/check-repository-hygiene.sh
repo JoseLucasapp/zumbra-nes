@@ -4,6 +4,8 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
+project_version="$(cat VERSION)"
+
 for forbidden in .env '*.key' '*.pem' '*.p12' '*.pfx' '*.sqlite' '*.sqlite3' '*.db' '*.sav' '*.zst'; do
     if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -path './zumbra-nes.sqlite3' -prune -o -name "$forbidden" -print | grep -q .; then
         echo "Forbidden secret or generated persistence file found: $forbidden" >&2
@@ -26,8 +28,8 @@ while IFS= read -r rom; do
     fi
 done < <(find fixtures/synthetic fixtures/homebrew -type f -iname '*.nes' -print)
 
-grep -q '^version = "0.5.40"$' zumbra.toml
-grep -q '^version = "0.5.40"$' zumbra-app.toml
+grep -q "^version = \"${project_version}\"$" zumbra.toml
+grep -q "^version = \"${project_version}\"$" zumbra-app.toml
 if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | grep -q .; then
     echo "Project-local C/C headers are forbidden; use the official Zumbra runtime." >&2
     exit 1
