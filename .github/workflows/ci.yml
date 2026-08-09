@@ -26,7 +26,7 @@ jobs:
             libsqlite3-dev libssl-dev libpq-dev libhiredis-dev \
             python3
 
-      - name: Install Zumbra 0.14.3
+      - name: Install Zumbra 0.14.5
         run: |
           curl -L --fail \
             --retry 5 \
@@ -39,10 +39,21 @@ jobs:
           install -m 755 /tmp/zumbra/zumbra "$HOME/.local/bin/zumbra"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Build Zumbra 0.14.5 from source
+        shell: bash
+        run: |
+          rm -rf /tmp/Zumbra-lang
+          git clone --depth 1 --branch v0.14.5 https://github.com/JoseLucasapp/Zumbra-lang.git /tmp/Zumbra-lang
+          cd /tmp/Zumbra-lang
+          go build -o "$HOME/.local/bin/zumbra" .
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/zumbra" --version
+          test "$("$HOME/.local/bin/zumbra" --version)" = "0.14.5"
+
       - name: Run Z23 gate
         env:
-          EXPECTED_ZUMBRA_VERSION: "0.14.3"
-        run: scripts/test-z23-compatibility.sh
+          EXPECTED_ZUMBRA_VERSION: "0.14.5"
+        run: ZUMBRA_BIN="$HOME/.local/bin/zumbra" EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
