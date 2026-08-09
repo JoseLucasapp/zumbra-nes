@@ -26,8 +26,8 @@ while IFS= read -r rom; do
     fi
 done < <(find fixtures/synthetic fixtures/homebrew -type f -iname '*.nes' -print)
 
-grep -q '^version = "0.5.35"$' zumbra.toml
-grep -q '^version = "0.5.35"$' zumbra-app.toml
+grep -q '^version = "0.5.40"$' zumbra.toml
+grep -q '^version = "0.5.40"$' zumbra-app.toml
 if find . -path './.git' -prune -o -path './build' -prune -o -path './dist' -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | grep -q .; then
     echo "Project-local C/C headers are forbidden; use the official Zumbra runtime." >&2
     exit 1

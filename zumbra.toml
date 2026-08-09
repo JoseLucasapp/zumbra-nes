@@ -1,6 +1,6 @@
 [project]
 name = "Zumbra NES"
-version = "0.5.43"
+version = "0.5.44"
 kind = "cli"
 entry = "src/main.zum"
 

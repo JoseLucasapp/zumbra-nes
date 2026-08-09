@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.35 — smooth-frame fast PPU and Zumbra 0.14.5
+# zumbra-nes 0.5.40 — smooth-frame fast PPU and Zumbra 0.14.5
 
 This release targets the frame-by-frame/slideshow behavior seen in Fire Emblem and other Mapper 10 games.
 

@@ -355,6 +355,23 @@ Copies all samples produced since the cursor, capped to one ring-buffer span.
 | `state` | parameter | `` |
 | `cursor` | parameter | `` |
 
+### drainClean
+
+```zumbra
+pub fct drainClean(state, cursor)
+```
+
+Drains audio for the live desktop path with a small cleanup filter.  
+  
+The APU still produces deterministic 8-bit PCM, but direct square/noise edges  
+can sound harsh in SDL when frame pacing jitters. This keeps latency low while  
+applying a light 3-tap low-pass and tiny de-click ramp at chunk edges.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `state` | parameter | `` |
+| `cursor` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/bus.zum`
 
 ### create

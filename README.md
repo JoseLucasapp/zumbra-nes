@@ -1,8 +1,8 @@
-**0.5.43 audio cleanup:** live desktop audio now uses a light cleanup filter and a slightly larger queue guard to reduce static without returning to dirty slow buffering.
+**0.5.44 audio cleanup:** live desktop audio now uses a light cleanup filter and a slightly larger queue guard to reduce static without returning to dirty slow buffering.
 
-# zumbra-nes 0.5.43
+# zumbra-nes 0.5.44
 
-**0.5.43 input UX:** Settings now opens inside the emulator window with `F1`, `1`-`8` remap buttons only while that overlay is visible, `F2` resets mappings, keyboard mappings persist in `zumbra-nes-controls.json`, and Xbox-style gamepads are polled automatically. Startup/settings transitions now mute input until buttons are released to avoid stuck Enter/D-pad state.
+**0.5.44 input UX:** Settings now opens inside the emulator window with `F1`, `1`-`8` remap buttons only while that overlay is visible, `F2` resets mappings, keyboard mappings persist in `zumbra-nes-controls.json`, and Xbox-style gamepads are polled automatically. Startup/settings transitions now mute input until buttons are released to avoid stuck Enter/D-pad state.
 
 # Zumbra NES
 

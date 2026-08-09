@@ -29,7 +29,7 @@ python3 -m py_compile scripts/generate-synthetic-fixtures.py scripts/generate-ze
 "$zumbra_bin" lint --deny-warnings --no-pipeline --no-public-docs --max-line-length 1000 src tests
 "$zumbra_bin" project info | tee build/project-info.txt
 grep -q '^project: Zumbra NES$' build/project-info.txt
-grep -q '^version: 0.5.43$' build/project-info.txt
+grep -q '^version: 0.5.44$' build/project-info.txt
 # Z23 intentionally keeps many modules available for the next desktop/menu pass.
 # Current Zumbra 0.14.5 returns a non-zero status for `project check` in this
 # repository when diagnostics are warning-only/unused-symbol reports. Do not let
@@ -37,7 +37,7 @@ grep -q '^version: 0.5.43$' build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z23 0.5.43; continuing to test/build."
+    echo "Project check is advisory in Z23 0.5.44; continuing to test/build."
 else
     cat build/project-check.txt
 fi
@@ -49,7 +49,7 @@ fi
 # execution step.
 if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
     cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z23 0.5.43; running tests individually."
+    echo "Project test aggregate precheck is advisory in Z23 0.5.44; running tests individually."
 else
     cat build/project-test-aggregate.txt
 fi
@@ -62,7 +62,7 @@ awk '!/^semantic warning in /' build/vm-run-raw.txt > build/vm-smoke.txt
 cat build/vm-smoke.txt
 mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[0]:-}" == "Zumbra NES Z23 compatibility" ]]
-[[ "${smoke[1]:-}" == "0.5.43" ]]
+[[ "${smoke[1]:-}" == "0.5.44" ]]
 [[ "${smoke[2]:-}" == "0" ]]
 [[ "${smoke[3]:-}" == "NROM" ]]
 [[ "${smoke[4]:-}" == "1" ]]

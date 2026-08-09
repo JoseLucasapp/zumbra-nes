@@ -37,7 +37,7 @@ grep -q 'usr/bin/zumbra-nes' build/deb-contents.txt
 if command -v appimagetool >/dev/null 2>&1 || [[ -x tools/appimagetool-x86_64.AppImage ]] || [[ -x tools/appimagetool ]]; then
     "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format appimage --binary build/zumbra-nes-app --output-dir "$output_dir"
 else
-    echo "AppImage not generated: install appimagetool or place it under tools/."
+    echo "AppImage not generated: install appimagetool or place it under tools/. Continuing without AppImage."
 fi
 
 (
