@@ -3,8 +3,333 @@ import "../core/console.zum" as console;
 import "../core/audio_output.zum" as audioOutput;
 import "../core/mapper.zum" as mapper;
 import "../core/palette.zum" as palette;
+import "../persistence/save_state.zum" as saveState;
 import "../stdlib/data.zum" as jsondata;
 import "native_bridge.zum" as native;
+// Z24 settings/input helpers.
+// JSON persistence uses dict<string,string>; values are converted at runtime.
+fct audioSettingsFile() {
+    return "zumbra-nes-audio.json";
+}
+fct loadAudioSetting() {
+    if (!fileExists(audioSettingsFile())) {
+        return true;
+    }
+    var loaded << jsondata.readJson(audioSettingsFile());
+    var value << loaded["enabled"];
+    if (toString(value) == "false") {
+        return false;
+    }
+    return true;
+}
+fct saveAudioSetting(enabled) {
+    var value << "false";
+    if (enabled) {
+        value << "true";
+    }
+    jsondata.writeJson(audioSettingsFile(), {
+        "enabled": value
+    }, true);
+    return true;
+}
+fct stableKey(context, code) {
+    if (code < 0) {
+        return false;
+    }
+    return native.keyDown(context, code) == true;
+}
+fct controlFile() {
+    return "zumbra-nes-controls.json";
+}
+fct controlDefaults() {
+    return {
+        "p1A": "29", "p1B": "27", "p1Select": "43", "p1Start": "40", "p1Up": "82", "p1Down": "81", "p1Left": "80", "p1Right": "79"
+    };
+}
+fct controlValue(source, key, fallback) {
+    var value << source[key];
+    if (toString(value) == "null") {
+        return fallback;
+    }
+    return toString(value);
+}
+fct loadControlSettings() {
+    var defaults << controlDefaults();
+    if (!fileExists(controlFile())) {
+        return defaults;
+    }
+    var loaded << jsondata.readJson(controlFile());
+    return {
+        "p1A": controlValue(loaded, "p1A", defaults["p1A"]), "p1B": controlValue(loaded, "p1B", defaults["p1B"]), "p1Select": controlValue(loaded, "p1Select", defaults["p1Select"]), "p1Start": controlValue(loaded, "p1Start", defaults["p1Start"]), "p1Up": controlValue(loaded, "p1Up", defaults["p1Up"]), "p1Down": controlValue(loaded, "p1Down", defaults["p1Down"]), "p1Left": controlValue(loaded, "p1Left", defaults["p1Left"]), "p1Right": controlValue(loaded, "p1Right", defaults["p1Right"])
+    };
+}
+fct saveControlSettings(controls) {
+    jsondata.writeJson(controlFile(), controls, true);
+    return true;
+}
+fct keyName(code) {
+    if (code == 4) {
+        return "A";
+    }
+    if (code == 7) {
+        return "D";
+    }
+    if (code == 13) {
+        return "J";
+    }
+    if (code == 14) {
+        return "K";
+    }
+    if (code == 22) {
+        return "S";
+    }
+    if (code == 26) {
+        return "W";
+    }
+    if (code == 27) {
+        return "X";
+    }
+    if (code == 29) {
+        return "Z";
+    }
+    if (code == 40) {
+        return "Enter";
+    }
+    if (code == 41) {
+        return "Esc";
+    }
+    if (code == 43) {
+        return "Tab";
+    }
+    if (code == 44) {
+        return "Space";
+    }
+    if (code == 58) {
+        return "F1";
+    }
+    if (code == 59) {
+        return "F2";
+    }
+    if (code == 60) {
+        return "F3";
+    }
+    if (code == 69) {
+        return "F12";
+    }
+    if (code == 79) {
+        return "Right";
+    }
+    if (code == 80) {
+        return "Left";
+    }
+    if (code == 81) {
+        return "Down";
+    }
+    if (code == 82) {
+        return "Up";
+    }
+    if (code == 88) {
+        return "Keypad Enter";
+    }
+    if (code == 225) {
+        return "Left Shift";
+    }
+    if (code == 229) {
+        return "Right Shift";
+    }
+    return "scancode " + toString(code);
+}
+fct controlSummary(controls) {
+    return "A=" + keyName(toInt(controls["p1A"])) + " B=" + keyName(toInt(controls["p1B"])) + " Select=" + keyName(toInt(controls["p1Select"])) + " Start=" + keyName(toInt(controls["p1Start"])) + " U=" + keyName(toInt(controls["p1Up"])) + " D=" + keyName(toInt(controls["p1Down"])) + " L=" + keyName(toInt(controls["p1Left"])) + " R=" + keyName(toInt(controls["p1Right"]));
+}
+fct showControlSettings(context, controls) {
+    native.setStatus(context, "SETTINGS | F1 fecha | 1-8 remap | F2 reset | " + controlSummary(controls));
+    return true;
+}
+fct settingsAction(context) {
+    if (native.keyDown(context, 30)) {
+        return "p1A";
+    }
+    if (native.keyDown(context, 31)) {
+        return "p1B";
+    }
+    if (native.keyDown(context, 32)) {
+        return "p1Select";
+    }
+    if (native.keyDown(context, 33)) {
+        return "p1Start";
+    }
+    if (native.keyDown(context, 34)) {
+        return "p1Up";
+    }
+    if (native.keyDown(context, 35)) {
+        return "p1Down";
+    }
+    if (native.keyDown(context, 36)) {
+        return "p1Left";
+    }
+    if (native.keyDown(context, 37)) {
+        return "p1Right";
+    }
+    return "";
+}
+fct actionLabel(action) {
+    if (action == "p1A") {
+        return "A";
+    }
+    if (action == "p1B") {
+        return "B";
+    }
+    if (action == "p1Select") {
+        return "Select";
+    }
+    if (action == "p1Start") {
+        return "Start";
+    }
+    if (action == "p1Up") {
+        return "Up";
+    }
+    if (action == "p1Down") {
+        return "Down";
+    }
+    if (action == "p1Left") {
+        return "Left";
+    }
+    if (action == "p1Right") {
+        return "Right";
+    }
+    return action;
+}
+fct remapControl(context, controls, action) {
+    native.setStatus(context, "SETTINGS | pressione nova tecla para " + actionLabel(action) + " | Esc cancela");
+    var code << native.captureKey(context, "Press new key for " + actionLabel(action));
+    if (code == 58 or code == 59 or code == 69 or code == 41) {
+        native.setStatus(context, "SETTINGS | tecla reservada/cancelada: " + keyName(code));
+    } else {
+        if (code >= 0) {
+            controls[action] << toString(code);
+            saveControlSettings(controls);
+            native.setStatus(context, "SETTINGS | " + actionLabel(action) + " = " + keyName(code) + " | salvo");
+        } else {
+            native.setStatus(context, "SETTINGS | remapeamento cancelado");
+        }
+    }
+    showControlSettings(context, controls);
+    return true;
+}
+fct gamepadDown(context, button) {
+    return native.gamepadButton(context, 0, button) or native.gamepadButton(context, 1, button);
+}
+fct gamepadPlayerOneMask(context) {
+    var mask << 0;
+    if (gamepadDown(context, 0) or gamepadDown(context, 2)) {
+        mask << mask bor 0x01;
+    }
+    if (gamepadDown(context, 1) or gamepadDown(context, 3)) {
+        mask << mask bor 0x02;
+    }
+    if (gamepadDown(context, 4)) {
+        mask << mask bor 0x04;
+    }
+    if (gamepadDown(context, 6) or gamepadDown(context, 7)) {
+        mask << mask bor 0x08;
+    }
+    if (gamepadDown(context, 11)) {
+        mask << mask bor 0x10;
+    }
+    if (gamepadDown(context, 12)) {
+        mask << mask bor 0x20;
+    }
+    if (gamepadDown(context, 13)) {
+        mask << mask bor 0x40;
+    }
+    if (gamepadDown(context, 14)) {
+        mask << mask bor 0x80;
+    }
+    if ((mask band 0x10) != 0 and(mask band 0x20) != 0) {
+        mask << mask band 0xCF;
+    }
+    if ((mask band 0x40) != 0 and(mask band 0x80) != 0) {
+        mask << mask band 0x3F;
+    }
+    return mask;
+}
+fct stablePlayerOneMask(context, controls) {
+    var mask << 0;
+    var keyA << toInt(controls["p1A"]);
+    var keyB << toInt(controls["p1B"]);
+    var keySelect << toInt(controls["p1Select"]);
+    var keyStart << toInt(controls["p1Start"]);
+    var keyUp << toInt(controls["p1Up"]);
+    var keyDownControl << toInt(controls["p1Down"]);
+    var keyLeft << toInt(controls["p1Left"]);
+    var keyRight << toInt(controls["p1Right"]);
+    if ((keyA >= 0 and stableKey(context, keyA)) or stableKey(context, 13)) {
+        mask << mask bor 0x01;
+    }
+    if ((keyB >= 0 and stableKey(context, keyB)) or stableKey(context, 14)) {
+        mask << mask bor 0x02;
+    }
+    if ((keySelect >= 0 and stableKey(context, keySelect)) or stableKey(context, 225) or stableKey(context, 229)) {
+        mask << mask bor 0x04;
+    }
+    if ((keyStart >= 0 and stableKey(context, keyStart)) or stableKey(context, 44) or stableKey(context, 88)) {
+        mask << mask bor 0x08;
+    }
+    if ((keyUp >= 0 and stableKey(context, keyUp)) or stableKey(context, 26)) {
+        mask << mask bor 0x10;
+    }
+    if ((keyDownControl >= 0 and stableKey(context, keyDownControl)) or stableKey(context, 22)) {
+        mask << mask bor 0x20;
+    }
+    if ((keyLeft >= 0 and stableKey(context, keyLeft)) or stableKey(context, 4)) {
+        mask << mask bor 0x40;
+    }
+    if ((keyRight >= 0 and stableKey(context, keyRight)) or stableKey(context, 7)) {
+        mask << mask bor 0x80;
+    }
+    if ((mask band 0x10) != 0 and(mask band 0x20) != 0) {
+        mask << mask band 0xCF;
+    }
+    if ((mask band 0x40) != 0 and(mask band 0x80) != 0) {
+        mask << mask band 0x3F;
+    }
+    return mask;
+}
+fct maskEdge(current, previous, bit) {
+    return(current band bit) != 0 and(previous band bit) == 0;
+}
+fct edgeBits(current, previous, bits) {
+    var edges << 0;
+    if ((bits band 0x01) != 0 and maskEdge(current, previous, 0x01)) {
+        edges << edges bor 0x01;
+    }
+    if ((bits band 0x02) != 0 and maskEdge(current, previous, 0x02)) {
+        edges << edges bor 0x02;
+    }
+    if ((bits band 0x04) != 0 and maskEdge(current, previous, 0x04)) {
+        edges << edges bor 0x04;
+    }
+    if ((bits band 0x08) != 0 and maskEdge(current, previous, 0x08)) {
+        edges << edges bor 0x08;
+    }
+    if ((bits band 0x10) != 0 and maskEdge(current, previous, 0x10)) {
+        edges << edges bor 0x10;
+    }
+    if ((bits band 0x20) != 0 and maskEdge(current, previous, 0x20)) {
+        edges << edges bor 0x20;
+    }
+    if ((bits band 0x40) != 0 and maskEdge(current, previous, 0x40)) {
+        edges << edges bor 0x40;
+    }
+    if ((bits band 0x80) != 0 and maskEdge(current, previous, 0x80)) {
+        edges << edges bor 0x80;
+    }
+    return edges;
+}
+
+// Z24 input/control helpers. Keep this block before first runtime/menu usage.
+// Z24 input/control helpers. Must stay before menu/runtime usage.
 fct introRect(output, x, y, width, height, red, green, blue) {
     var yy << y;
     while (yy < y + height) {
@@ -26,6 +351,9 @@ fct introRect(output, x, y, width, height, red, green, blue) {
 fct fontRows(code) {
     if (code == 32) {
         return[0, 0, 0, 0, 0, 0, 0];
+    }
+    if (code == 35) {
+        return[10, 31, 10, 10, 31, 10, 0];
     }
     if (code == 45) {
         return[0, 0, 0, 31, 0, 0, 0];
@@ -71,6 +399,9 @@ fct fontRows(code) {
     }
     if (code == 61) {
         return[0, 0, 31, 0, 31, 0, 0];
+    }
+    if (code == 62) {
+        return[16, 8, 4, 2, 4, 8, 16];
     }
     if (code == 65) {
         return[14, 17, 17, 31, 17, 17, 17];
@@ -260,7 +591,7 @@ fct drawSettingsOverlay(output, controls, captureAction, gamepadMask) {
     introRect(output, 10, 8, 236, 224, 8, 12, 28);
     introRect(output, 12, 10, 232, 220, 24, 28, 58);
     introRect(output, 14, 12, 228, 20, 42, 56, 116);
-    drawTinyCodes(output, 22, 18, 1,[90, 85, 77, 66, 82, 65, 32, 78, 69, 83, 32, 48, 46, 53, 46, 52, 48], 17, 236, 238, 236);
+    drawTinyCodes(output, 22, 18, 1,[90, 85, 77, 66, 82, 65, 32, 78, 69, 83, 32, 48, 46, 53, 46, 52, 54], 17, 236, 238, 236);
     drawTinyCodes(output, 22, 42, 1,[83, 69, 84, 84, 73, 78, 71, 83], 8, 255, 220, 120);
     drawSettingsRow(output, 62, 49,[65], 1, controls["p1A"]);
     drawSettingsRow(output, 78, 50,[66], 1, controls["p1B"]);
@@ -510,61 +841,214 @@ fct showStartupIntro(context, headlessMode) {
     }
     return true;
 }
+fct drawMenuRow(output, y, selected, labelCodes, labelCount) {
+    if (selected) {
+        introRect(output, 22, y - 3, 210, 14, 42, 56, 116);
+        drawTinyChar(output, 28, y, 1, 62, 255, 220, 120);
+        drawTinyCodes(output, 42, y, 1, labelCodes, labelCount, 255, 245, 180);
+    } else {
+        drawTinyCodes(output, 42, y, 1, labelCodes, labelCount, 236, 238, 236);
+    }
+    return true;
+}
+fct drawZ24MainMenu(output, selected, controls, audioEnabled, recentPath, gamepadMask) {
+    var y << 0;
+    while (y < 240) {
+        var x << 0;
+        while (x < 256) {
+            var destination <<(y * 256 + x) * 4;
+            output[destination] << 8u8;
+            output[destination + 1] << 10u8;
+            output[destination + 2] << 22u8;
+            output[destination + 3] << 255u8;
+            x << x + 1;
+        }
+        y << y + 1;
+    }
+    introRect(output, 8, 8, 240, 224, 6, 8, 18);
+    introRect(output, 10, 10, 236, 220, 20, 24, 48);
+    introRect(output, 14, 14, 228, 22, 42, 56, 116);
+    drawTinyCodes(output, 22, 22, 1,[90, 85, 77, 66, 82, 65, 32, 78, 69, 83, 32, 48, 46, 53, 46, 52, 54], 17, 236, 238, 236);
+    drawTinyCodes(output, 22, 46, 1,[90, 50, 52, 32, 80, 76, 65, 89, 65, 66, 73, 76, 73, 84, 89, 32, 85, 88], 18, 120, 220, 255);
+    drawMenuRow(output, 68, selected == 0,[76, 79, 65, 68, 32, 82, 79, 77], 8);
+    drawMenuRow(output, 84, selected == 1,[82, 69, 67, 69, 78, 84, 32, 82, 79, 77], 10);
+    drawMenuRow(output, 100, selected == 2,[90, 69, 66, 82, 65, 32, 68, 69, 77, 79], 10);
+    drawMenuRow(output, 116, selected == 3,[67, 79, 78, 84, 82, 79, 76, 83], 8);
+    drawMenuRow(output, 132, selected == 4,[65, 85, 68, 73, 79], 5);
+    drawMenuRow(output, 148, selected == 5,[65, 66, 79, 85, 84], 5);
+    drawMenuRow(output, 164, selected == 6,[81, 85, 73, 84], 4);
+    drawTinyCodes(output, 22, 188, 1,[85, 80, 47, 68, 79, 87, 78, 32, 77, 79, 86, 69, 32, 32, 65, 47, 83, 84, 65, 82, 84, 32, 79, 75], 24, 236, 238, 236);
+    drawTinyCodes(output, 22, 202, 1,[70, 49, 32, 67, 79, 78, 84, 82, 79, 76, 83, 32, 70, 51, 32, 79, 86, 69, 82, 76, 65, 89], 22, 236, 238, 236);
+    if (audioEnabled) {
+        drawTinyCodes(output, 150, 132, 1,[79, 78], 2, 120, 255, 160);
+    } else {
+        drawTinyCodes(output, 150, 132, 1,[79, 70, 70], 3, 255, 150, 120);
+    }
+    if (gamepadMask != 0) {
+        drawTinyCodes(output, 150, 46, 1,[88, 66, 79, 88, 32, 79, 78], 7, 120, 255, 160);
+    } else {
+        drawTinyCodes(output, 150, 46, 1,[88, 66, 79, 88, 32, 65, 85, 84, 79], 9, 120, 220, 255);
+    }
+    if (recentPath == "") {
+        drawTinyCodes(output, 150, 84, 1,[69, 77, 80, 84, 89], 5, 255, 150, 120);
+    } else {
+        drawTinyCodes(output, 150, 84, 1,[82, 69, 65, 68, 89], 5, 120, 255, 160);
+    }
+    return true;
+}
+fct drawAboutOverlay(output) {
+    introRect(output, 20, 42, 216, 150, 8, 12, 28);
+    introRect(output, 22, 44, 212, 146, 24, 28, 58);
+    drawTinyCodes(output, 34, 58, 1,[90, 85, 77, 66, 82, 65, 32, 78, 69, 83], 10, 255, 220, 120);
+    drawTinyCodes(output, 34, 78, 1,[90, 50, 52, 32, 80, 76, 65, 89, 65, 66, 73, 76, 73, 84, 89, 32, 85, 88], 18, 236, 238, 236);
+    drawTinyCodes(output, 34, 96, 1,[70, 79, 67, 85, 83, 58, 32, 77, 69, 78, 85, 44, 32, 82, 79, 77, 83, 44, 32, 83, 84, 65, 84, 69, 83], 25, 120, 220, 255);
+    drawTinyCodes(output, 34, 114, 1,[80, 69, 78, 68, 73, 78, 71, 58, 32, 65, 85, 68, 73, 79, 32, 67, 76, 69, 65, 78, 85, 80], 22, 255, 220, 120);
+    drawTinyCodes(output, 34, 132, 1,[80, 69, 78, 68, 73, 78, 71, 58, 32, 71, 65, 77, 69, 32, 77, 69, 78, 85, 32, 65, 82, 82, 79, 87, 83], 25, 255, 220, 120);
+    drawTinyCodes(output, 34, 162, 1,[69, 83, 67, 32, 66, 65, 67, 75], 8, 236, 238, 236);
+    return true;
+}
+fct drawTechnicalOverlay(output, mapperId, frames, queuedAudioBytes, audioEnabled, gamepadMask) {
+    introRect(output, 6, 6, 138, 58, 8, 12, 28);
+    introRect(output, 8, 8, 134, 54, 24, 28, 58);
+    drawTinyCodes(output, 14, 16, 1,[79, 86, 69, 82, 76, 65, 89], 7, 255, 220, 120);
+    drawTinyCodes(output, 14, 30, 1,[77, 65, 80, 80, 69, 82], 6, 236, 238, 236);
+    drawTinyCodes(output, 76, 30, 1,[35], 1, 120, 220, 255);
+    drawTinyCodes(output, 14, 44, 1,[65, 85, 68, 73, 79], 5, 236, 238, 236);
+    if (audioEnabled) {
+        drawTinyCodes(output, 76, 44, 1,[79, 78], 2, 120, 255, 160);
+    } else {
+        drawTinyCodes(output, 76, 44, 1,[79, 70, 70], 3, 255, 150, 120);
+    }
+    if (gamepadMask != 0) {
+        drawTinyCodes(output, 102, 44, 1,[71, 80], 2, 120, 255, 160);
+    }
+    return true;
+}
+fct recentFile() {
+    return "zumbra-nes-recent.json";
+}
+fct loadRecentPath() {
+    if (!fileExists(recentFile())) {
+        return "";
+    }
+    var loaded << jsondata.readJson(recentFile());
+    var value << loaded["lastRom"];
+    if (toString(value) == "null") {
+        return "";
+    }
+    return toString(value);
+}
+fct saveRecentPath(path) {
+    if (path != "") {
+        jsondata.writeJson(recentFile(), {
+            "lastRom": path
+        }, true);
+    }
+    return true;
+}
+fct saveStatePath() {
+    return "zumbra-nes-quickstate.state";
+}
 fct stableShell(context, headlessMode) {
     var pixels << bytes(256 * 240 * 4);
-    paintNoRomShell(pixels);
-    native.present(context, pixels);
-    native.setStatus(context, "Zumbra NES 0.5.45 | O/Enter abrir ROM | Z demo Zebra | Esc/F12 sair");
+    var controls << loadControlSettings();
+    var audioEnabled << loadAudioSetting();
+    var recentPath << loadRecentPath();
+    var selectedPath << "";
     var running << true;
     var frames << 0u64;
     var lastPresent << native.ticks(context);
-    var selectedPath << "";
-    var lastOpen << false;
-    var lastDemo << false;
-    var lastHelp << false;
+    var selected << 0;
+    var previousMask << 0;
+    var aboutVisible << false;
+    native.setStatus(context, "Zumbra NES 0.5.53 | Z24 menu | Load ROM | Recent | Controls | Audio | About");
     while (running and!native.shouldClose(context)) {
         native.pollAll(context, 32);
-        if (native.keyDown(context, 41) or native.keyDown(context, 69)) {
-            running << false;
-        }
-        var openNow << native.keyDown(context, 18) or native.keyDown(context, 40) or native.keyDown(context, 44);
-        if (openNow and!lastOpen and!headlessMode) {
-            selectedPath << native.pickRom(context);
-            if (selectedPath != "") {
-                running << false;
-            } else {
-                native.setStatus(context, "Zumbra NES 0.5.45 | nenhuma ROM escolhida | O/Enter abrir | Z demo Zebra");
-                running << running;
+        var gamepadMask << gamepadPlayerOneMask(context);
+        var mask << stablePlayerOneMask(context, controls) bor gamepadMask;
+        var edges << edgeBits(mask, previousMask, 0xFF);
+        previousMask << mask;
+        if ((edges band 0x10) != 0) {
+            selected << selected - 1;
+            if (selected < 0) {
+                selected << 6;
             }
         }
-        lastOpen << openNow;
-        var demoNow << native.keyDown(context, 29);
-        if (demoNow and!lastDemo and!headlessMode and fileExists("fixtures/homebrew/zebra-platformer.nes")) {
-            selectedPath << "fixtures/homebrew/zebra-platformer.nes";
+        if ((edges band 0x20) != 0) {
+            selected << selected + 1;
+            if (selected > 6) {
+                selected << 0;
+            }
+        }
+        if (native.keyDown(context, 41)) {
+            if (aboutVisible) {
+                aboutVisible << false;
+            } else {
+                running << false;
+            }
+        }
+        if (native.keyDown(context, 69)) {
             running << false;
         }
-        lastDemo << demoNow;
-        var helpNow << native.keyDown(context, 6) or native.keyDown(context, 11);
-        if (helpNow and!lastHelp) {
-            native.setStatus(context, "AJUDA | O/Enter abrir ROM | Z demo | F1 settings | 1-8 remap em jogo | F2 reset | Esc/F12 sair");
-            running << running;
+        if (((edges band 0x09) != 0) and!aboutVisible) {
+            if (selected == 0 and!headlessMode) {
+                selectedPath << native.pickRom(context);
+                if (selectedPath != "") {
+                    saveRecentPath(selectedPath);
+                    running << false;
+                }
+            }
+            if (selected == 1) {
+                recentPath << loadRecentPath();
+                if (recentPath != "" and fileExists(recentPath)) {
+                    selectedPath << recentPath;
+                    running << false;
+                } else {
+                    native.setStatus(context, "RECENT ROM vazio ou ausente");
+                }
+            }
+            if (selected == 2 and fileExists("fixtures/homebrew/zebra-platformer.nes")) {
+                selectedPath << "fixtures/homebrew/zebra-platformer.nes";
+                running << false;
+            }
+            if (selected == 3) {
+                native.setStatus(context, "CONTROLS | F1 dentro do jogo abre settings | 1-8 remap | Xbox auto");
+            }
+            if (selected == 4) {
+                audioEnabled <<!audioEnabled;
+                saveAudioSetting(audioEnabled);
+                if (audioEnabled) {
+                    native.setStatus(context, "AUDIO ON");
+                } else {
+                    native.setStatus(context, "AUDIO OFF");
+                }
+            }
+            if (selected == 5) {
+                aboutVisible << true;
+            }
+            if (selected == 6) {
+                running << false;
+            }
         }
-        lastHelp << helpNow;
+        drawZ24MainMenu(pixels, selected, controls, audioEnabled, recentPath, gamepadMask);
+        if (aboutVisible) {
+            drawAboutOverlay(pixels);
+        }
         var nowTicks << native.ticks(context);
-        if (nowTicks - lastPresent >= 250u64) {
+        if (nowTicks - lastPresent >= 33u64) {
             native.present(context, pixels);
             lastPresent << nowTicks;
         }
         native.delay(context, 16);
         if (headlessMode) {
-            frames << frames + 1u64;
+            var frames << frames + 1u64;
             if (frames >= 2u64) {
                 running << false;
             }
         }
     }
     return {
-        "frames": frames, "path": selectedPath
+        "frames": frames, "path": selectedPath, "audio": audioEnabled
     };
 }
 fct openGameRuntime(path) {
@@ -594,314 +1078,15 @@ fct openGameRuntime(path) {
         "ok": true, "message": "ok", "path": path, "machine": machine, "mapper": mapperId, "rgba": palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"])
     };
 } /// Runtime-editable player 1 bindings persisted as JSON in the project directory.
-fct controlDefaults() {
-    return {
-        "p1A": 29, "p1B": 27, "p1Select": 43, "p1Start": 40, "p1Up": 82, "p1Down": 81, "p1Left": 80, "p1Right": 79
-    };
-}
-fct controlFile() {
-    return "zumbra-nes-controls.json";
-}
-fct controlValue(source, key, fallback) {
-    var value << source[key];
-    if (toString(value) == "null") {
-        return fallback;
-    }
-    return toInt(value);
-}
-fct loadControlSettings() {
-    var controls << controlDefaults();
-    if (fileExists(controlFile())) {
-        var loaded << jsondata.readJson(controlFile());
-        controls["p1A"] << controlValue(loaded, "p1A", controls["p1A"]);
-        controls["p1B"] << controlValue(loaded, "p1B", controls["p1B"]);
-        controls["p1Select"] << controlValue(loaded, "p1Select", controls["p1Select"]);
-        controls["p1Start"] << controlValue(loaded, "p1Start", controls["p1Start"]);
-        controls["p1Up"] << controlValue(loaded, "p1Up", controls["p1Up"]);
-        controls["p1Down"] << controlValue(loaded, "p1Down", controls["p1Down"]);
-        controls["p1Left"] << controlValue(loaded, "p1Left", controls["p1Left"]);
-        controls["p1Right"] << controlValue(loaded, "p1Right", controls["p1Right"]);
-    }
-    return controls;
-}
-fct saveControlSettings(controls) {
-    jsondata.writeJson(controlFile(), controls, true);
-    return true;
-}
-fct keyName(code) {
-    if (code == 4) {
-        return "A";
-    }
-    if (code == 7) {
-        return "D";
-    }
-    if (code == 13) {
-        return "J";
-    }
-    if (code == 14) {
-        return "K";
-    }
-    if (code == 22) {
-        return "S";
-    }
-    if (code == 26) {
-        return "W";
-    }
-    if (code == 27) {
-        return "X";
-    }
-    if (code == 29) {
-        return "Z";
-    }
-    if (code == 40) {
-        return "Enter";
-    }
-    if (code == 41) {
-        return "Esc";
-    }
-    if (code == 43) {
-        return "Tab";
-    }
-    if (code == 44) {
-        return "Space";
-    }
-    if (code == 58) {
-        return "F1";
-    }
-    if (code == 59) {
-        return "F2";
-    }
-    if (code == 60) {
-        return "F3";
-    }
-    if (code == 69) {
-        return "F12";
-    }
-    if (code == 79) {
-        return "Right";
-    }
-    if (code == 80) {
-        return "Left";
-    }
-    if (code == 81) {
-        return "Down";
-    }
-    if (code == 82) {
-        return "Up";
-    }
-    if (code == 88) {
-        return "Keypad Enter";
-    }
-    if (code == 225) {
-        return "Left Shift";
-    }
-    if (code == 229) {
-        return "Right Shift";
-    }
-    return "scancode " + toString(code);
-}
-fct controlSummary(controls) {
-    return "A=" + keyName(controls["p1A"]) + " B=" + keyName(controls["p1B"]) + " Select=" + keyName(controls["p1Select"]) + " Start=" + keyName(controls["p1Start"]) + " U=" + keyName(controls["p1Up"]) + " D=" + keyName(controls["p1Down"]) + " L=" + keyName(controls["p1Left"]) + " R=" + keyName(controls["p1Right"]);
-}
-fct showControlSettings(context, controls) {
-    native.setStatus(context, "SETTINGS | F1 fecha | 1-8 remap | F2 reset | " + controlSummary(controls));
-    return true;
-}
-fct settingsAction(context) {
-    if (native.keyDown(context, 30)) {
-        return "p1A";
-    }
-    if (native.keyDown(context, 31)) {
-        return "p1B";
-    }
-    if (native.keyDown(context, 32)) {
-        return "p1Select";
-    }
-    if (native.keyDown(context, 33)) {
-        return "p1Start";
-    }
-    if (native.keyDown(context, 34)) {
-        return "p1Up";
-    }
-    if (native.keyDown(context, 35)) {
-        return "p1Down";
-    }
-    if (native.keyDown(context, 36)) {
-        return "p1Left";
-    }
-    if (native.keyDown(context, 37)) {
-        return "p1Right";
-    }
-    return "";
-}
-fct actionLabel(action) {
-    if (action == "p1A") {
-        return "A";
-    }
-    if (action == "p1B") {
-        return "B";
-    }
-    if (action == "p1Select") {
-        return "Select";
-    }
-    if (action == "p1Start") {
-        return "Start";
-    }
-    if (action == "p1Up") {
-        return "Up";
-    }
-    if (action == "p1Down") {
-        return "Down";
-    }
-    if (action == "p1Left") {
-        return "Left";
-    }
-    if (action == "p1Right") {
-        return "Right";
-    }
-    return action;
-}
-fct remapControl(context, controls, action) {
-    native.setStatus(context, "SETTINGS | pressione nova tecla para " + actionLabel(action) + " | Esc cancela");
-    var code << native.captureKey(context, "Press new key for " + actionLabel(action));
-    if (code == 58 or code == 59 or code == 69 or code == 41) {
-        native.setStatus(context, "SETTINGS | tecla reservada/cancelada: " + keyName(code));
-    } else {
-        if (code >= 0) {
-            controls[action] << code;
-            saveControlSettings(controls);
-            native.setStatus(context, "SETTINGS | " + actionLabel(action) + " = " + keyName(code) + " | salvo");
-        } else {
-            native.setStatus(context, "SETTINGS | remapeamento cancelado");
-        }
-    }
-    showControlSettings(context, controls);
-    return true;
-}
-fct stablePlayerOneMask(context, controls) {
-    var mask << 0;
-    var keyA << controls["p1A"];
-    var keyB << controls["p1B"];
-    var keySelect << controls["p1Select"];
-    var keyStart << controls["p1Start"];
-    var keyUp << controls["p1Up"];
-    var keyDownControl << controls["p1Down"];
-    var keyLeft << controls["p1Left"];
-    var keyRight << controls["p1Right"];
-    if ((keyA >= 0 and native.keyDown(context, keyA)) or native.keyDown(context, 13)) {
-        mask << mask bor 0x01;
-    }
-    if ((keyB >= 0 and native.keyDown(context, keyB)) or native.keyDown(context, 14)) {
-        mask << mask bor 0x02;
-    }
-    if ((keySelect >= 0 and native.keyDown(context, keySelect)) or native.keyDown(context, 225) or native.keyDown(context, 229)) {
-        mask << mask bor 0x04;
-    }
-    if ((keyStart >= 0 and native.keyDown(context, keyStart)) or native.keyDown(context, 44) or native.keyDown(context, 88)) {
-        mask << mask bor 0x08;
-    }
-    if ((keyUp >= 0 and native.keyDown(context, keyUp)) or native.keyDown(context, 26)) {
-        mask << mask bor 0x10;
-    }
-    if ((keyDownControl >= 0 and native.keyDown(context, keyDownControl)) or native.keyDown(context, 22)) {
-        mask << mask bor 0x20;
-    }
-    if ((keyLeft >= 0 and native.keyDown(context, keyLeft)) or native.keyDown(context, 4)) {
-        mask << mask bor 0x40;
-    }
-    if ((keyRight >= 0 and native.keyDown(context, keyRight)) or native.keyDown(context, 7)) {
-        mask << mask bor 0x80;
-    }
-
-    // Hardware never allows opposite directions at the same time. Filtering here
-    // prevents stuck multicart/title menus when SDL repeats or a gamepad reports
-    // two opposing d-pad states during connection noise.
-    if ((mask band 0x10) != 0 and(mask band 0x20) != 0) {
-        mask << mask band 0xCF;
-    }
-    if ((mask band 0x40) != 0 and(mask band 0x80) != 0) {
-        mask << mask band 0x3F;
-    }
-    return mask;
-}
-fct gamepadDown(context, button) {
-    return native.gamepadButton(context, 0, button) or native.gamepadButton(context, 1, button);
-}
-fct gamepadPlayerOneMask(context) {
-    var mask << 0;
-    if (gamepadDown(context, 0) or gamepadDown(context, 2)) {
-        mask << mask bor 0x01;
-    }
-    if (gamepadDown(context, 1) or gamepadDown(context, 3)) {
-        mask << mask bor 0x02;
-    }
-    if (gamepadDown(context, 4)) {
-        mask << mask bor 0x04;
-    }
-    if (gamepadDown(context, 6) or gamepadDown(context, 7)) {
-        mask << mask bor 0x08;
-    }
-    if (gamepadDown(context, 11)) {
-        mask << mask bor 0x10;
-    }
-    if (gamepadDown(context, 12)) {
-        mask << mask bor 0x20;
-    }
-    if (gamepadDown(context, 13)) {
-        mask << mask bor 0x40;
-    }
-    if (gamepadDown(context, 14)) {
-        mask << mask bor 0x80;
-    }
-    if ((mask band 0x10) != 0 and(mask band 0x20) != 0) {
-        mask << mask band 0xCF;
-    }
-    if ((mask band 0x40) != 0 and(mask band 0x80) != 0) {
-        mask << mask band 0x3F;
-    }
-    return mask;
-}
 fct inputLockedMask(rawMask, lockFrames) {
     if (lockFrames > 0) {
         return 0;
     }
     return rawMask;
-}
-fct maskEdge(current, previous, bit) {
-    return(current band bit) != 0 and(previous band bit) == 0;
-}
-fct edgeBits(current, previous, bits) {
-    var edges << 0;
-    if ((bits band 0x01) != 0 and maskEdge(current, previous, 0x01)) {
-        edges << edges bor 0x01;
-    }
-    if ((bits band 0x02) != 0 and maskEdge(current, previous, 0x02)) {
-        edges << edges bor 0x02;
-    }
-    if ((bits band 0x04) != 0 and maskEdge(current, previous, 0x04)) {
-        edges << edges bor 0x04;
-    }
-    if ((bits band 0x08) != 0 and maskEdge(current, previous, 0x08)) {
-        edges << edges bor 0x08;
-    }
-    if ((bits band 0x10) != 0 and maskEdge(current, previous, 0x10)) {
-        edges << edges bor 0x10;
-    }
-    if ((bits band 0x20) != 0 and maskEdge(current, previous, 0x20)) {
-        edges << edges bor 0x20;
-    }
-    if ((bits band 0x40) != 0 and maskEdge(current, previous, 0x40)) {
-        edges << edges bor 0x40;
-    }
-    if ((bits band 0x80) != 0 and maskEdge(current, previous, 0x80)) {
-        edges << edges bor 0x80;
-    }
-    return edges;
-}
-
-/// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
+} /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
+// Z24 build compatibility helpers.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.45", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.53", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -909,6 +1094,7 @@ pub fct run() {
     }
     native.pollAll(context, 4);
     showStartupIntro(context, headlessMode);
+    var audioEnabled << loadAudioSetting();
     var initialPath << native.initialRom();
     if (initialPath == "--zebra") {
         initialPath << "fixtures/homebrew/zebra-platformer.nes";
@@ -919,6 +1105,7 @@ pub fct run() {
     if (initialPath == "") {
         var shellResult << stableShell(context, headlessMode);
         initialPath << shellResult["path"];
+        audioEnabled << shellResult["audio"];
         if (initialPath == "") {
             native.destroy(context);
             show("Z23 desktop session complete");
@@ -933,11 +1120,12 @@ pub fct run() {
         show(game["message"]);
         return false;
     }
+    saveRecentPath(initialPath);
     console.setPerformanceMode(game["machine"], true);
-    // 0.5.45: audio is opt-in after performance mode so the desktop queue receives
+    // 0.5.53: audio is opt-in after performance mode so the desktop queue receives
     // real APU samples. This is slower than silent fast mode, but avoids the
     // confusing "no sound" release behavior.
-    console.setAudioOutput(game["machine"], true);
+    console.setAudioOutput(game["machine"], audioEnabled);
     var audioCursor << audioOutput.createCursor();
     var running << true;
     var paused << false;
@@ -953,7 +1141,11 @@ pub fct run() {
     var settingsVisible << false;
     var captureAction << "";
     var inputLock << 12;
-    native.setStatus(context, "Zumbra NES 0.5.45 | mapper " + toString(mapperId) + " | F1 settings | gamepad auto | P pausa | F12 sair");
+    var overlayVisible << false;
+    var lastF3 << false;
+    var lastF5 << false;
+    var lastF8 << false;
+    native.setStatus(context, "Zumbra NES 0.5.53 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
     var loopMemoryMark << runtimeMemoryMark();
     runtimeMemoryResetPeak();
     while (running and!native.shouldClose(context)) {
@@ -965,7 +1157,7 @@ pub fct run() {
                 paused << false;
                 captureAction << "";
                 inputLock << 10;
-                native.setStatus(context, "Zumbra NES 0.5.45 | mapper " + toString(mapperId) + " | F1 settings | F12 sair");
+                native.setStatus(context, "Zumbra NES 0.5.53 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
             }
         }
         if (native.keyDown(context, 69)) {
@@ -994,6 +1186,28 @@ pub fct run() {
             showControlSettings(context, controls);
         }
         lastF2 << f2Now;
+        var f3Now << native.keyDown(context, 60);
+        if (f3Now and!lastF3) {
+            overlayVisible <<!overlayVisible;
+        }
+        lastF3 << f3Now;
+        var f5Now << native.keyDown(context, 62);
+        if (f5Now and!lastF5 and!settingsVisible) {
+            saveState.save(saveStatePath(), game["machine"]);
+            native.setStatus(context, "SAVE STATE salvo em " + saveStatePath());
+        }
+        lastF5 << f5Now;
+        var f8Now << native.keyDown(context, 65);
+        if (f8Now and!lastF8 and!settingsVisible) {
+            var loadResult << saveState.load(saveStatePath(), game["machine"]);
+            if (loadResult.ok) {
+                native.setStatus(context, "SAVE STATE carregado");
+                pendingFrame << true;
+            } else {
+                native.setStatus(context, "SAVE STATE falhou: " + loadResult.message);
+            }
+        }
+        lastF8 << f8Now;
         var selectedSettingAction << "";
         if (settingsVisible) {
             selectedSettingAction << settingsAction(context);
@@ -1013,7 +1227,7 @@ pub fct run() {
             rawPlayerOneMask << 0;
         }
         if (inputLock > 0) {
-            // 0.5.45: fixed cooldown, not "wait until every button is released".
+            // 0.5.53: fixed cooldown, not "wait until every button is released".
             // Holding Start/D-pad while a multicart changes banks should not lock
             // out controller input forever or make the title screen look frozen.
             inputLock << inputLock - 1;
@@ -1029,7 +1243,7 @@ pub fct run() {
             }
             var frameCompleteNow << false;
             var loops << 0;
-            // 0.5.45: run toward a real NES frame instead of advancing only a
+            // 0.5.53: run toward a real NES frame instead of advancing only a
             // few tiny slices per host frame. The PPU fast-timing path keeps
             // VBlank/NMI moving without per-dot rendering overhead.
             var sliceLimit << 262144;
@@ -1058,20 +1272,23 @@ pub fct run() {
             runtimeMemoryReset(loopMemoryMark);
             if (frameCompleteNow) {
                 pendingFrame << true;
-                frames << frames + 1u64;
+                var frames << frames + 1u64;
                 var framebuffer << game["machine"]["bus"]["ppu"]["framebuffer"];
                 var rgba << palette.writeRgba(framebuffer, game["rgba"]);
+                if (overlayVisible) {
+                    drawTechnicalOverlay(rgba, mapperId, frames, native.audioQueued(context), audioEnabled, detectedGamepadMask);
+                }
                 if (settingsVisible) {
                     drawSettingsOverlay(rgba, controls, captureAction, detectedGamepadMask);
                 }
                 native.present(context, rgba);
                 var audioSamples << audioOutput.drainClean(game["machine"]["bus"]["apu"], audioCursor);
                 var queuedAudioBytes << native.audioQueued(context);
-                // 0.5.45: low-latency queue guard. If the SDL queue is already
+                // 0.5.53: low-latency queue guard. If the SDL queue is already
                 // backed up, drop this frame's drained samples instead of adding
                 // late audio. This avoids the dirty/slow "buffer avalanche" sound
                 // while keeping the emulator responsive.
-                if (sizeOf(audioSamples) > 0 and queuedAudioBytes < 12288) {
+                if (audioEnabled and sizeOf(audioSamples) > 0 and queuedAudioBytes < 12288) {
                     native.queueAudio(context, audioSamples);
                 }
                 lastPresent << native.ticks(context);
@@ -1085,6 +1302,9 @@ pub fct run() {
             if (pausedTicks - lastPresent >= 100u64) {
                 console.renderFrameSnapshot(game["machine"]);
                 var pausedRgba << palette.writeRgba(game["machine"]["bus"]["ppu"]["framebuffer"], game["rgba"]);
+                if (overlayVisible) {
+                    drawTechnicalOverlay(pausedRgba, mapperId, frames, native.audioQueued(context), audioEnabled, detectedGamepadMask);
+                }
                 if (settingsVisible) {
                     drawSettingsOverlay(pausedRgba, controls, captureAction, detectedGamepadMask);
                 }

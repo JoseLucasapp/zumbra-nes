@@ -2414,8 +2414,6 @@ pub fct summary(debugger)
 pub fct run()
 ```
 
-Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
-
 ## `/home/joselucasapp/projects/zumbra-nes/src/frontend/desktop_contract.zum`
 
 ### DesktopFrontendState
