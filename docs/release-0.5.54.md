@@ -1,10 +1,11 @@
 # zumbra-nes 0.5.59
 
-Z24 visual argument type fix.
+Z24 settings row type fix.
 
 ## Changes
 
-- Fixes string numeric arguments passed to drawing helpers that expect int.
+- Converts persisted string control values back to int before drawing settings rows.
+- Fixes the desktop app doctor type error: argument 6 expects int, got string.
 - Keeps Z24 menu, overlay, quick save/load and UX work.
 - Keeps settings persisted as dict<string,string>.
 - Keeps AppImage optional and release scripts version-driven.

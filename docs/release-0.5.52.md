@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.53
+# zumbra-nes 0.5.59
 
 Z24 JSON settings type fix.
 
