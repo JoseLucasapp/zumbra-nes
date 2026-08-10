@@ -7,6 +7,7 @@ cd "$root"
 zumbra_bin="${ZUMBRA_BIN:-zumbra}"
 output_dir="${Z23_PACKAGE_DIR:-dist}"
 arch="${Z23_ARCH:-amd64}"
+project_version="$(cat VERSION)"
 
 # Keep packaged local builds aligned with the gate performance profile.
 export ZUMBRA_NATIVE_TUNE="${ZUMBRA_NATIVE_TUNE:-native}"
@@ -23,21 +24,21 @@ grep -q '^Z23 desktop session complete$' build/desktop-headless.txt
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format appdir --binary build/zumbra-nes-app --output-dir "$output_dir"
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format deb --binary build/zumbra-nes-app --output-dir "$output_dir"
 
-appdir="$output_dir/zumbra-nes-0.5.35-linux-${arch}.AppDir"
-deb="$output_dir/zumbra-nes_0.5.35_${arch}.deb"
+appdir="$output_dir/zumbra-nes-${project_version}-linux-${arch}.AppDir"
+deb="$output_dir/zumbra-nes_${project_version}_${arch}.deb"
 test -x "$appdir/AppRun"
 test -f "$deb"
 ZUMBRA_DESKTOP_HEADLESS=1 "$appdir/AppRun" | tee build/appdir-headless.txt
 grep -q '^Z23 desktop session complete$' build/appdir-headless.txt
 dpkg-deb --info "$deb" > build/deb-info.txt
 dpkg-deb --contents "$deb" > build/deb-contents.txt
-grep -q ' Version: 0.5.35' build/deb-info.txt
+grep -q " Version: ${project_version}" build/deb-info.txt
 grep -q 'usr/bin/zumbra-nes' build/deb-contents.txt
 
 if command -v appimagetool >/dev/null 2>&1 || [[ -x tools/appimagetool-x86_64.AppImage ]] || [[ -x tools/appimagetool ]]; then
     "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format appimage --binary build/zumbra-nes-app --output-dir "$output_dir"
 else
-    echo "AppImage not generated: install appimagetool or place it under tools/."
+    echo "AppImage not generated: install appimagetool or place it under tools/. Continuing without AppImage."
 fi
 
 (
