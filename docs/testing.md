@@ -1,4 +1,17 @@
-## 0.5.59 desktop/input/homebrew check
+## 0.5.60 Z27 settings persistence check
+
+Comandos principais:
+
+```bash
+export ZUMBRA_BIN="$HOME/projects/Zumbra-lang/build/zumbra"
+"$ZUMBRA_BIN" fmt src/frontend/desktop.zum src/frontend/playable_headless.zum tests/playable_headless_test.zum tests/settings_persistence_test.zum src/persistence/store.zum src/frontend/settings.zum
+rm -rf build nativec/build dist
+EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
+```
+
+Validação manual: abrir o emulador, usar `F1`, remapear controles, alternar áudio e confirmar persistência após reiniciar.
+
+## 0.5.53 desktop/input/homebrew check
 
 Comandos manuais principais:
 
@@ -11,13 +24,13 @@ taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"
 
 A ROM `fixtures/homebrew/zebra-platformer.nes` é original do projeto e existe para testar input e renderização sem ROM comercial.
 
-## 0.5.59 desktop intro/input check
+## 0.5.53 desktop intro/input check
 
 Validar `./build/zumbra-nes` sem ROM e `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`. A intro deve aparecer antes do menu da ROM, e Enter/Space/Shift/Tab/setas/WASD/Z/X/J/K devem ser capturados pela janela.
 
-## 0.5.59 desktop app-build check
+## 0.5.53 desktop app-build check
 
-A 0.5.59 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
+A 0.5.53 exige que `zumbra app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes` gere `build/zumbra-nes` sem `types: function has conflicting return types: null and bool`.
 
 ## 0.5.23 desktop runtime check
 

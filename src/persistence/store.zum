@@ -57,66 +57,1622 @@ pub fct setting(db, key, fallback) {
     }
     rows[0]["value"];
 }
-pub fct saveSettings(db, value) {
-    var values << settings.asDictionary(value);
-    saveSetting(db, "scale", values["scale"]);
-    saveSetting(db, "vsync", values["vsync"]);
-    saveSetting(db, "fullscreen", values["fullscreen"]);
-    saveSetting(db, "volume", values["volume"]);
-    saveSetting(db, "muted", values["muted"]);
-    saveSetting(db, "showFps", values["showFps"]);
-    saveSetting(db, "unlimited", values["unlimited"]);
-    saveSetting(db, "p1A", values["p1A"]);
-    saveSetting(db, "p1B", values["p1B"]);
-    saveSetting(db, "p1Select", values["p1Select"]);
-    saveSetting(db, "p1Start", values["p1Start"]);
-    saveSetting(db, "p1Up", values["p1Up"]);
-    saveSetting(db, "p1Down", values["p1Down"]);
-    saveSetting(db, "p1Left", values["p1Left"]);
-    saveSetting(db, "p1Right", values["p1Right"]);
-    saveSetting(db, "p2A", values["p2A"]);
-    saveSetting(db, "p2B", values["p2B"]);
-    saveSetting(db, "p2Select", values["p2Select"]);
-    saveSetting(db, "p2Start", values["p2Start"]);
-    saveSetting(db, "p2Up", values["p2Up"]);
-    saveSetting(db, "p2Down", values["p2Down"]);
-    saveSetting(db, "p2Left", values["p2Left"]);
-    saveSetting(db, "p2Right", values["p2Right"]);
-    true;
+fct intSettingValue(value, fallback) {
+    if (value == "-1") {
+        return-1;
+    }
+    if (value == "0") {
+        return 0;
+    }
+    if (value == "1") {
+        return 1;
+    }
+    if (value == "2") {
+        return 2;
+    }
+    if (value == "3") {
+        return 3;
+    }
+    if (value == "4") {
+        return 4;
+    }
+    if (value == "5") {
+        return 5;
+    }
+    if (value == "6") {
+        return 6;
+    }
+    if (value == "7") {
+        return 7;
+    }
+    if (value == "8") {
+        return 8;
+    }
+    if (value == "9") {
+        return 9;
+    }
+    if (value == "10") {
+        return 10;
+    }
+    if (value == "11") {
+        return 11;
+    }
+    if (value == "12") {
+        return 12;
+    }
+    if (value == "13") {
+        return 13;
+    }
+    if (value == "14") {
+        return 14;
+    }
+    if (value == "15") {
+        return 15;
+    }
+    if (value == "16") {
+        return 16;
+    }
+    if (value == "17") {
+        return 17;
+    }
+    if (value == "18") {
+        return 18;
+    }
+    if (value == "19") {
+        return 19;
+    }
+    if (value == "20") {
+        return 20;
+    }
+    if (value == "21") {
+        return 21;
+    }
+    if (value == "22") {
+        return 22;
+    }
+    if (value == "23") {
+        return 23;
+    }
+    if (value == "24") {
+        return 24;
+    }
+    if (value == "25") {
+        return 25;
+    }
+    if (value == "26") {
+        return 26;
+    }
+    if (value == "27") {
+        return 27;
+    }
+    if (value == "28") {
+        return 28;
+    }
+    if (value == "29") {
+        return 29;
+    }
+    if (value == "30") {
+        return 30;
+    }
+    if (value == "31") {
+        return 31;
+    }
+    if (value == "32") {
+        return 32;
+    }
+    if (value == "33") {
+        return 33;
+    }
+    if (value == "34") {
+        return 34;
+    }
+    if (value == "35") {
+        return 35;
+    }
+    if (value == "36") {
+        return 36;
+    }
+    if (value == "37") {
+        return 37;
+    }
+    if (value == "38") {
+        return 38;
+    }
+    if (value == "39") {
+        return 39;
+    }
+    if (value == "40") {
+        return 40;
+    }
+    if (value == "41") {
+        return 41;
+    }
+    if (value == "42") {
+        return 42;
+    }
+    if (value == "43") {
+        return 43;
+    }
+    if (value == "44") {
+        return 44;
+    }
+    if (value == "45") {
+        return 45;
+    }
+    if (value == "46") {
+        return 46;
+    }
+    if (value == "47") {
+        return 47;
+    }
+    if (value == "48") {
+        return 48;
+    }
+    if (value == "49") {
+        return 49;
+    }
+    if (value == "50") {
+        return 50;
+    }
+    if (value == "51") {
+        return 51;
+    }
+    if (value == "52") {
+        return 52;
+    }
+    if (value == "53") {
+        return 53;
+    }
+    if (value == "54") {
+        return 54;
+    }
+    if (value == "55") {
+        return 55;
+    }
+    if (value == "56") {
+        return 56;
+    }
+    if (value == "57") {
+        return 57;
+    }
+    if (value == "58") {
+        return 58;
+    }
+    if (value == "59") {
+        return 59;
+    }
+    if (value == "60") {
+        return 60;
+    }
+    if (value == "61") {
+        return 61;
+    }
+    if (value == "62") {
+        return 62;
+    }
+    if (value == "63") {
+        return 63;
+    }
+    if (value == "64") {
+        return 64;
+    }
+    if (value == "65") {
+        return 65;
+    }
+    if (value == "66") {
+        return 66;
+    }
+    if (value == "67") {
+        return 67;
+    }
+    if (value == "68") {
+        return 68;
+    }
+    if (value == "69") {
+        return 69;
+    }
+    if (value == "70") {
+        return 70;
+    }
+    if (value == "71") {
+        return 71;
+    }
+    if (value == "72") {
+        return 72;
+    }
+    if (value == "73") {
+        return 73;
+    }
+    if (value == "74") {
+        return 74;
+    }
+    if (value == "75") {
+        return 75;
+    }
+    if (value == "76") {
+        return 76;
+    }
+    if (value == "77") {
+        return 77;
+    }
+    if (value == "78") {
+        return 78;
+    }
+    if (value == "79") {
+        return 79;
+    }
+    if (value == "80") {
+        return 80;
+    }
+    if (value == "81") {
+        return 81;
+    }
+    if (value == "82") {
+        return 82;
+    }
+    if (value == "83") {
+        return 83;
+    }
+    if (value == "84") {
+        return 84;
+    }
+    if (value == "85") {
+        return 85;
+    }
+    if (value == "86") {
+        return 86;
+    }
+    if (value == "87") {
+        return 87;
+    }
+    if (value == "88") {
+        return 88;
+    }
+    if (value == "89") {
+        return 89;
+    }
+    if (value == "90") {
+        return 90;
+    }
+    if (value == "91") {
+        return 91;
+    }
+    if (value == "92") {
+        return 92;
+    }
+    if (value == "93") {
+        return 93;
+    }
+    if (value == "94") {
+        return 94;
+    }
+    if (value == "95") {
+        return 95;
+    }
+    if (value == "96") {
+        return 96;
+    }
+    if (value == "97") {
+        return 97;
+    }
+    if (value == "98") {
+        return 98;
+    }
+    if (value == "99") {
+        return 99;
+    }
+    if (value == "100") {
+        return 100;
+    }
+    if (value == "101") {
+        return 101;
+    }
+    if (value == "102") {
+        return 102;
+    }
+    if (value == "103") {
+        return 103;
+    }
+    if (value == "104") {
+        return 104;
+    }
+    if (value == "105") {
+        return 105;
+    }
+    if (value == "106") {
+        return 106;
+    }
+    if (value == "107") {
+        return 107;
+    }
+    if (value == "108") {
+        return 108;
+    }
+    if (value == "109") {
+        return 109;
+    }
+    if (value == "110") {
+        return 110;
+    }
+    if (value == "111") {
+        return 111;
+    }
+    if (value == "112") {
+        return 112;
+    }
+    if (value == "113") {
+        return 113;
+    }
+    if (value == "114") {
+        return 114;
+    }
+    if (value == "115") {
+        return 115;
+    }
+    if (value == "116") {
+        return 116;
+    }
+    if (value == "117") {
+        return 117;
+    }
+    if (value == "118") {
+        return 118;
+    }
+    if (value == "119") {
+        return 119;
+    }
+    if (value == "120") {
+        return 120;
+    }
+    if (value == "121") {
+        return 121;
+    }
+    if (value == "122") {
+        return 122;
+    }
+    if (value == "123") {
+        return 123;
+    }
+    if (value == "124") {
+        return 124;
+    }
+    if (value == "125") {
+        return 125;
+    }
+    if (value == "126") {
+        return 126;
+    }
+    if (value == "127") {
+        return 127;
+    }
+    if (value == "128") {
+        return 128;
+    }
+    if (value == "129") {
+        return 129;
+    }
+    if (value == "130") {
+        return 130;
+    }
+    if (value == "131") {
+        return 131;
+    }
+    if (value == "132") {
+        return 132;
+    }
+    if (value == "133") {
+        return 133;
+    }
+    if (value == "134") {
+        return 134;
+    }
+    if (value == "135") {
+        return 135;
+    }
+    if (value == "136") {
+        return 136;
+    }
+    if (value == "137") {
+        return 137;
+    }
+    if (value == "138") {
+        return 138;
+    }
+    if (value == "139") {
+        return 139;
+    }
+    if (value == "140") {
+        return 140;
+    }
+    if (value == "141") {
+        return 141;
+    }
+    if (value == "142") {
+        return 142;
+    }
+    if (value == "143") {
+        return 143;
+    }
+    if (value == "144") {
+        return 144;
+    }
+    if (value == "145") {
+        return 145;
+    }
+    if (value == "146") {
+        return 146;
+    }
+    if (value == "147") {
+        return 147;
+    }
+    if (value == "148") {
+        return 148;
+    }
+    if (value == "149") {
+        return 149;
+    }
+    if (value == "150") {
+        return 150;
+    }
+    if (value == "151") {
+        return 151;
+    }
+    if (value == "152") {
+        return 152;
+    }
+    if (value == "153") {
+        return 153;
+    }
+    if (value == "154") {
+        return 154;
+    }
+    if (value == "155") {
+        return 155;
+    }
+    if (value == "156") {
+        return 156;
+    }
+    if (value == "157") {
+        return 157;
+    }
+    if (value == "158") {
+        return 158;
+    }
+    if (value == "159") {
+        return 159;
+    }
+    if (value == "160") {
+        return 160;
+    }
+    if (value == "161") {
+        return 161;
+    }
+    if (value == "162") {
+        return 162;
+    }
+    if (value == "163") {
+        return 163;
+    }
+    if (value == "164") {
+        return 164;
+    }
+    if (value == "165") {
+        return 165;
+    }
+    if (value == "166") {
+        return 166;
+    }
+    if (value == "167") {
+        return 167;
+    }
+    if (value == "168") {
+        return 168;
+    }
+    if (value == "169") {
+        return 169;
+    }
+    if (value == "170") {
+        return 170;
+    }
+    if (value == "171") {
+        return 171;
+    }
+    if (value == "172") {
+        return 172;
+    }
+    if (value == "173") {
+        return 173;
+    }
+    if (value == "174") {
+        return 174;
+    }
+    if (value == "175") {
+        return 175;
+    }
+    if (value == "176") {
+        return 176;
+    }
+    if (value == "177") {
+        return 177;
+    }
+    if (value == "178") {
+        return 178;
+    }
+    if (value == "179") {
+        return 179;
+    }
+    if (value == "180") {
+        return 180;
+    }
+    if (value == "181") {
+        return 181;
+    }
+    if (value == "182") {
+        return 182;
+    }
+    if (value == "183") {
+        return 183;
+    }
+    if (value == "184") {
+        return 184;
+    }
+    if (value == "185") {
+        return 185;
+    }
+    if (value == "186") {
+        return 186;
+    }
+    if (value == "187") {
+        return 187;
+    }
+    if (value == "188") {
+        return 188;
+    }
+    if (value == "189") {
+        return 189;
+    }
+    if (value == "190") {
+        return 190;
+    }
+    if (value == "191") {
+        return 191;
+    }
+    if (value == "192") {
+        return 192;
+    }
+    if (value == "193") {
+        return 193;
+    }
+    if (value == "194") {
+        return 194;
+    }
+    if (value == "195") {
+        return 195;
+    }
+    if (value == "196") {
+        return 196;
+    }
+    if (value == "197") {
+        return 197;
+    }
+    if (value == "198") {
+        return 198;
+    }
+    if (value == "199") {
+        return 199;
+    }
+    if (value == "200") {
+        return 200;
+    }
+    if (value == "201") {
+        return 201;
+    }
+    if (value == "202") {
+        return 202;
+    }
+    if (value == "203") {
+        return 203;
+    }
+    if (value == "204") {
+        return 204;
+    }
+    if (value == "205") {
+        return 205;
+    }
+    if (value == "206") {
+        return 206;
+    }
+    if (value == "207") {
+        return 207;
+    }
+    if (value == "208") {
+        return 208;
+    }
+    if (value == "209") {
+        return 209;
+    }
+    if (value == "210") {
+        return 210;
+    }
+    if (value == "211") {
+        return 211;
+    }
+    if (value == "212") {
+        return 212;
+    }
+    if (value == "213") {
+        return 213;
+    }
+    if (value == "214") {
+        return 214;
+    }
+    if (value == "215") {
+        return 215;
+    }
+    if (value == "216") {
+        return 216;
+    }
+    if (value == "217") {
+        return 217;
+    }
+    if (value == "218") {
+        return 218;
+    }
+    if (value == "219") {
+        return 219;
+    }
+    if (value == "220") {
+        return 220;
+    }
+    if (value == "221") {
+        return 221;
+    }
+    if (value == "222") {
+        return 222;
+    }
+    if (value == "223") {
+        return 223;
+    }
+    if (value == "224") {
+        return 224;
+    }
+    if (value == "225") {
+        return 225;
+    }
+    if (value == "226") {
+        return 226;
+    }
+    if (value == "227") {
+        return 227;
+    }
+    if (value == "228") {
+        return 228;
+    }
+    if (value == "229") {
+        return 229;
+    }
+    if (value == "230") {
+        return 230;
+    }
+    if (value == "231") {
+        return 231;
+    }
+    if (value == "232") {
+        return 232;
+    }
+    if (value == "233") {
+        return 233;
+    }
+    if (value == "234") {
+        return 234;
+    }
+    if (value == "235") {
+        return 235;
+    }
+    if (value == "236") {
+        return 236;
+    }
+    if (value == "237") {
+        return 237;
+    }
+    if (value == "238") {
+        return 238;
+    }
+    if (value == "239") {
+        return 239;
+    }
+    if (value == "240") {
+        return 240;
+    }
+    if (value == "241") {
+        return 241;
+    }
+    if (value == "242") {
+        return 242;
+    }
+    if (value == "243") {
+        return 243;
+    }
+    if (value == "244") {
+        return 244;
+    }
+    if (value == "245") {
+        return 245;
+    }
+    if (value == "246") {
+        return 246;
+    }
+    if (value == "247") {
+        return 247;
+    }
+    if (value == "248") {
+        return 248;
+    }
+    if (value == "249") {
+        return 249;
+    }
+    if (value == "250") {
+        return 250;
+    }
+    if (value == "251") {
+        return 251;
+    }
+    if (value == "252") {
+        return 252;
+    }
+    if (value == "253") {
+        return 253;
+    }
+    if (value == "254") {
+        return 254;
+    }
+    if (value == "255") {
+        return 255;
+    }
+    if (value == "256") {
+        return 256;
+    }
+    if (value == "257") {
+        return 257;
+    }
+    if (value == "258") {
+        return 258;
+    }
+    if (value == "259") {
+        return 259;
+    }
+    if (value == "260") {
+        return 260;
+    }
+    if (value == "261") {
+        return 261;
+    }
+    if (value == "262") {
+        return 262;
+    }
+    if (value == "263") {
+        return 263;
+    }
+    if (value == "264") {
+        return 264;
+    }
+    if (value == "265") {
+        return 265;
+    }
+    if (value == "266") {
+        return 266;
+    }
+    if (value == "267") {
+        return 267;
+    }
+    if (value == "268") {
+        return 268;
+    }
+    if (value == "269") {
+        return 269;
+    }
+    if (value == "270") {
+        return 270;
+    }
+    if (value == "271") {
+        return 271;
+    }
+    if (value == "272") {
+        return 272;
+    }
+    if (value == "273") {
+        return 273;
+    }
+    if (value == "274") {
+        return 274;
+    }
+    if (value == "275") {
+        return 275;
+    }
+    if (value == "276") {
+        return 276;
+    }
+    if (value == "277") {
+        return 277;
+    }
+    if (value == "278") {
+        return 278;
+    }
+    if (value == "279") {
+        return 279;
+    }
+    if (value == "280") {
+        return 280;
+    }
+    if (value == "281") {
+        return 281;
+    }
+    if (value == "282") {
+        return 282;
+    }
+    if (value == "283") {
+        return 283;
+    }
+    if (value == "284") {
+        return 284;
+    }
+    if (value == "285") {
+        return 285;
+    }
+    if (value == "286") {
+        return 286;
+    }
+    if (value == "287") {
+        return 287;
+    }
+    if (value == "288") {
+        return 288;
+    }
+    if (value == "289") {
+        return 289;
+    }
+    if (value == "290") {
+        return 290;
+    }
+    if (value == "291") {
+        return 291;
+    }
+    if (value == "292") {
+        return 292;
+    }
+    if (value == "293") {
+        return 293;
+    }
+    if (value == "294") {
+        return 294;
+    }
+    if (value == "295") {
+        return 295;
+    }
+    if (value == "296") {
+        return 296;
+    }
+    if (value == "297") {
+        return 297;
+    }
+    if (value == "298") {
+        return 298;
+    }
+    if (value == "299") {
+        return 299;
+    }
+    if (value == "300") {
+        return 300;
+    }
+    if (value == "301") {
+        return 301;
+    }
+    if (value == "302") {
+        return 302;
+    }
+    if (value == "303") {
+        return 303;
+    }
+    if (value == "304") {
+        return 304;
+    }
+    if (value == "305") {
+        return 305;
+    }
+    if (value == "306") {
+        return 306;
+    }
+    if (value == "307") {
+        return 307;
+    }
+    if (value == "308") {
+        return 308;
+    }
+    if (value == "309") {
+        return 309;
+    }
+    if (value == "310") {
+        return 310;
+    }
+    if (value == "311") {
+        return 311;
+    }
+    if (value == "312") {
+        return 312;
+    }
+    if (value == "313") {
+        return 313;
+    }
+    if (value == "314") {
+        return 314;
+    }
+    if (value == "315") {
+        return 315;
+    }
+    if (value == "316") {
+        return 316;
+    }
+    if (value == "317") {
+        return 317;
+    }
+    if (value == "318") {
+        return 318;
+    }
+    if (value == "319") {
+        return 319;
+    }
+    if (value == "320") {
+        return 320;
+    }
+    if (value == "321") {
+        return 321;
+    }
+    if (value == "322") {
+        return 322;
+    }
+    if (value == "323") {
+        return 323;
+    }
+    if (value == "324") {
+        return 324;
+    }
+    if (value == "325") {
+        return 325;
+    }
+    if (value == "326") {
+        return 326;
+    }
+    if (value == "327") {
+        return 327;
+    }
+    if (value == "328") {
+        return 328;
+    }
+    if (value == "329") {
+        return 329;
+    }
+    if (value == "330") {
+        return 330;
+    }
+    if (value == "331") {
+        return 331;
+    }
+    if (value == "332") {
+        return 332;
+    }
+    if (value == "333") {
+        return 333;
+    }
+    if (value == "334") {
+        return 334;
+    }
+    if (value == "335") {
+        return 335;
+    }
+    if (value == "336") {
+        return 336;
+    }
+    if (value == "337") {
+        return 337;
+    }
+    if (value == "338") {
+        return 338;
+    }
+    if (value == "339") {
+        return 339;
+    }
+    if (value == "340") {
+        return 340;
+    }
+    if (value == "341") {
+        return 341;
+    }
+    if (value == "342") {
+        return 342;
+    }
+    if (value == "343") {
+        return 343;
+    }
+    if (value == "344") {
+        return 344;
+    }
+    if (value == "345") {
+        return 345;
+    }
+    if (value == "346") {
+        return 346;
+    }
+    if (value == "347") {
+        return 347;
+    }
+    if (value == "348") {
+        return 348;
+    }
+    if (value == "349") {
+        return 349;
+    }
+    if (value == "350") {
+        return 350;
+    }
+    if (value == "351") {
+        return 351;
+    }
+    if (value == "352") {
+        return 352;
+    }
+    if (value == "353") {
+        return 353;
+    }
+    if (value == "354") {
+        return 354;
+    }
+    if (value == "355") {
+        return 355;
+    }
+    if (value == "356") {
+        return 356;
+    }
+    if (value == "357") {
+        return 357;
+    }
+    if (value == "358") {
+        return 358;
+    }
+    if (value == "359") {
+        return 359;
+    }
+    if (value == "360") {
+        return 360;
+    }
+    if (value == "361") {
+        return 361;
+    }
+    if (value == "362") {
+        return 362;
+    }
+    if (value == "363") {
+        return 363;
+    }
+    if (value == "364") {
+        return 364;
+    }
+    if (value == "365") {
+        return 365;
+    }
+    if (value == "366") {
+        return 366;
+    }
+    if (value == "367") {
+        return 367;
+    }
+    if (value == "368") {
+        return 368;
+    }
+    if (value == "369") {
+        return 369;
+    }
+    if (value == "370") {
+        return 370;
+    }
+    if (value == "371") {
+        return 371;
+    }
+    if (value == "372") {
+        return 372;
+    }
+    if (value == "373") {
+        return 373;
+    }
+    if (value == "374") {
+        return 374;
+    }
+    if (value == "375") {
+        return 375;
+    }
+    if (value == "376") {
+        return 376;
+    }
+    if (value == "377") {
+        return 377;
+    }
+    if (value == "378") {
+        return 378;
+    }
+    if (value == "379") {
+        return 379;
+    }
+    if (value == "380") {
+        return 380;
+    }
+    if (value == "381") {
+        return 381;
+    }
+    if (value == "382") {
+        return 382;
+    }
+    if (value == "383") {
+        return 383;
+    }
+    if (value == "384") {
+        return 384;
+    }
+    if (value == "385") {
+        return 385;
+    }
+    if (value == "386") {
+        return 386;
+    }
+    if (value == "387") {
+        return 387;
+    }
+    if (value == "388") {
+        return 388;
+    }
+    if (value == "389") {
+        return 389;
+    }
+    if (value == "390") {
+        return 390;
+    }
+    if (value == "391") {
+        return 391;
+    }
+    if (value == "392") {
+        return 392;
+    }
+    if (value == "393") {
+        return 393;
+    }
+    if (value == "394") {
+        return 394;
+    }
+    if (value == "395") {
+        return 395;
+    }
+    if (value == "396") {
+        return 396;
+    }
+    if (value == "397") {
+        return 397;
+    }
+    if (value == "398") {
+        return 398;
+    }
+    if (value == "399") {
+        return 399;
+    }
+    if (value == "400") {
+        return 400;
+    }
+    if (value == "401") {
+        return 401;
+    }
+    if (value == "402") {
+        return 402;
+    }
+    if (value == "403") {
+        return 403;
+    }
+    if (value == "404") {
+        return 404;
+    }
+    if (value == "405") {
+        return 405;
+    }
+    if (value == "406") {
+        return 406;
+    }
+    if (value == "407") {
+        return 407;
+    }
+    if (value == "408") {
+        return 408;
+    }
+    if (value == "409") {
+        return 409;
+    }
+    if (value == "410") {
+        return 410;
+    }
+    if (value == "411") {
+        return 411;
+    }
+    if (value == "412") {
+        return 412;
+    }
+    if (value == "413") {
+        return 413;
+    }
+    if (value == "414") {
+        return 414;
+    }
+    if (value == "415") {
+        return 415;
+    }
+    if (value == "416") {
+        return 416;
+    }
+    if (value == "417") {
+        return 417;
+    }
+    if (value == "418") {
+        return 418;
+    }
+    if (value == "419") {
+        return 419;
+    }
+    if (value == "420") {
+        return 420;
+    }
+    if (value == "421") {
+        return 421;
+    }
+    if (value == "422") {
+        return 422;
+    }
+    if (value == "423") {
+        return 423;
+    }
+    if (value == "424") {
+        return 424;
+    }
+    if (value == "425") {
+        return 425;
+    }
+    if (value == "426") {
+        return 426;
+    }
+    if (value == "427") {
+        return 427;
+    }
+    if (value == "428") {
+        return 428;
+    }
+    if (value == "429") {
+        return 429;
+    }
+    if (value == "430") {
+        return 430;
+    }
+    if (value == "431") {
+        return 431;
+    }
+    if (value == "432") {
+        return 432;
+    }
+    if (value == "433") {
+        return 433;
+    }
+    if (value == "434") {
+        return 434;
+    }
+    if (value == "435") {
+        return 435;
+    }
+    if (value == "436") {
+        return 436;
+    }
+    if (value == "437") {
+        return 437;
+    }
+    if (value == "438") {
+        return 438;
+    }
+    if (value == "439") {
+        return 439;
+    }
+    if (value == "440") {
+        return 440;
+    }
+    if (value == "441") {
+        return 441;
+    }
+    if (value == "442") {
+        return 442;
+    }
+    if (value == "443") {
+        return 443;
+    }
+    if (value == "444") {
+        return 444;
+    }
+    if (value == "445") {
+        return 445;
+    }
+    if (value == "446") {
+        return 446;
+    }
+    if (value == "447") {
+        return 447;
+    }
+    if (value == "448") {
+        return 448;
+    }
+    if (value == "449") {
+        return 449;
+    }
+    if (value == "450") {
+        return 450;
+    }
+    if (value == "451") {
+        return 451;
+    }
+    if (value == "452") {
+        return 452;
+    }
+    if (value == "453") {
+        return 453;
+    }
+    if (value == "454") {
+        return 454;
+    }
+    if (value == "455") {
+        return 455;
+    }
+    if (value == "456") {
+        return 456;
+    }
+    if (value == "457") {
+        return 457;
+    }
+    if (value == "458") {
+        return 458;
+    }
+    if (value == "459") {
+        return 459;
+    }
+    if (value == "460") {
+        return 460;
+    }
+    if (value == "461") {
+        return 461;
+    }
+    if (value == "462") {
+        return 462;
+    }
+    if (value == "463") {
+        return 463;
+    }
+    if (value == "464") {
+        return 464;
+    }
+    if (value == "465") {
+        return 465;
+    }
+    if (value == "466") {
+        return 466;
+    }
+    if (value == "467") {
+        return 467;
+    }
+    if (value == "468") {
+        return 468;
+    }
+    if (value == "469") {
+        return 469;
+    }
+    if (value == "470") {
+        return 470;
+    }
+    if (value == "471") {
+        return 471;
+    }
+    if (value == "472") {
+        return 472;
+    }
+    if (value == "473") {
+        return 473;
+    }
+    if (value == "474") {
+        return 474;
+    }
+    if (value == "475") {
+        return 475;
+    }
+    if (value == "476") {
+        return 476;
+    }
+    if (value == "477") {
+        return 477;
+    }
+    if (value == "478") {
+        return 478;
+    }
+    if (value == "479") {
+        return 479;
+    }
+    if (value == "480") {
+        return 480;
+    }
+    if (value == "481") {
+        return 481;
+    }
+    if (value == "482") {
+        return 482;
+    }
+    if (value == "483") {
+        return 483;
+    }
+    if (value == "484") {
+        return 484;
+    }
+    if (value == "485") {
+        return 485;
+    }
+    if (value == "486") {
+        return 486;
+    }
+    if (value == "487") {
+        return 487;
+    }
+    if (value == "488") {
+        return 488;
+    }
+    if (value == "489") {
+        return 489;
+    }
+    if (value == "490") {
+        return 490;
+    }
+    if (value == "491") {
+        return 491;
+    }
+    if (value == "492") {
+        return 492;
+    }
+    if (value == "493") {
+        return 493;
+    }
+    if (value == "494") {
+        return 494;
+    }
+    if (value == "495") {
+        return 495;
+    }
+    if (value == "496") {
+        return 496;
+    }
+    if (value == "497") {
+        return 497;
+    }
+    if (value == "498") {
+        return 498;
+    }
+    if (value == "499") {
+        return 499;
+    }
+    if (value == "500") {
+        return 500;
+    }
+    if (value == "501") {
+        return 501;
+    }
+    if (value == "502") {
+        return 502;
+    }
+    if (value == "503") {
+        return 503;
+    }
+    if (value == "504") {
+        return 504;
+    }
+    if (value == "505") {
+        return 505;
+    }
+    if (value == "506") {
+        return 506;
+    }
+    if (value == "507") {
+        return 507;
+    }
+    if (value == "508") {
+        return 508;
+    }
+    if (value == "509") {
+        return 509;
+    }
+    if (value == "510") {
+        return 510;
+    }
+    if (value == "511") {
+        return 511;
+    }
+    if (value == "512") {
+        return 512;
+    }
+    return fallback;
 }
 fct intSetting(db, key, fallback) {
-    toInt(setting(db, key, fallback));
+    var fallbackText << toString(fallback);
+    var value << setting(db, key, fallbackText);
+    intSettingValue(value, fallback);
 }
 fct boolSetting(db, key, fallback) {
-    var value << setting(db, key, fallback);
-    value == "true" or value == "1";
+    var fallbackText << "0";
+    if (fallback) {
+        fallbackText << "1";
+    }
+    var value << setting(db, key, fallbackText);
+    if (value == "1" or value == "true") {
+        return true;
+    }
+    if (value == "0" or value == "false") {
+        return false;
+    }
+    return fallback;
+}
+pub fct saveSettings(db, value) {
+    saveSetting(db, "scale", value.scale);
+    saveSetting(db, "vsync", value.vsync);
+    saveSetting(db, "fullscreen", value.fullscreen);
+    saveSetting(db, "volume", value.volume);
+    saveSetting(db, "muted", value.muted);
+    saveSetting(db, "showFps", value.showFps);
+    saveSetting(db, "unlimited", value.unlimited);
+    saveSetting(db, "p1A", value.p1A);
+    saveSetting(db, "p1B", value.p1B);
+    saveSetting(db, "p1Select", value.p1Select);
+    saveSetting(db, "p1Start", value.p1Start);
+    saveSetting(db, "p1Up", value.p1Up);
+    saveSetting(db, "p1Down", value.p1Down);
+    saveSetting(db, "p1Left", value.p1Left);
+    saveSetting(db, "p1Right", value.p1Right);
+    saveSetting(db, "p2A", value.p2A);
+    saveSetting(db, "p2B", value.p2B);
+    saveSetting(db, "p2Select", value.p2Select);
+    saveSetting(db, "p2Start", value.p2Start);
+    saveSetting(db, "p2Up", value.p2Up);
+    saveSetting(db, "p2Down", value.p2Down);
+    saveSetting(db, "p2Left", value.p2Left);
+    saveSetting(db, "p2Right", value.p2Right);
+    true;
 }
 pub fct loadSettings(db) {
-    var value << settings.defaults();
-    value.scale << intSetting(db, "scale", value.scale);
-    value.vsync << boolSetting(db, "vsync", value.vsync);
-    value.fullscreen << boolSetting(db, "fullscreen", value.fullscreen);
-    value.volume << intSetting(db, "volume", value.volume);
-    value.muted << boolSetting(db, "muted", value.muted);
-    value.showFps << boolSetting(db, "showFps", value.showFps);
-    value.unlimited << boolSetting(db, "unlimited", value.unlimited);
-    value.p1A << intSetting(db, "p1A", value.p1A);
-    value.p1B << intSetting(db, "p1B", value.p1B);
-    value.p1Select << intSetting(db, "p1Select", value.p1Select);
-    value.p1Start << intSetting(db, "p1Start", value.p1Start);
-    value.p1Up << intSetting(db, "p1Up", value.p1Up);
-    value.p1Down << intSetting(db, "p1Down", value.p1Down);
-    value.p1Left << intSetting(db, "p1Left", value.p1Left);
-    value.p1Right << intSetting(db, "p1Right", value.p1Right);
-    value.p2A << intSetting(db, "p2A", value.p2A);
-    value.p2B << intSetting(db, "p2B", value.p2B);
-    value.p2Select << intSetting(db, "p2Select", value.p2Select);
-    value.p2Start << intSetting(db, "p2Start", value.p2Start);
-    value.p2Up << intSetting(db, "p2Up", value.p2Up);
-    value.p2Down << intSetting(db, "p2Down", value.p2Down);
-    value.p2Left << intSetting(db, "p2Left", value.p2Left);
-    value.p2Right << intSetting(db, "p2Right", value.p2Right);
-    value;
+    var defaults << settings.defaults();
+    var scale << intSetting(db, "scale", defaults.scale);
+    var vsync << boolSetting(db, "vsync", defaults.vsync);
+    var fullscreen << boolSetting(db, "fullscreen", defaults.fullscreen);
+    var volume << intSetting(db, "volume", defaults.volume);
+    var muted << boolSetting(db, "muted", defaults.muted);
+    var showFps << boolSetting(db, "showFps", defaults.showFps);
+    var unlimited << boolSetting(db, "unlimited", defaults.unlimited);
+    var p1A << intSetting(db, "p1A", defaults.p1A);
+    var p1B << intSetting(db, "p1B", defaults.p1B);
+    var p1Select << intSetting(db, "p1Select", defaults.p1Select);
+    var p1Start << intSetting(db, "p1Start", defaults.p1Start);
+    var p1Up << intSetting(db, "p1Up", defaults.p1Up);
+    var p1Down << intSetting(db, "p1Down", defaults.p1Down);
+    var p1Left << intSetting(db, "p1Left", defaults.p1Left);
+    var p1Right << intSetting(db, "p1Right", defaults.p1Right);
+    var p2A << intSetting(db, "p2A", defaults.p2A);
+    var p2B << intSetting(db, "p2B", defaults.p2B);
+    var p2Select << intSetting(db, "p2Select", defaults.p2Select);
+    var p2Start << intSetting(db, "p2Start", defaults.p2Start);
+    var p2Up << intSetting(db, "p2Up", defaults.p2Up);
+    var p2Down << intSetting(db, "p2Down", defaults.p2Down);
+    var p2Left << intSetting(db, "p2Left", defaults.p2Left);
+    var p2Right << intSetting(db, "p2Right", defaults.p2Right);
+    settings.create(scale, vsync, fullscreen, volume, muted, showFps, unlimited, p1A, p1B, p1Select, p1Start, p1Up, p1Down, p1Left, p1Right, p2A, p2B, p2Select, p2Start, p2Up, p2Down, p2Left, p2Right);
 }
 pub fct recordRom(db, info, openedAt) {
     database.exec(db, "INSERT INTO rom_library(digest, path, title, mapper, last_opened, created_at) VALUES (:digest, :path, :title, :mapper, :opened, :opened) ON CONFLICT(digest) DO UPDATE SET path = excluded.path, title = excluded.title, mapper = excluded.mapper, last_opened = excluded.last_opened", {

@@ -51,7 +51,7 @@ test -x scripts/check-z23-sustained-memory.sh
 test -x scripts/check-z23-fast-frame-loop.sh
 test -x scripts/run-z23-tests.sh
 test -x scripts/package-z23-linux.sh
-test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 76
+test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 77
 
 if [[ -d .git ]]; then
     tracked_generated="$(git ls-files 'build/**' 'dist/**' '.zumbra/**')"

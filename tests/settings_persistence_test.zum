@@ -1,0 +1,38 @@
+import "../src/frontend/settings.zum" as settings;
+import "../src/persistence/store.zum" as store;
+import "../src/testing/assert.zum" as test;
+var db << store.memory();
+store.saveSetting(db, "volume", 41);
+test.assertString(store.setting(db, "volume", "0"), "41", "direct volume setting round trip");
+test.assertInt(store.loadSettings(db).volume, 41, "direct volume loadSetting bridge");
+var value << settings.create(3, true, false, 41, true, false, false, 13, 14, 225, 44, 26, 22, 4, 7, 10, 11, 23, 28, 26, 22, 4, 7);
+store.saveSettings(db, value);
+var loaded << store.loadSettings(db);
+test.assertInt(loaded.volume, 41, "volume persisted");
+test.assertBool(loaded.muted, "muted persisted");
+test.assertBool(!loaded.showFps, "showFps persisted false");
+test.assertInt(loaded.p1A, 13, "p1A persisted");
+test.assertInt(loaded.p1B, 14, "p1B persisted");
+test.assertInt(loaded.p1Select, 225, "p1Select persisted");
+test.assertInt(loaded.p1Start, 44, "p1Start persisted");
+test.assertInt(loaded.p1Up, 26, "p1Up persisted");
+test.assertInt(loaded.p1Down, 22, "p1Down persisted");
+test.assertInt(loaded.p1Left, 4, "p1Left persisted");
+test.assertInt(loaded.p1Right, 7, "p1Right persisted");
+store.saveSetting(db, "p1A", "bad");
+var repaired << store.loadSettings(db);
+test.assertInt(repaired.p1A, 29, "bad persisted p1A falls back safely");
+var mutedAgain << settings.withMuted(repaired, true);
+store.saveSettings(db, mutedAgain);
+var mutedLoaded << store.loadSettings(db);
+test.assertBool(mutedLoaded.muted, "withMuted persisted");
+var remap << {
+    "p1A": 29, "p1B": 27, "p1Select": 43, "p1Start": 40, "p1Up": 82, "p1Down": 81, "p1Left": 80, "p1Right": 79
+};
+var remapped << settings.withPlayerOneControls(mutedLoaded, remap);
+store.saveSettings(db, remapped);
+var remappedLoaded << store.loadSettings(db);
+test.assertInt(remappedLoaded.p1A, 29, "withPlayerOneControls p1A persisted");
+test.assertInt(remappedLoaded.p1Right, 79, "withPlayerOneControls p1Right persisted");
+store.close(db);
+show("settings_persistence_test: ok");

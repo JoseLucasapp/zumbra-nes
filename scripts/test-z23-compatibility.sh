@@ -38,7 +38,7 @@ grep -q "^version: ${project_version}$" build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z23 0.5.59; continuing to test/build."
+    echo "Project check is advisory in Z23 0.5.60; continuing to test/build."
 else
     cat build/project-check.txt
 fi
@@ -50,7 +50,7 @@ fi
 # execution step.
 if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
     cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z23 0.5.59; running tests individually."
+    echo "Project test aggregate precheck is advisory in Z23 0.5.60; running tests individually."
 else
     cat build/project-test-aggregate.txt
 fi

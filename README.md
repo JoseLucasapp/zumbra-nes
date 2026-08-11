@@ -1,8 +1,6 @@
-**0.5.59 audio cleanup:** live desktop audio now uses a light cleanup filter and a slightly larger queue guard to reduce static without returning to dirty slow buffering.
+# zumbra-nes 0.5.60
 
-# zumbra-nes 0.5.59
-
-**0.5.59 input UX:** Settings now opens inside the emulator window with `F1`, `1`-`8` remap buttons only while that overlay is visible, `F2` resets mappings, keyboard mappings persist in `zumbra-nes-controls.json`, and Xbox-style gamepads are polled automatically. Startup/settings transitions now mute input until buttons are released to avoid stuck Enter/D-pad state.
+**Z27 typed settings persistence:** desktop settings now persist through the existing SQLite settings table instead of JSON control/audio side files. Player 1 remaps stay as integers in memory, audio ON/OFF maps to the persisted `muted` setting, and corrupted numeric settings fall back to defaults instead of crashing startup.
 
 # Zumbra NES
 
