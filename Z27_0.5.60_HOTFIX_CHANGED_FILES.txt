@@ -1,8 +1,0 @@
-ALTERADOS:
-- src/persistence/store.zum
-- tests/settings_persistence_test.zum
-
-MOTIVO:
-- Corrige falha em settings_persistence_test no assert `volume persisted`.
-- Mantém saveSettings baseado em settings.asDictionary.
-- Mantém fallback seguro para valor numérico corrompido na leitura.

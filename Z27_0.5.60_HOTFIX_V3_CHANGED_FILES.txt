@@ -1,9 +1,0 @@
-ALTERADOS:
-- src/frontend/settings.zum
-- src/persistence/store.zum
-- src/frontend/desktop.zum
-- tests/settings_persistence_test.zum
-
-CRIADOS:
-- README_APPLY_Z27_HOTFIX_V3.md
-- Z27_0.5.60_HOTFIX_V3_CHANGED_FILES.txt
