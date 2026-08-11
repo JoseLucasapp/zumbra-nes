@@ -1,10 +1,20 @@
-## 0.5.59 validation — audio cleanup
+## 0.5.60 validation — Z27 typed settings persistence
+
+Critérios de aprovação:
+
+1. Rodar `zumbra fmt` nos arquivos alterados.
+2. Rodar `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` até o gate completo passar.
+3. Abrir `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
+4. Abrir Settings com `F1`, remapear um botão com `1`-`8`, fechar e reabrir o app.
+5. Confirmar que o remap e áudio ON/OFF persistem via `zumbra-nes.sqlite3`.
+
+## 0.5.53 validation — audio cleanup
 
 - Run `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh`.
 - Launch `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
 - Confirm audio is cleaner, without heavy static, and input/settings/gamepad behavior remains intact.
 
-## 0.5.59 validation — input UX
+## 0.5.53 validation — input UX
 
 Critérios adicionais:
 
@@ -16,7 +26,7 @@ Critérios adicionais:
 6. Entrar em ROM/menu e soltar Enter/D-pad não deixa botão preso.
 7. Controle Xbox Series S é detectado automaticamente pelo gamepad bridge, com D-pad, A/B, Select e Start.
 
-## 0.5.59 validation
+## 0.5.53 validation
 
 Critérios de aprovação:
 
@@ -27,11 +37,11 @@ Critérios de aprovação:
 5. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"` não trava o PC e Enter/Space enviam Start+Select assistido para o menu.
 6. `taskset -c 0 ./build/zumbra-nes "$HOME/Downloads/fe.nes"` não deve mais rejeitar por mapper 10; se falhar, a falha deve ser de execução/renderização, não de compatibilidade.
 
-## 0.5.59 validation
+## 0.5.53 validation
 
 A etapa é aprovada quando o gate completo passa, o desktop sem ROM sai da tela de logo para o shell "NO ROM", e a ROM 1200-in-1 aceita teclado no menu.
 
-## 0.5.59 validation
+## 0.5.53 validation
 
 A etapa bloqueante nova é o build desktop nativo. O erro `types: function has conflicting return types: null and bool` não pode aparecer.
 
@@ -230,7 +240,7 @@ EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
 The `project check` and aggregate `project test` diagnostics are advisory for Z23 0.5.23. The gate must execute all 75 test files through `scripts/run-z23-tests.sh` before building native and desktop artifacts.
 
 
-## 0.5.59 additional gate
+## 0.5.53 additional gate
 
 The compatibility script now also runs:
 

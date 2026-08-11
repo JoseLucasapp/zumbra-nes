@@ -3132,6 +3132,70 @@ pub fct defaults()
 
 SDL scancode defaults: arrows/Z/X/Enter/RightShift and WASD/G/H/T/Y.
 
+### create
+
+```zumbra
+pub fct create(scale, vsync, fullscreen, volume, muted, showFps, unlimited, p1A, p1B, p1Select, p1Start, p1Up, p1Down, p1Left, p1Right, p2A, p2B, p2Select, p2Start, p2Up, p2Down, p2Left, p2Right)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `scale` | parameter | `` |
+| `vsync` | parameter | `` |
+| `fullscreen` | parameter | `` |
+| `volume` | parameter | `` |
+| `muted` | parameter | `` |
+| `showFps` | parameter | `` |
+| `unlimited` | parameter | `` |
+| `p1A` | parameter | `` |
+| `p1B` | parameter | `` |
+| `p1Select` | parameter | `` |
+| `p1Start` | parameter | `` |
+| `p1Up` | parameter | `` |
+| `p1Down` | parameter | `` |
+| `p1Left` | parameter | `` |
+| `p1Right` | parameter | `` |
+| `p2A` | parameter | `` |
+| `p2B` | parameter | `` |
+| `p2Select` | parameter | `` |
+| `p2Start` | parameter | `` |
+| `p2Up` | parameter | `` |
+| `p2Down` | parameter | `` |
+| `p2Left` | parameter | `` |
+| `p2Right` | parameter | `` |
+
+### copy
+
+```zumbra
+pub fct copy(value)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `value` | parameter | `` |
+
+### withMuted
+
+```zumbra
+pub fct withMuted(value, muted)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `value` | parameter | `` |
+| `muted` | parameter | `` |
+
+### withPlayerOneControls
+
+```zumbra
+pub fct withPlayerOneControls(value, controls)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `value` | parameter | `` |
+| `controls` | parameter | `` |
+
 ### asDictionary
 
 ```zumbra
