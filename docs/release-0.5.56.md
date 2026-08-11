@@ -1,12 +1,14 @@
 # zumbra-nes 0.5.59
 
-Z24 visual argument type fix.
+Z24 runtime control settings fix.
 
 ## Changes
 
-- Fixes string numeric arguments passed to drawing helpers that expect int.
+- Keeps controls as int values in memory.
+- Saves controls as dict<string,string> only at the JSON boundary.
+- Removes dynamic toInt calls from runtime input/drawing paths.
+- Avoids stale corrupted local settings during validation.
 - Keeps Z24 menu, overlay, quick save/load and UX work.
-- Keeps settings persisted as dict<string,string>.
 - Keeps AppImage optional and release scripts version-driven.
 
 ## Deferred follow-ups

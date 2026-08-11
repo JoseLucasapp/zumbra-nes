@@ -1,12 +1,12 @@
 # zumbra-nes 0.5.59
 
-Z24 visual argument type fix.
+Z24 parser cleanup fix.
 
 ## Changes
 
-- Fixes string numeric arguments passed to drawing helpers that expect int.
+- Fixes malformed toInt control assignments caused by the previous settings-row patch.
+- Keeps drawSettingsRow receiving int values.
 - Keeps Z24 menu, overlay, quick save/load and UX work.
-- Keeps settings persisted as dict<string,string>.
 - Keeps AppImage optional and release scripts version-driven.
 
 ## Deferred follow-ups

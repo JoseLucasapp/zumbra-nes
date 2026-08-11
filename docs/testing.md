@@ -1,3 +1,16 @@
+## 0.5.60 Z27 settings persistence check
+
+Comandos principais:
+
+```bash
+export ZUMBRA_BIN="$HOME/projects/Zumbra-lang/build/zumbra"
+"$ZUMBRA_BIN" fmt src/frontend/desktop.zum src/frontend/playable_headless.zum tests/playable_headless_test.zum tests/settings_persistence_test.zum src/persistence/store.zum src/frontend/settings.zum
+rm -rf build nativec/build dist
+EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
+```
+
+Validação manual: abrir o emulador, usar `F1`, remapear controles, alternar áudio e confirmar persistência após reiniciar.
+
 ## 0.5.53 desktop/input/homebrew check
 
 Comandos manuais principais:

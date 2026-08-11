@@ -1,4 +1,4 @@
-# zumbra-nes 0.5.53
+# zumbra-nes 0.5.59
 
 Z24 complete playability and UX pass.
 
@@ -10,7 +10,7 @@ Z24 complete playability and UX pass.
 - Adds persistent audio on/off setting.
 - Adds F3 technical overlay.
 - Adds F5 quick save and F8 quick load.
-- Fixes visible Settings version label to 0.5.53.
+- Fixes visible Settings version label to 0.5.59.
 - Keeps Xbox-style gamepad detection and runtime control remapping.
 
 ## Explicitly deferred

@@ -1,3 +1,13 @@
+## 0.5.60 validation — Z27 typed settings persistence
+
+Critérios de aprovação:
+
+1. Rodar `zumbra fmt` nos arquivos alterados.
+2. Rodar `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` até o gate completo passar.
+3. Abrir `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"`.
+4. Abrir Settings com `F1`, remapear um botão com `1`-`8`, fechar e reabrir o app.
+5. Confirmar que o remap e áudio ON/OFF persistem via `zumbra-nes.sqlite3`.
+
 ## 0.5.53 validation — audio cleanup
 
 - Run `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh`.

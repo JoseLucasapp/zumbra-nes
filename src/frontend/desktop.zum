@@ -4,32 +4,54 @@ import "../core/audio_output.zum" as audioOutput;
 import "../core/mapper.zum" as mapper;
 import "../core/palette.zum" as palette;
 import "../persistence/save_state.zum" as saveState;
-import "../stdlib/data.zum" as jsondata;
+import "../persistence/store.zum" as store;
 import "native_bridge.zum" as native;
-// Z24 settings/input helpers.
-// JSON persistence uses dict<string,string>; values are converted at runtime.
-fct audioSettingsFile() {
-    return "zumbra-nes-audio.json";
+import "settings.zum" as hostSettings;
+// Z27 typed settings persistence.
+// SQLite keeps settings durable; desktop controls remain dict<string,int> in memory.
+fct desktopSettingsPath() {
+    return "zumbra-nes.sqlite3";
 }
-fct loadAudioSetting() {
-    if (!fileExists(audioSettingsFile())) {
-        return true;
-    }
-    var loaded << jsondata.readJson(audioSettingsFile());
-    var value << loaded["enabled"];
-    if (toString(value) == "false") {
-        return false;
-    }
+fct loadDesktopSettings() {
+    var db << store.open(desktopSettingsPath());
+    var value << store.loadSettings(db);
+    store.close(db);
+    return value;
+}
+fct saveDesktopSettings(value) {
+    var db << store.open(desktopSettingsPath());
+    store.saveSettings(db, value);
+    store.close(db);
     return true;
 }
+fct settingsToControls(value) {
+    return {
+        "p1A": value.p1A, "p1B": value.p1B, "p1Select": value.p1Select, "p1Start": value.p1Start, "p1Up": value.p1Up, "p1Down": value.p1Down, "p1Left": value.p1Left, "p1Right": value.p1Right
+    };
+}
+fct controlsToSettings(value, controls) {
+    hostSettings.withPlayerOneControls(value, controls);
+}
+fct loadAudioSetting() {
+    var value << loadDesktopSettings();
+    return!value.muted;
+}
 fct saveAudioSetting(enabled) {
-    var value << "false";
-    if (enabled) {
-        value << "true";
-    }
-    jsondata.writeJson(audioSettingsFile(), {
-        "enabled": value
-    }, true);
+    var value << loadDesktopSettings();
+    var updated << hostSettings.withMuted(value,!enabled);
+    saveDesktopSettings(updated);
+    return true;
+}
+fct controlDefaults() {
+    return settingsToControls(hostSettings.defaults());
+}
+fct loadControlSettings() {
+    return settingsToControls(loadDesktopSettings());
+}
+fct saveControlSettings(controls) {
+    var value << loadDesktopSettings();
+    var updated << controlsToSettings(value, controls);
+    saveDesktopSettings(updated);
     return true;
 }
 fct stableKey(context, code) {
@@ -37,35 +59,6 @@ fct stableKey(context, code) {
         return false;
     }
     return native.keyDown(context, code) == true;
-}
-fct controlFile() {
-    return "zumbra-nes-controls.json";
-}
-fct controlDefaults() {
-    return {
-        "p1A": "29", "p1B": "27", "p1Select": "43", "p1Start": "40", "p1Up": "82", "p1Down": "81", "p1Left": "80", "p1Right": "79"
-    };
-}
-fct controlValue(source, key, fallback) {
-    var value << source[key];
-    if (toString(value) == "null") {
-        return fallback;
-    }
-    return toString(value);
-}
-fct loadControlSettings() {
-    var defaults << controlDefaults();
-    if (!fileExists(controlFile())) {
-        return defaults;
-    }
-    var loaded << jsondata.readJson(controlFile());
-    return {
-        "p1A": controlValue(loaded, "p1A", defaults["p1A"]), "p1B": controlValue(loaded, "p1B", defaults["p1B"]), "p1Select": controlValue(loaded, "p1Select", defaults["p1Select"]), "p1Start": controlValue(loaded, "p1Start", defaults["p1Start"]), "p1Up": controlValue(loaded, "p1Up", defaults["p1Up"]), "p1Down": controlValue(loaded, "p1Down", defaults["p1Down"]), "p1Left": controlValue(loaded, "p1Left", defaults["p1Left"]), "p1Right": controlValue(loaded, "p1Right", defaults["p1Right"])
-    };
-}
-fct saveControlSettings(controls) {
-    jsondata.writeJson(controlFile(), controls, true);
-    return true;
 }
 fct keyName(code) {
     if (code == 4) {
@@ -140,7 +133,7 @@ fct keyName(code) {
     return "scancode " + toString(code);
 }
 fct controlSummary(controls) {
-    return "A=" + keyName(toInt(controls["p1A"])) + " B=" + keyName(toInt(controls["p1B"])) + " Select=" + keyName(toInt(controls["p1Select"])) + " Start=" + keyName(toInt(controls["p1Start"])) + " U=" + keyName(toInt(controls["p1Up"])) + " D=" + keyName(toInt(controls["p1Down"])) + " L=" + keyName(toInt(controls["p1Left"])) + " R=" + keyName(toInt(controls["p1Right"]));
+    return "A=" + keyName(controls["p1A"]) + " B=" + keyName(controls["p1B"]) + " Select=" + keyName(controls["p1Select"]) + " Start=" + keyName(controls["p1Start"]) + " U=" + keyName(controls["p1Up"]) + " D=" + keyName(controls["p1Down"]) + " L=" + keyName(controls["p1Left"]) + " R=" + keyName(controls["p1Right"]);
 }
 fct showControlSettings(context, controls) {
     native.setStatus(context, "SETTINGS | F1 fecha | 1-8 remap | F2 reset | " + controlSummary(controls));
@@ -207,7 +200,7 @@ fct remapControl(context, controls, action) {
         native.setStatus(context, "SETTINGS | tecla reservada/cancelada: " + keyName(code));
     } else {
         if (code >= 0) {
-            controls[action] << toString(code);
+            controls[action] << code;
             saveControlSettings(controls);
             native.setStatus(context, "SETTINGS | " + actionLabel(action) + " = " + keyName(code) + " | salvo");
         } else {
@@ -256,14 +249,14 @@ fct gamepadPlayerOneMask(context) {
 }
 fct stablePlayerOneMask(context, controls) {
     var mask << 0;
-    var keyA << toInt(controls["p1A"]);
-    var keyB << toInt(controls["p1B"]);
-    var keySelect << toInt(controls["p1Select"]);
-    var keyStart << toInt(controls["p1Start"]);
-    var keyUp << toInt(controls["p1Up"]);
-    var keyDownControl << toInt(controls["p1Down"]);
-    var keyLeft << toInt(controls["p1Left"]);
-    var keyRight << toInt(controls["p1Right"]);
+    var keyA << controls["p1A"];
+    var keyB << controls["p1B"];
+    var keySelect << controls["p1Select"];
+    var keyStart << controls["p1Start"];
+    var keyUp << controls["p1Up"];
+    var keyDownControl << controls["p1Down"];
+    var keyLeft << controls["p1Left"];
+    var keyRight << controls["p1Right"];
     if ((keyA >= 0 and stableKey(context, keyA)) or stableKey(context, 13)) {
         mask << mask bor 0x01;
     }
@@ -924,26 +917,19 @@ fct drawTechnicalOverlay(output, mapperId, frames, queuedAudioBytes, audioEnable
     }
     return true;
 }
-fct recentFile() {
-    return "zumbra-nes-recent.json";
-}
 fct loadRecentPath() {
-    if (!fileExists(recentFile())) {
-        return "";
-    }
-    var loaded << jsondata.readJson(recentFile());
-    var value << loaded["lastRom"];
-    if (toString(value) == "null") {
-        return "";
-    }
-    return toString(value);
+    var db << store.open(desktopSettingsPath());
+    var path << store.setting(db, "lastRom", "");
+    store.close(db);
+    return path;
 }
 fct saveRecentPath(path) {
-    if (path != "") {
-        jsondata.writeJson(recentFile(), {
-            "lastRom": path
-        }, true);
+    if (path == "") {
+        return false;
     }
+    var db << store.open(desktopSettingsPath());
+    store.saveSetting(db, "lastRom", path);
+    store.close(db);
     return true;
 }
 fct saveStatePath() {
@@ -961,7 +947,7 @@ fct stableShell(context, headlessMode) {
     var selected << 0;
     var previousMask << 0;
     var aboutVisible << false;
-    native.setStatus(context, "Zumbra NES 0.5.53 | Z24 menu | Load ROM | Recent | Controls | Audio | About");
+    native.setStatus(context, "Zumbra NES 0.5.60 | Z24 menu | Load ROM | Recent | Controls | Audio | About");
     while (running and!native.shouldClose(context)) {
         native.pollAll(context, 32);
         var gamepadMask << gamepadPlayerOneMask(context);
@@ -1077,7 +1063,7 @@ fct openGameRuntime(path) {
     return {
         "ok": true, "message": "ok", "path": path, "machine": machine, "mapper": mapperId, "rgba": palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"])
     };
-} /// Runtime-editable player 1 bindings persisted as JSON in the project directory.
+} /// Runtime-editable player 1 bindings persisted through Z27 typed settings.
 fct inputLockedMask(rawMask, lockFrames) {
     if (lockFrames > 0) {
         return 0;
@@ -1086,7 +1072,7 @@ fct inputLockedMask(rawMask, lockFrames) {
 } /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 // Z24 build compatibility helpers.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.53", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.60", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -1120,6 +1106,12 @@ pub fct run() {
         show(game["message"]);
         return false;
     }
+    if (headlessMode) {
+        native.destroy(context);
+        show("Z23 desktop session complete");
+        show(2);
+        return true;
+    }
     saveRecentPath(initialPath);
     console.setPerformanceMode(game["machine"], true);
     // 0.5.53: audio is opt-in after performance mode so the desktop queue receives
@@ -1145,7 +1137,7 @@ pub fct run() {
     var lastF3 << false;
     var lastF5 << false;
     var lastF8 << false;
-    native.setStatus(context, "Zumbra NES 0.5.53 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
+    native.setStatus(context, "Zumbra NES 0.5.60 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
     var loopMemoryMark << runtimeMemoryMark();
     runtimeMemoryResetPeak();
     while (running and!native.shouldClose(context)) {
@@ -1157,7 +1149,7 @@ pub fct run() {
                 paused << false;
                 captureAction << "";
                 inputLock << 10;
-                native.setStatus(context, "Zumbra NES 0.5.53 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
+                native.setStatus(context, "Zumbra NES 0.5.60 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
             }
         }
         if (native.keyDown(context, 69)) {

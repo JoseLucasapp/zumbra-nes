@@ -1,3 +1,11 @@
+## 0.5.60 — Z27 typed settings persistence
+
+- Reintroduced durable desktop settings through the existing SQLite settings table.
+- Kept control values as typed integers in memory and stringified values only at the store boundary.
+- Persisted audio ON/OFF through the existing `muted` setting.
+- Added fallback behavior for corrupted numeric settings.
+- Added `tests/settings_persistence_test.zum`.
+
 ## 0.5.53 — audio cleanup
 
 - Cleaned live desktop audio with a light 3-tap low-pass filter.
