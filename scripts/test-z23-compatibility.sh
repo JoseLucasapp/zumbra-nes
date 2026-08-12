@@ -38,7 +38,7 @@ grep -q "^version: ${project_version}$" build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z23 0.5.60; continuing to test/build."
+    echo "Project check is advisory in Z28 0.5.61; continuing to test/build."
 else
     cat build/project-check.txt
 fi
@@ -50,7 +50,7 @@ fi
 # execution step.
 if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
     cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z23 0.5.60; running tests individually."
+    echo "Project test aggregate precheck is advisory in Z28 0.5.61; running tests individually."
 else
     cat build/project-test-aggregate.txt
 fi
@@ -73,7 +73,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[9]:-}" == "4" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
-[[ "${smoke[12]:-}" == "8" ]]
+[[ "${smoke[12]:-}" == "15" ]]
 [[ "${smoke[13]:-}" == "1" ]]
 
 if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then
@@ -103,7 +103,8 @@ if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/synthetic/unsupported-mapper5.nes > build/unsupported-mapper.txt 2>&1 || true
     grep -q 'ROM incompatível: mapper 5' build/unsupported-mapper.txt
     grep -q '0 (NROM)' build/unsupported-mapper.txt
-    grep -q '227 (multicart)' build/unsupported-mapper.txt
+    grep -q '180 (UNROM reverse)' build/unsupported-mapper.txt
+grep -q '227 (multicart)' build/unsupported-mapper.txt
 
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/homebrew/zebra-platformer.nes > build/zebra-platformer-smoke.txt
     grep -q '^Z23 desktop session complete$' build/zebra-platformer-smoke.txt
@@ -116,4 +117,4 @@ fi
 
 scripts/check-repository-hygiene.sh
 
-echo "Z23 compatibility, persistence and debugger gate passed."
+echo "Z28 compatibility, mapper expansion, persistence and debugger gate passed."

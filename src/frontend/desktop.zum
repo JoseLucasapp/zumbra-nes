@@ -947,7 +947,7 @@ fct stableShell(context, headlessMode) {
     var selected << 0;
     var previousMask << 0;
     var aboutVisible << false;
-    native.setStatus(context, "Zumbra NES 0.5.60 | Z24 menu | Load ROM | Recent | Controls | Audio | About");
+    native.setStatus(context, "Zumbra NES 0.5.61 | Z24 menu | Load ROM | Recent | Controls | Audio | About");
     while (running and!native.shouldClose(context)) {
         native.pollAll(context, 32);
         var gamepadMask << gamepadPlayerOneMask(context);
@@ -1072,7 +1072,7 @@ fct inputLockedMask(rawMask, lockFrames) {
 } /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 // Z24 build compatibility helpers.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.60", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.61", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -1137,7 +1137,7 @@ pub fct run() {
     var lastF3 << false;
     var lastF5 << false;
     var lastF8 << false;
-    native.setStatus(context, "Zumbra NES 0.5.60 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
+    native.setStatus(context, "Zumbra NES 0.5.61 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
     var loopMemoryMark << runtimeMemoryMark();
     runtimeMemoryResetPeak();
     while (running and!native.shouldClose(context)) {
@@ -1149,7 +1149,7 @@ pub fct run() {
                 paused << false;
                 captureAction << "";
                 inputLock << 10;
-                native.setStatus(context, "Zumbra NES 0.5.60 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
+                native.setStatus(context, "Zumbra NES 0.5.61 | mapper " + toString(mapperId) + " | F1 settings | F3 overlay | F5 save | F8 load | F12 sair");
             }
         }
         if (native.keyDown(context, 69)) {

@@ -58,22 +58,24 @@ fct mapBank(address, windowStart, bank, bankBytes, totalBytes, writable) {
     Mapping(true, mapBankOffset(address, windowStart, bank, bankBytes, totalBytes), writable);
 }
 
-/// Returns whether the mapper is implemented by Z23.
+/// Returns whether the mapper is implemented by Z28.
 pub fct supports(mapperId) {
-    mapperId == 0u16 or mapperId == 1u16 or mapperId == 2u16 or mapperId == 3u16 or mapperId == 4u16 or mapperId == 7u16 or mapperId == 10u16 or mapperId == 227u16;
-} /// Stable list of mapper IDs accepted by the current compatibility layer.
+    mapperId == 0u16 or mapperId == 1u16 or mapperId == 2u16 or mapperId == 3u16 or mapperId == 4u16 or mapperId == 7u16 or mapperId == 10u16 or mapperId == 11u16 or mapperId == 30u16 or mapperId == 66u16 or mapperId == 71u16 or mapperId == 87u16 or mapperId == 94u16 or mapperId == 180u16 or mapperId == 227u16;
+}
+
+/// Stable list of mapper IDs accepted by the current compatibility layer.
 pub fct supportedIds() {
-    [0, 1, 2, 3, 4, 7, 10, 227];
+    [0, 1, 2, 3, 4, 7, 10, 11, 30, 66, 71, 87, 94, 180, 227];
 }
 
 /// Allocation-free count used by reports and release gates.
 pub fct supportedCount() {
-    8;
+    15;
 }
 
 /// Human-readable mapper compatibility list used by the desktop frontend.
 pub fct supportedText() {
-    "0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 10 (MMC4), 227 (multicart)";
+    "0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 10 (MMC4), 11 (Color Dreams), 30 (UNROM 512), 66 (GxROM), 71 (Camerica), 87 (Jaleco), 94 (UN1ROM), 180 (UNROM reverse), 227 (multicart)";
 }
 pub fct name(mapperId) {
     match (toInt(mapperId)) {
@@ -97,6 +99,27 @@ pub fct name(mapperId) {
         }
         case 10 {
             "MMC4/FxROM";
+        }
+        case 11 {
+            "Color Dreams";
+        }
+        case 30 {
+            "UNROM 512";
+        }
+        case 66 {
+            "GxROM";
+        }
+        case 71 {
+            "Camerica/Codemasters";
+        }
+        case 87 {
+            "Jaleco JF-13";
+        }
+        case 94 {
+            "UN1ROM";
+        }
+        case 180 {
+            "UNROM reverse";
         }
         case 227 {
             "Mapper 227 multicart";
@@ -140,6 +163,9 @@ pub fct create(mapperId, submapper, prgBytes, chrBytes, battery, initialMirrorin
     if (mapperId == 10u16) {
         mirror << initialMirroring;
     }
+    if (mapperId == 30u16 or mapperId == 71u16) {
+        mirror << initialMirroring;
+    }
     if (mapperId == 227u16) {
         mirror << "vertical";
         chrWritable << true;
@@ -151,7 +177,7 @@ pub fct create(mapperId, submapper, prgBytes, chrBytes, battery, initialMirrorin
 pub fct descriptor(state) {
     var core << state["core"];
     {
-        "id": core.id, "submapper": core.submapper, "name": core.name, "mirroring": core.mirroring, "prgBanks16": bankCount(state["prgBytes"], 16384), "chrBanks8": bankCount(state["chrBytes"], 8192)
+        "id": core.id, "submapper": core.submapper, "name": core.name, "mirroring": core.mirroring, "prgBank": core.prgBank, "chrBank": core.chrBank, "prgBanks16": bankCount(state["prgBytes"], 16384), "prgBanks32": bankCount(state["prgBytes"], 32768), "chrBanks8": bankCount(state["chrBytes"], 8192)
     };
 }
 pub fct mirroring(state, fallback) {
@@ -229,6 +255,39 @@ fct mmc4CpuOffset(state, address, prgBytes) {
     }
     return mapBankOffset(address, 0xC000, banks16 - 1, 16384, prgBytes);
 }
+fct mapper11CpuOffset(state, address, prgBytes) {
+    return mapBankOffset(address, 0x8000, state["core"].prgBank, 32768, prgBytes);
+}
+fct mapper30CpuOffset(state, address, prgBytes) {
+    var banks16 << bankCount(prgBytes, 16384);
+    if (address < 0xC000) {
+        return mapBankOffset(address, 0x8000, state["core"].prgBank, 16384, prgBytes);
+    }
+    return mapBankOffset(address, 0xC000, banks16 - 1, 16384, prgBytes);
+}
+fct mapper66CpuOffset(state, address, prgBytes) {
+    return mapBankOffset(address, 0x8000, state["core"].prgBank, 32768, prgBytes);
+}
+fct mapper71CpuOffset(state, address, prgBytes) {
+    var banks16 << bankCount(prgBytes, 16384);
+    if (address < 0xC000) {
+        return mapBankOffset(address, 0x8000, state["core"].prgBank, 16384, prgBytes);
+    }
+    return mapBankOffset(address, 0xC000, banks16 - 1, 16384, prgBytes);
+}
+fct mapper94CpuOffset(state, address, prgBytes) {
+    var banks16 << bankCount(prgBytes, 16384);
+    if (address < 0xC000) {
+        return mapBankOffset(address, 0x8000, state["core"].prgBank, 16384, prgBytes);
+    }
+    return mapBankOffset(address, 0xC000, banks16 - 1, 16384, prgBytes);
+}
+fct mapper180CpuOffset(state, address, prgBytes) {
+    if (address < 0xC000) {
+        return mapBankOffset(address, 0x8000, 0, 16384, prgBytes);
+    }
+    return mapBankOffset(address, 0xC000, state["core"].prgBank, 16384, prgBytes);
+}
 fct mapper227Bank(state, upper) {
     var latch << state["core"].latchAddress;
     var s << latch band 1;
@@ -280,6 +339,27 @@ pub fct cpuReadOffset(state, address, prgBytes) {
     }
     if (mapperId == 10u16) {
         return mmc4CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 11u16) {
+        return mapper11CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 30u16) {
+        return mapper30CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 66u16) {
+        return mapper66CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 71u16) {
+        return mapper71CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 87u16) {
+        return nromCpuOffset(address, prgBytes);
+    }
+    if (mapperId == 94u16) {
+        return mapper94CpuOffset(state, address, prgBytes);
+    }
+    if (mapperId == 180u16) {
+        return mapper180CpuOffset(state, address, prgBytes);
     }
     if (mapperId == 227u16) {
         if (address < 0xC000) {
@@ -454,6 +534,50 @@ pub fct cpuWriteInPlace(state, address, value, prgBytes) {
     if (core.id == 10u16) {
         return writeMmc4(state, address, byteValue);
     }
+    if (core.id == 11u16) {
+        core.prgBank << byteValue band 0x0F;
+        core.chrBank <<(byteValue shr 4) band 0x0F;
+        return true;
+    }
+    if (core.id == 30u16) {
+        core.prgBank << byteValue band 0x1F;
+        if ((byteValue band 0x80) == 0) {
+            core.mirroring << "single-screen-lower";
+        } else {
+            core.mirroring << "single-screen-upper";
+        }
+        return true;
+    }
+    if (core.id == 66u16) {
+        core.prgBank <<(byteValue shr 4) band 0x03;
+        core.chrBank << byteValue band 0x03;
+        return true;
+    }
+    if (core.id == 71u16) {
+        if (address >= 0x9000 and address <= 0x9FFF) {
+            if ((byteValue band 0x10) == 0) {
+                core.mirroring << "single-screen-lower";
+            } else {
+                core.mirroring << "single-screen-upper";
+            }
+        }
+        if (address >= 0xC000) {
+            core.prgBank << byteValue band 0x0F;
+        }
+        return true;
+    }
+    if (core.id == 87u16) {
+        core.chrBank <<((byteValue band 0x01) shl 1) bor((byteValue band 0x02) shr 1);
+        return true;
+    }
+    if (core.id == 94u16) {
+        core.prgBank <<(byteValue shr 2) band 0x07;
+        return true;
+    }
+    if (core.id == 180u16) {
+        core.prgBank << byteValue band 0x0F;
+        return true;
+    }
     if (core.id == 227u16) {
         core.latchAddress << address band 0xFFFF;
         if ((address band 0x02) == 0) {
@@ -557,6 +681,9 @@ pub fct ppuReadOffset(state, address, chrBytes) {
         return mmc4PpuOffset(state, address, chrBytes);
     }
     if (core.id == 3u16) {
+        return mapBankOffset(address, 0, core.chrBank, 8192, chrBytes);
+    }
+    if (core.id == 11u16 or core.id == 66u16 or core.id == 87u16) {
         return mapBankOffset(address, 0, core.chrBank, 8192, chrBytes);
     }
     if (core.id == 4u16) {

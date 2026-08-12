@@ -1,3 +1,21 @@
+## 0.5.61 validation — Z28 compatibility and mapper expansion
+
+Critérios de aprovação:
+
+1. Rodar `zumbra fmt` nos arquivos alterados.
+2. Rodar `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` até o gate completo passar.
+3. Confirmar `project test: 79 test file(s) executed`.
+4. Confirmar `mapper.supportedCount()` reportando `15`.
+5. Confirmar que Mapper 5 continua rejeitado com mensagem expandida de compatibilidade.
+6. Abrir `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"` e validar que áudio, input, settings, recent ROM e quick save/load continuam ok.
+7. Testar uma ROM própria de mapper recém-suportado quando disponível, especialmente 11, 30, 66, 71, 87, 94 ou 180.
+
+Resultado esperado do gate:
+
+```text
+Z28 compatibility, mapper expansion, persistence and debugger gate passed.
+```
+
 ## 0.5.60 validation — Z27 typed settings persistence
 
 Critérios de aprovação:
