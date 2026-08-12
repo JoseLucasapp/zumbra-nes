@@ -1627,7 +1627,7 @@ Mutable state shared by the CPU and PPU sides of one cartridge mapper.
 pub fct supports(mapperId)
 ```
 
-Returns whether the mapper is implemented by Z23.
+Returns whether the mapper is implemented by Z28.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -1638,6 +1638,8 @@ Returns whether the mapper is implemented by Z23.
 ```zumbra
 pub fct supportedIds()
 ```
+
+Stable list of mapper IDs accepted by the current compatibility layer.
 
 ### supportedCount
 

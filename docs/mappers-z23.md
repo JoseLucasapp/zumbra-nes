@@ -1,8 +1,16 @@
-# Mappers Z23
+# Mappers Z28
+
+Z28 expands the Z23 mapper architecture while preserving its mutable mapper core, save-state snapshot model and debugger-visible mapper state.
 
 ## Registro
 
-O registro aceita os IDs `0`, `1`, `2`, `3`, `4`, `7` e `227`. Uma ROM com outro mapper recebe um resultado estruturado de incompatibilidade antes de a máquina ser criada.
+O registro aceita os IDs `0`, `1`, `2`, `3`, `4`, `7`, `10`, `11`, `30`, `66`, `71`, `87`, `94`, `180` e `227`. Uma ROM com outro mapper recebe um resultado estruturado de incompatibilidade antes de a máquina ser criada.
+
+## Mapper 0 — NROM
+
+- PRG fixo de 16 KiB espelhado ou 32 KiB;
+- CHR ROM fixa ou CHR RAM;
+- mirroring definido pelo header.
 
 ## Mapper 1 — MMC1
 
@@ -39,6 +47,53 @@ O clock de IRQ é integrado ao evento de renderização por scanline do núcleo 
 
 - banco PRG de 32 KiB;
 - single-screen lower/upper mirroring.
+
+## Mapper 10 — MMC4
+
+- PRG de 16 KiB selecionável em `$8000`;
+- último banco PRG fixo em `$C000`;
+- CHR de 4 KiB controlado por latches FD/FE;
+- mirroring por registrador.
+
+## Mapper 11 — Color Dreams
+
+- banco PRG de 32 KiB selecionado pelo latch;
+- banco CHR de 8 KiB selecionado pelo latch;
+- mirroring vem do header.
+
+## Mapper 30 — UNROM 512
+
+- banco PRG de 16 KiB selecionável em `$8000`;
+- último banco fixo em `$C000`;
+- seleção single-screen lower/upper por bit de latch;
+- CHR RAM/ROM permanece no espaço padrão.
+
+## Mapper 66 — GxROM
+
+- banco PRG de 32 KiB selecionável;
+- banco CHR de 8 KiB selecionável;
+- mirroring vem do header.
+
+## Mapper 71 — Camerica/Codemasters
+
+- banco PRG de 16 KiB selecionável em `$8000`;
+- último banco fixo em `$C000`;
+- registrador de mirroring single-screen.
+
+## Mapper 87 — Jaleco JF-13
+
+- PRG como NROM;
+- banco CHR de 8 KiB com bits de seleção trocados.
+
+## Mapper 94 — UN1ROM
+
+- banco PRG de 16 KiB selecionável em `$8000` usando bits deslocados do latch;
+- último banco fixo em `$C000`.
+
+## Mapper 180 — UNROM reverse
+
+- primeiro banco PRG fixo em `$8000`;
+- banco PRG selecionável em `$C000`.
 
 ## Mapper 227
 

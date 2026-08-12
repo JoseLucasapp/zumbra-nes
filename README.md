@@ -1,18 +1,14 @@
-# zumbra-nes 0.5.60
+# zumbra-nes 0.5.61
 
-**Z27 typed settings persistence:** desktop settings now persist through the existing SQLite settings table instead of JSON control/audio side files. Player 1 remaps stay as integers in memory, audio ON/OFF maps to the persisted `muted` setting, and corrupted numeric settings fall back to defaults instead of crashing startup.
+**Z28 compatibility and mapper expansion:** the emulator now supports 15 mapper families while keeping the Zumbra-lang baseline frozen at **0.14.5**. Z27 typed settings persistence, recent ROM persistence, audio ON/OFF, controller remaps, quick save/load and the desktop UX remain intact.
 
-# Zumbra NES
+Zumbra NES is a local-first NES/Famicom emulator written in **Zumbra**. The application repository keeps the emulator code in `.zum`; video, audio, input, packaging and desktop integration come from the official Zumbra runtime.
 
-A versão **0.5.23** exige o patch de performance do backend C11 nativo da Zumbra 0.14.5 e corrige a causa real do delay extremo no Mapper 227: o emulador precisava rodar rápido o bastante para a ROM consumir os botões em tempo útil.
+No commercial ROM is included.
 
-Emulador NES/Famicom local-first escrito em **Zumbra 0.14.5**. O repositório da aplicação contém somente código `.zum`; vídeo, áudio, teclado, gamepads e integração desktop são fornecidos pelas APIs oficiais do runtime Zumbra.
+## Compatibility
 
-A versão **0.5.23** corrige a latência de input do Mapper 227 na ROM real `1200-in-1.nes` com fatias cooperativas e sem idle agressivo. A versão **0.5.0** concluiu a **Z23**: adiciona uma arquitetura mutável de mappers, suporte aos mappers 1, 2, 3, 4, 7, 10 e 227, SRAM persistente, dez slots de save state, debugger, fixture visual e diagnósticos explícitos de compatibilidade.
-
-## Compatibilidade
-
-Mappers implementados:
+Supported mappers:
 
 - `0` — NROM;
 - `1` — MMC1/SxROM;
@@ -21,92 +17,54 @@ Mappers implementados:
 - `4` — MMC3/TxROM;
 - `7` — AxROM;
 - `10` — MMC4/FxROM;
-- `227` — multicarts baseadas em latch de endereço.
+- `11` — Color Dreams;
+- `30` — UNROM 512;
+- `66` — GxROM;
+- `71` — Camerica/Codemasters;
+- `87` — Jaleco JF-13;
+- `94` — UN1ROM;
+- `180` — UNROM reverse;
+- `227` — multicart/address-latch boards.
 
-A implementação cobre os comportamentos iNES usuais dessas famílias. Variantes específicas de placa, submappers incomuns, chips adicionais e ROMs que dependem de opcodes 6502 não oficiais ainda podem exigir trabalho adicional. Nenhuma ROM comercial é incluída.
+The implementation covers common iNES behavior for those families. Specific board revisions, copy-protection behavior, unusual submappers, extra audio chips and ROMs depending on unofficial 6502 opcodes may still require future compatibility work.
 
-## Recursos
+See `docs/compatibility-matrix-z28.md` and `docs/mappers-z23.md` for mapper details.
 
-### Núcleo
+## Features
 
-- iNES 1.0 e detecção básica NES 2.0;
-- CPU Ricoh 2A03 com os 151 opcodes oficiais;
-- PPU 2C02 com background, sprites, scrolling, VBlank/NMI e OAM DMA;
-- APU com pulse 1/2, triangle, noise e DMC;
-- dois controles e scheduler CPU/PPU/APU;
-- bank switching PRG/CHR e mirroring controlado pelo mapper;
-- IRQ de MMC3 integrado à linha de IRQ da CPU;
-- CHR RAM e proteção de escrita do Mapper 227;
-- paridade determinística entre VM e backend C11.
+- iNES 1.0 and basic NES 2.0 header detection;
+- CPU Ricoh 2A03 with the 151 official opcodes;
+- PPU 2C02 background, sprites, scrolling, VBlank/NMI and OAM DMA;
+- APU pulse 1/2, triangle, noise and DMC;
+- keyboard and gamepad input;
+- SQLite-backed local settings and ROM history;
+- SRAM persistence;
+- ten save-state slots;
+- debugger with stepping, breakpoints, memory inspection and mapper state;
+- Linux AppDir and `.deb` packaging;
+- AppImage optional when `appimagetool` is available.
 
-### Persistência
-
-SQLite continua sendo a fonte principal para:
-
-- configurações e remapeamento;
-- biblioteca e ROMs recentes;
-- sessões e tempo jogado;
-- conquistas locais;
-- metadados de save states.
-
-A Z23 adiciona:
-
-- SRAM de bateria em `saves/<sha256>.sav`;
-- flush por dirty flag e no fechamento da sessão;
-- save states portáveis em `states/<sha256>-slotN.zst`;
-- dez slots, de `0` a `9`;
-- validação de schema, versão, SHA-256 da ROM e mapper antes da restauração;
-- serialização de CPU, PPU, APU, bus, RAM, OAM, controles, DMA, relógio e mapper.
-
-JSON permanece restrito a exportação, importação e depuração.
-
-### Debugger
-
-O debugger Z23 oferece:
-
-- pausa e retomada;
-- step de instrução e step de frame;
-- breakpoints de PC;
-- breakpoints de leitura e escrita no bus;
-- leitura de registradores, flags, stack e memória;
-- disassembly baseado na tabela oficial de opcodes;
-- inspeção do mapper;
-- trace limitado;
-- painel desktop de diagnóstico.
-
-### Desktop
-
-- janela SDL3 redimensionável;
-- framebuffer `256×240` em RGBA;
-- áudio PCM mono a 44,1 kHz;
-- teclado e dois gamepads;
-- fullscreen, VSync, escala 1×–4× e letterboxing;
-- abertura por CLI, seletor e lista recente;
-- pausa, reset, avanço de frame, mute, volume e FPS;
-- mensagens claras para mappers não suportados;
-- nenhuma fonte `.c` ou `.h` mantida no repositório.
-
-## Requisitos
+## Requirements
 
 - Linux amd64;
-- Zumbra `0.14.3`;
-- Clang ou GCC;
+- Zumbra `0.14.5`;
+- Clang or GCC;
 - `libsqlite3-0`;
-- `libsdl3-0` para a interface gráfica;
-- `zenity` recomendado para o seletor de ROM;
-- `appimagetool` opcional para AppImage.
+- `libsdl3-0` for the desktop frontend;
+- `zenity` recommended for the ROM picker;
+- `appimagetool` optional.
 
 ```bash
 zumbra --version
 ```
 
-Resultado esperado:
+Expected:
 
 ```text
-0.14.3
+0.14.5
 ```
 
-## Build e execução
+## Build
 
 ```bash
 zumbra app build \
@@ -117,132 +75,72 @@ zumbra app build \
   -o build/zumbra-nes
 ```
 
-Abrir o seletor:
+Open the launcher:
 
 ```bash
 ./build/zumbra-nes
 ```
 
-Abrir uma ROM própria:
+Open a ROM you own:
 
 ```bash
-./build/zumbra-nes /caminho/jogo.nes
+./build/zumbra-nes /path/to/game.nes
 ```
 
-Fixture visual legalmente redistribuível:
+Run the legal visual fixture:
 
 ```bash
 ./build/zumbra-nes fixtures/synthetic/z23-visible-frame.nes
 ```
 
-Fixture sintética Mapper 227:
-
-```bash
-./build/zumbra-nes fixtures/synthetic/mapper227-multicart.nes
-```
-
-## Controles
-
-| Ação | Jogador 1 | Jogador 2 |
-|---|---|---|
-| Direcional | Setas | WASD |
-| A | Z | G |
-| B | X | H |
-| Select | Shift direito | T |
-| Start | Enter | Y |
-
-Atalhos:
-
-- `O`: abrir ROM;
-- `P`: pausar/continuar;
-- `R`: reset;
-- `N`: avançar um frame;
-- `M`: mute;
-- `F1`: biblioteca;
-- `F2`: conquistas;
-- `F3`: remapear controles;
-- `F4`: velocidade ilimitada;
-- `F5`: fechar ROM;
-- `F6` / `F7`: escala;
-- `F8` / `F9`: exportar/importar JSON;
-- `F10`: FPS;
-- `F11`: fullscreen;
-- `F12`: VSync;
-- `0`–`9`: selecionar slot de save state;
-- `Q`: salvar no slot selecionado;
-- `E`: carregar o slot selecionado;
-- `F`: abrir o painel do debugger;
-- `C`: executar uma instrução quando pausado;
-- `-` / `=`: volume;
-- `Esc`: sair.
-
-## Testes
+## Gate
 
 ```bash
 EXPECTED_ZUMBRA_VERSION=0.14.5 \
   scripts/test-z23-compatibility.sh
 ```
 
-O gate valida:
+The gate validates:
 
-- SHA-256 das fixtures;
-- 151 opcodes oficiais;
-- formatter e linter;
-- análise do projeto;
-- **75 testes**;
-- documentação;
-- execução VM e C11;
-- paridade VM/native;
-- Mapper 227 no aplicativo desktop headless;
-- rejeição explícita do Mapper 5;
-- save RAM, save states e debugger;
-- AppDir e `.deb`;
-- ausência de C local e ROM comercial;
-- higiene do repositório.
+- fixture checksums;
+- CPU opcode table;
+- formatter and linter;
+- project info/check diagnostics;
+- 79 direct test files;
+- docs generation;
+- VM smoke;
+- native C11 smoke;
+- sustained memory and fast-frame hot loops;
+- desktop app doctor;
+- desktop headless smoke;
+- unsupported mapper diagnostics;
+- AppDir and `.deb` packaging;
+- repository hygiene.
 
-Resultado final:
+Expected final line:
 
 ```text
-Zumbra NES repository hygiene checks passed.
-Z23 compatibility, persistence and debugger gate passed.
+Z28 compatibility, mapper expansion, persistence and debugger gate passed.
 ```
 
-## Empacotamento
+## Packaging
 
 ```bash
 scripts/package-z23-linux.sh
 ```
 
-Artefatos principais:
+Main artifacts:
 
 ```text
-dist/zumbra-nes-0.5.23-linux-amd64.AppDir/
-dist/zumbra-nes_0.5.23_amd64.deb
-dist/SHA256SUMS-Z23.txt
+dist/zumbra-nes-0.5.61-linux-amd64.AppDir/
+dist/zumbra-nes_0.5.61_amd64.deb
 ```
 
-## Roadmap
+## Current status
 
-- Z19 / `0.1.0`: fundação e Mapper 0;
-- Z20 / `0.2.0`: CPU 6502;
-- Z21 / `0.3.0`: PPU, APU, controles e sincronização;
-- Z22 / `0.4.0`: desktop, SQLite e conquistas locais;
-- Z23 hotfix / `0.5.23`: latência de input Mapper 227 reduzida com fatias cooperativas sem idle agressivo.
-- Z23 hotfix / `0.5.6`: splash inicial, input Mapper 227 mais responsivo e áudio Mapper 227 desativado por segurança.
-- Z23 / `0.5.0`: mappers, SRAM, save states, debugger e compatibilidade.
-
-O próximo marco deve priorizar validação de compatibilidade com homebrew/test ROMs legalmente redistribuíveis, refinamento cycle-accurate e suporte a variantes/submappers observados em jogos reais.
-
-
-## 0.5.6 Mapper 227 input hotfix
-
-The `1200-in-1.nes` Mapper 227 menu uses the normal NES controller polling path. The desktop frontend keeps very short key taps alive for a small host-side window and runs a temporary execution burst when input is active.
-
-
-## 0.5.23 controles ouvidos no PC
-
-Jogador 1: Start = Enter/Space/keypad Enter; Select = Right Shift/Left Shift/Tab/Backspace; direcional = setas/WASD; A = Z/J; B = X/K; Esc fecha o emulador. Gamepad: A=0, B=1, Select=4, Start=6, D-pad=11-14.
-
-### Z23 0.5.23 gate note
-
-The compatibility gate uses `scripts/run-z23-tests.sh` to execute the 75 test files directly when aggregate project diagnostics contain warning-only unused-symbol reports.
+```text
+Zumbra-lang baseline: 0.14.5
+zumbra-nes release: 0.5.61
+phase: Z28 compatibility and mapper expansion
+supported mappers: 15
+```

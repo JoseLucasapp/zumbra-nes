@@ -1,3 +1,26 @@
+## 0.5.61 Z28 compatibility and mapper expansion check
+
+Run:
+
+```bash
+EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
+```
+
+Expected highlights:
+
+```text
+project test: 79 test file(s) executed
+Z28 compatibility, mapper expansion, persistence and debugger gate passed.
+```
+
+Manual follow-up:
+
+```bash
+./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
+```
+
+Confirm that the Z27 settings persistence, audio, input, recent ROM and quick save/load behavior still work after the mapper expansion.
+
 ## 0.5.60 Z27 settings persistence check
 
 Comandos principais:

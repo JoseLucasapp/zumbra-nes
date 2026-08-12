@@ -1,3 +1,11 @@
+## 0.5.61 — Z28 compatibility and mapper expansion
+
+- Expands the supported mapper registry from 8 to 15 mapper families.
+- Adds Mapper 11/Color Dreams, 30/UNROM 512, 66/GxROM, 71/Camerica, 87/Jaleco, 94/UN1ROM and 180/UNROM reverse.
+- Adds mapper expansion and diagnostics regression tests.
+- Adds a compatibility matrix for supported mapper behavior and limits.
+- Keeps Zumbra-lang pinned to 0.14.5 and preserves Z27 settings persistence, audio, input, save states and desktop UX.
+
 ## 0.5.60 — Z27 typed settings persistence
 
 - Reintroduced durable desktop settings through the existing SQLite settings table.
