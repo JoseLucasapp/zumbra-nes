@@ -1,5 +1,39 @@
 import "../core/bus.zum" as bus;
 import "../persistence/store.zum" as store;
+fct bcdByte(value) {
+    var byteValue << toInt(value) band 0xFF;
+    return((byteValue shr 4) * 10) +(byteValue band 0x0F);
+}
+fct bcd16(systemBus, address) {
+    var low << bcdByte(bus.read(systemBus, address));
+    var high << bcdByte(bus.read(systemBus, address + 1));
+    return low +(high * 100);
+}
+fct bcd24(systemBus, address) {
+    var low << bcdByte(bus.read(systemBus, address));
+    var middle << bcdByte(bus.read(systemBus, address + 1));
+    var high << bcdByte(bus.read(systemBus, address + 2));
+    return low +(middle * 100) +(high * 10000);
+}
+fct decimalDigit(value) {
+    var digit << toInt(value) band 0xFF;
+    if (digit >= 0 and digit <= 9) {
+        return digit;
+    }
+    if (digit >= 0x30 and digit <= 0x39) {
+        return digit - 0x30;
+    }
+    return 0;
+}
+fct decimal6(systemBus, address) {
+    var value << 0;
+    var index << 0;
+    while (index < 6) {
+        value <<(value * 10) + decimalDigit(bus.read(systemBus, address + index));
+        index << index + 1;
+    }
+    return value;
+}
 fct valueFor(machine, row, frames, controllerMask, seconds) {
     var ruleType << row["type"];
     if (ruleType == "frame_count") {
@@ -13,30 +47,64 @@ fct valueFor(machine, row, frames, controllerMask, seconds) {
     }
     if (ruleType == "controller_mask") {
         if (controllerMask != 0) {
-            return row["target"];
+            return toInt(row["target"]);
+        }
+        return 0;
+    }
+    if (ruleType == "controller_contains") {
+        var required << toInt(row["address"]);
+        if ((controllerMask band required) == required) {
+            return toInt(row["target"]);
+        }
+        return 0;
+    }
+    if (ruleType == "controller_any") {
+        var allowed << toInt(row["address"]);
+        if ((controllerMask band allowed) != 0) {
+            return toInt(row["target"]);
         }
         return 0;
     }
     if (ruleType == "memory_equals") {
-        var value << bus.read(machine["bus"], row["address"]);
-        if (value == row["target"]) {
-            return row["target"];
+        var target << toInt(row["target"]);
+        var value << bus.read(machine["bus"], toInt(row["address"]));
+        if (value == target) {
+            return target;
         }
         return 0;
     }
     if (ruleType == "memory_at_least") {
-        return bus.read(machine["bus"], row["address"]);
+        return bus.read(machine["bus"], toInt(row["address"]));
+    }
+    if (ruleType == "bcd16_at_least") {
+        return bcd16(machine["bus"], toInt(row["address"]));
+    }
+    if (ruleType == "bcd24_at_least") {
+        return bcd24(machine["bus"], toInt(row["address"]));
+    }
+    if (ruleType == "decimal6_at_least") {
+        return decimal6(machine["bus"], toInt(row["address"]));
     }
     0;
 }
 fct stableProgress(row, progress) {
-    if (row["progress"] > progress) {
-        return row["progress"];
+    var previous << toInt(row["progress"]);
+    if (previous > progress) {
+        return previous;
     }
     return progress;
 }
+fct changed(row, progress, complete) {
+    if (progress > toInt(row["progress"])) {
+        return true;
+    }
+    return complete and toInt(row["unlocked"]) != 1;
+}
 
 /// Evaluates and persists local offline achievement progress, returning newly unlocked rows.
+///
+/// Hot-loop rule: unchanged achievements never issue SQLite UPDATEs. This keeps
+/// controller polling and periodic progress checks from stalling the audio queue.
 pub fct evaluate(db, digest, machine, frames, controllerMask, seconds, timestamp) {
     var rows << store.achievementRows(db, digest);
     var unlocked <<[];
@@ -45,14 +113,17 @@ pub fct evaluate(db, digest, machine, frames, controllerMask, seconds, timestamp
         var row << rows[index];
         var rawProgress << valueFor(machine, row, frames, controllerMask, seconds);
         var progress << stableProgress(row, rawProgress);
-        var complete << progress >= row["target"];
-        var wasUnlocked << row["unlocked"] == 1;
-        store.updateAchievement(db, digest, row["id"], progress, complete, timestamp);
-        if (complete and!wasUnlocked) {
-            store.recordAchievementEvent(db, digest, row["id"], row["title"], row["description"], timestamp);
-            addToArrayEnd(unlocked, {
-                "id": row["id"], "title": row["title"], "description": row["description"], "progress": progress
-            });
+        var target << toInt(row["target"]);
+        var complete << progress >= target;
+        var wasUnlocked << toInt(row["unlocked"]) == 1;
+        if (changed(row, progress, complete)) {
+            store.updateAchievement(db, digest, row["id"], progress, complete, timestamp);
+            if (complete and!wasUnlocked) {
+                store.recordAchievementEvent(db, digest, row["id"], row["title"], row["description"], timestamp);
+                addToArrayEnd(unlocked, {
+                    "id": row["id"], "title": row["title"], "description": row["description"], "progress": progress
+                });
+            }
         }
         index << index + 1;
     }

@@ -4,7 +4,7 @@ import "../core/cartridge.zum" as cartridge;
 import "../core/console.zum" as console;
 import "../core/controller.zum" as controller;
 import "../core/ppu.zum" as ppu;
-/// Stable Z21 report covering CPU, PPU, APU, controllers and scheduler state.
+/// Stable report covering CPU, PPU, APU, controllers and scheduler state.
 pub struct DiagnosticReport {
     sourcePath: string;
     format: string;
@@ -49,9 +49,9 @@ pub fct run(cart) {
     DiagnosticReport(info.sourcePath, info.header.format, info.header.mapper, resetVector, machine["cpu"].a, machine["cpu"].instructions, consoleCore.cpuCycles, consoleCore.ppuCycles, ppuCore.frame, ppuCore.scanline, ppuCore.dot, ppu.frameDigest(systemBus["ppu"]), apu.sampleCount(systemBus["apu"]), apu.sampleDigest(systemBus["apu"]), controllerA, consoleCore.dmaCycles, consoleCore.dmcStallCycles);
 }
 
-/// Prints the Z21 report in a deterministic VM/native format.
+/// Prints the hardware report in a deterministic VM/native format.
 pub fct printReport(report) {
-    show("Zumbra NES Z21 hardware");
+    show("Zumbra NES hardware");
     show(report.sourcePath);
     show(report.format);
     show(report.mapper);
@@ -71,7 +71,7 @@ pub fct printReport(report) {
     show(report.dmcStallCycles);
 }
 
-/// Loads a ROM and runs the deterministic Z21 frontend.
+/// Loads a ROM and runs the deterministic headless frontend.
 pub fct runFile(path) {
     var cart << cartridge.load(path);
     var report << run(cart);

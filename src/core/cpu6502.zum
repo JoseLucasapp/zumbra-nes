@@ -1739,7 +1739,7 @@ pub struct Cpu6502 {
     }
 }
 
-/// Creates and resets a CPU against the supplied Z19 bus.
+/// Creates and resets a CPU against the supplied system bus.
 pub fct create(systemBus) {
     var processor << Cpu6502(0, 0, 0, 0xFD, 0, FLAG_INTERRUPT bor FLAG_UNUSED, 0, 0, 0, false, false, false);
     processor.reset(systemBus);

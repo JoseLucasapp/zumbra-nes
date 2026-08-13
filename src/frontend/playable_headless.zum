@@ -7,7 +7,7 @@ import "../core/mapper.zum" as mapper;
 import "../persistence/save_state.zum" as saveState;
 import "../core/palette.zum" as palette;
 import "../persistence/store.zum" as store;
-/// Deterministic Z22 report covering video, audio, persistence and achievements.
+/// Deterministic report covering video, audio, persistence and achievements.
 pub struct PlayableReport {
     version: string;
     mapper: u16;
@@ -40,7 +40,7 @@ pub fct runFile(path) {
     report;
 }
 pub fct printReport(report) {
-    show("Zumbra NES Z23 compatibility");
+    show("Zumbra NES compatibility");
     show(report.version);
     show(report.mapper);
     show(report.mapperName);

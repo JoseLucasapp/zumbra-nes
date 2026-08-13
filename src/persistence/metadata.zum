@@ -2,7 +2,7 @@
 pub fct toJson(cart) {
     var info << cart["info"];
     jsonStringify({
-        "sourcePath": info.sourcePath, "digest": info.digest, "format": info.header.format, "mapper": info.header.mapper, "submapper": info.header.submapper, "prgRomBytes": info.header.prgRomBytes, "chrRomBytes": info.header.chrRomBytes, "chrIsRam": info.chrIsRam, "mirroring": info.header.mirroring, "battery": info.header.battery, "trainer": info.header.trainer
+        "sourcePath": info.sourcePath, "digest": info.digest, "imageCrc32": info.imageCrc32, "contentCrc32": info.contentCrc32, "format": info.header.format, "mapper": info.header.mapper, "submapper": info.header.submapper, "prgRomBytes": info.header.prgRomBytes, "chrRomBytes": info.header.chrRomBytes, "chrIsRam": info.chrIsRam, "mirroring": info.header.mirroring, "battery": info.header.battery, "trainer": info.header.trainer
     });
 }
 

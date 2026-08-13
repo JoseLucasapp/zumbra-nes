@@ -47,7 +47,7 @@ if (delta < 0) {
     delta << 0;
 }
 if (delta > 524288) {
-    panic("Z23 sustained memory grew by " + toString(delta) + " bytes");
+    panic("sustained memory grew by " + toString(delta) + " bytes");
 }
 show("z23-memory-hotloop: ok");
 show(frames);
@@ -59,3 +59,74 @@ ZUM
 "$work/z23-memory-hotloop" | awk '!/^semantic warning in /' | tee "$work/output.txt"
 grep -q '^z23-memory-hotloop: ok$' "$work/output.txt"
 grep -q '^120$' "$work/output.txt"
+
+# Native achievement lifetime regression. Do not gate on exact source spelling here:
+# formatting/refactors can legitimately change desktop.zum while preserving behavior.
+# The compiled native probe below is the source of truth for cache lifetime and
+# SQLite-backed numeric values.
+achievement_probe="$work/achievement_lifetime.zum"
+cat > "$achievement_probe" <<'ZUM'
+import "../../src/achievements/engine.zum" as achievements;
+import "../../src/achievements/offline.zum" as offline;
+import "../../src/core/cartridge.zum" as cartridge;
+import "../../src/core/console.zum" as console;
+import "../../src/persistence/store.zum" as store;
+
+var db << store.memory();
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var machine << console.create(cart);
+var digest << cart["info"].digest;
+offline.install(db, cart["info"], 1u64);
+
+var cacheBase << runtimeMemoryMark();
+var rows << offline.rows(db, digest);
+var summary << offline.summary(db, digest);
+var unlockedCount << toInt(summary["unlocked"]);
+var totalCount << toInt(summary["total"]);
+var frameMark << runtimeMemoryMark();
+
+var unlockedNow << achievements.evaluate(db, digest, machine, 1, 1, 0, 2u64);
+var unlockedNowCount << sizeOf(unlockedNow);
+if (unlockedNowCount <= 0) {
+    panic("achievement lifetime probe expected an unlock");
+}
+
+runtimeMemoryReset(cacheBase);
+rows << offline.rows(db, digest);
+summary << offline.summary(db, digest);
+unlockedCount << toInt(summary["unlocked"]);
+totalCount << toInt(summary["total"]);
+frameMark << runtimeMemoryMark();
+
+if (sizeOf(rows) != 5) {
+    panic("achievement lifetime probe lost achievement rows");
+}
+var firstRow << rows[0];
+var firstRowProgress << toInt(firstRow["progress"]);
+var firstRowTarget << toInt(firstRow["target"]);
+if (firstRowProgress < 0 or firstRowTarget <= 0) {
+    panic("achievement row numeric normalization failed");
+}
+if (unlockedCount != 2) {
+    panic("achievement lifetime probe expected first-frame + first-input unlocks");
+}
+if (unlockedCount >= totalCount) {
+    panic("achievement lifetime probe expected locked achievements to remain");
+}
+
+runtimeMemoryReset(frameMark);
+if (toInt(summary["unlocked"]) != 2) {
+    panic("cached achievement summary did not survive frame reset");
+}
+store.close(db);
+show("achievement-lifetime: ok");
+show(unlockedCount);
+show(totalCount);
+ZUM
+
+"$zumbra_bin" build --release "$achievement_probe" -o "$work/achievement-lifetime"
+"$work/achievement-lifetime" | awk '!/^semantic warning in /' | tee "$work/achievement-output.txt"
+grep -q '^achievement-lifetime: ok$' "$work/achievement-output.txt"
+grep -q '^2$' "$work/achievement-output.txt"
+grep -q '^5$' "$work/achievement-output.txt"
+

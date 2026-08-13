@@ -19,7 +19,7 @@ Manual follow-up:
 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
 ```
 
-Confirm that Z27 settings persistence, Z28 mapper compatibility, audio, input, recent ROM, quick save/load and Z29 local achievements all work. `F6` must open the achievements overlay and `F9` must export a local JSON backup.
+Confirm that Z27 settings persistence, Z28 mapper compatibility, audio, input, recent ROM, quick save/load and Z29 local achievements all work. `F6` must open the game-specific achievements overlay and `F9` must export a local JSON backup with visible confirmation; `E` while F6 is open is the alternate export path.
 
 ## 0.5.60 Z27 settings persistence check
 

@@ -5,6 +5,8 @@ pub struct Cartridge {
     header: header.RomHeader;
     sourcePath: string;
     digest: string;
+    imageCrc32: u64;
+    contentCrc32: u64;
     chrIsRam: bool;
     imageBytes: int;
     trainerBytes: int;
@@ -23,6 +25,28 @@ fct copyRegion(data, start, length) {
         copyBytes(output, 0, data, start, length);
     }
     output;
+}
+
+/// IEEE CRC-32 used only for local ROM identification. SHA-256 remains the
+/// canonical persistence key; CRC-32 lets bundled game packs match known dumps
+/// independently of iNES header variations.
+fct crc32Range(data, start, length) {
+    var crc << 0xFFFFFFFFu64;
+    var index << 0;
+    while (index < length) {
+        crc << crc bxor u64(data[start + index]);
+        var bit << 0;
+        while (bit < 8) {
+            if ((crc band 1u64) != 0u64) {
+                crc <<(crc shr 1u64) bxor 0xEDB88320u64;
+            } else {
+                crc << crc shr 1u64;
+            }
+            bit << bit + 1;
+        }
+        index << index + 1;
+    }
+    return(crc bxor 0xFFFFFFFFu64) band 0xFFFFFFFFu64;
 }
 
 /// Validates header, trainer and ROM payload boundaries.
@@ -56,6 +80,8 @@ pub fct fromBytes(data, sourcePath) {
         trainerData << copyRegion(data, cursor, constants.TRAINER_BYTES);
         cursor << cursor + constants.TRAINER_BYTES;
     }
+    var payloadStart << cursor;
+    var payloadBytes << parsed.prgRomBytes + parsed.chrRomBytes;
     var prgRom << copyRegion(data, cursor, parsed.prgRomBytes);
     cursor << cursor + parsed.prgRomBytes;
     var chrIsRam << parsed.chrRomBytes == 0;
@@ -63,7 +89,9 @@ pub fct fromBytes(data, sourcePath) {
     if (!chrIsRam) {
         chrMemory << copyRegion(data, cursor, parsed.chrRomBytes);
     }
-    var info << Cartridge(parsed, sourcePath, sha256(data), chrIsRam, sizeOf(data), sizeOf(trainerData));
+    var imageCrc << crc32Range(data, 0, sizeOf(data));
+    var contentCrc << crc32Range(data, payloadStart, payloadBytes);
+    var info << Cartridge(parsed, sourcePath, sha256(data), imageCrc, contentCrc, chrIsRam, sizeOf(data), sizeOf(trainerData));
     {
         "info": info, "prgRom": prgRom, "chrMemory": chrMemory, "trainerData": trainerData
     };

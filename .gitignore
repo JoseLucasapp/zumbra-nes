@@ -4,6 +4,7 @@ dist/
 *.prof
 *.tmp
 *.sqlite3
+*.sqlite3-*
 .DS_Store
 Thumbs.db
 __pycache__/

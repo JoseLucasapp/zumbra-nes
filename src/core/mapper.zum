@@ -58,7 +58,7 @@ fct mapBank(address, windowStart, bank, bankBytes, totalBytes, writable) {
     Mapping(true, mapBankOffset(address, windowStart, bank, bankBytes, totalBytes), writable);
 }
 
-/// Returns whether the mapper is implemented by Z28.
+/// Returns whether the mapper is implemented by the current compatibility layer.
 pub fct supports(mapperId) {
     mapperId == 0u16 or mapperId == 1u16 or mapperId == 2u16 or mapperId == 3u16 or mapperId == 4u16 or mapperId == 7u16 or mapperId == 10u16 or mapperId == 11u16 or mapperId == 30u16 or mapperId == 66u16 or mapperId == 71u16 or mapperId == 87u16 or mapperId == 94u16 or mapperId == 180u16 or mapperId == 227u16;
 }
@@ -137,7 +137,7 @@ pub fct compatibility(mapperId) {
         };
     }
     {
-        "ok": false, "mapper": mapperId, "name": "Unsupported", "message": "ROM incompatível: mapper " + toString(mapperId) + ". Suportados: " + supportedText()
+        "ok": false, "mapper": mapperId, "name": "Unsupported", "message": "Incompatible ROM: mapper " + toString(mapperId) + ". Supported: " + supportedText()
     };
 }
 

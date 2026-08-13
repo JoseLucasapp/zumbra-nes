@@ -1,6 +1,6 @@
 # zumbra-nes 0.5.62
 
-**Z29 local achievements offline:** the emulator now keeps achievements entirely on the PC where it is installed. Progress, unlock events, ROM library metadata, recent ROMs, settings and save-state metadata are stored in local SQLite. There is no account, no cloud sync, no leaderboard and no remote achievement service.
+**Local achievements in 0.5.62:** the emulator now keeps achievements entirely on the PC where it is installed. Progress, unlock events, ROM library metadata, recent ROMs, settings and save-state metadata are stored in local SQLite. There is no account, no cloud sync, no leaderboard and no remote achievement service.
 
 Zumbra NES is a local-first NES/Famicom emulator written in **Zumbra**. The application repository keeps the emulator code in `.zum`; video, audio, input, packaging and desktop integration come from the official Zumbra runtime.
 
@@ -38,7 +38,7 @@ See `docs/compatibility-matrix-z28.md`, `docs/mappers-z23.md` and `docs/local-ac
 - APU pulse 1/2, triangle, noise and DMC;
 - keyboard and gamepad input;
 - SQLite-backed local settings, ROM history and achievements;
-- local offline achievement unlocks, summaries and JSON backup/export;
+- local offline achievement unlocks using game-specific ROM-hash packs, summaries and JSON backup/export;
 - SRAM persistence;
 - ten save-state slots plus SQLite save-state metadata;
 - debugger with stepping, breakpoints, memory inspection and mapper state;
@@ -121,7 +121,7 @@ The gate validates:
 Expected final line:
 
 ```text
-Z29 local achievements, compatibility, mapper expansion, persistence and debugger gate passed.
+Zumbra NES release gate passed.
 ```
 
 ## Packaging
@@ -142,7 +142,7 @@ dist/zumbra-nes_0.5.62_amd64.deb
 ```text
 Zumbra-lang baseline: 0.14.5
 zumbra-nes release: 0.5.62
-phase: Z29 local achievements offline
+release focus: local achievements offline
 supported mappers: 15
 local achievements: SQLite-only, offline
 ```

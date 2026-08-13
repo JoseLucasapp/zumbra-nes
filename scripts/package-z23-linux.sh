@@ -19,7 +19,7 @@ mkdir -p "$output_dir" build
 "$zumbra_bin" app doctor --manifest zumbra-app.toml --target linux --arch "$arch" --format appdir --json
 "$zumbra_bin" app build --manifest zumbra-app.toml --target linux --arch "$arch" --release -o build/zumbra-nes-app
 ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes-app | tee build/desktop-headless.txt
-grep -q '^Z23 desktop session complete$' build/desktop-headless.txt
+grep -q '^Zumbra NES desktop session complete$' build/desktop-headless.txt
 
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format appdir --binary build/zumbra-nes-app --output-dir "$output_dir"
 "$zumbra_bin" app package --manifest zumbra-app.toml --target linux --arch "$arch" --format deb --binary build/zumbra-nes-app --output-dir "$output_dir"
@@ -29,7 +29,7 @@ deb="$output_dir/zumbra-nes_${project_version}_${arch}.deb"
 test -x "$appdir/AppRun"
 test -f "$deb"
 ZUMBRA_DESKTOP_HEADLESS=1 "$appdir/AppRun" | tee build/appdir-headless.txt
-grep -q '^Z23 desktop session complete$' build/appdir-headless.txt
+grep -q '^Zumbra NES desktop session complete$' build/appdir-headless.txt
 dpkg-deb --info "$deb" > build/deb-info.txt
 dpkg-deb --contents "$deb" > build/deb-contents.txt
 grep -q " Version: ${project_version}" build/deb-info.txt
@@ -43,7 +43,7 @@ fi
 
 (
     cd "$output_dir"
-    find . -maxdepth 1 -type f ! -name 'SHA256SUMS-Z29.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-Z29.txt
+    find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
 )
 
-echo "Z29 Linux packages created in $output_dir."
+echo "Zumbra NES Linux packages created in $output_dir."

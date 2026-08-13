@@ -3,7 +3,7 @@ import "constants.zum" as constants;
 import "controller.zum" as controller;
 import "mapper.zum" as mapper;
 import "ppu.zum" as ppu;
-/// Builds the complete Z21 CPU bus around one validated cartridge.
+/// Builds the complete CPU bus around one validated cartridge.
 pub fct create(cart) {
     var info << cart["info"];
     var mapperState << mapper.create(info.header.mapper, info.header.submapper, sizeOf(cart["prgRom"]), sizeOf(cart["chrMemory"]), info.header.battery, info.header.mirroring);
@@ -94,7 +94,7 @@ pub fct read(state, address) {
     value band 0xFF;
 }
 
-/// Writes one CPU-visible byte and routes all Z21 hardware registers.
+/// Writes one CPU-visible byte and routes all hardware registers.
 pub fct write(state, address, value) {
     var normalized << address band 0xFFFF;
     recordDebugAccess(state, "write", normalized);

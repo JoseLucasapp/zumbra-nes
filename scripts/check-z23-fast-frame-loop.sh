@@ -37,7 +37,7 @@ while (frames < 180) {
         slices << slices + 1;
     }
     if (!console.frameComplete(machine)) {
-        panic("Z23 fast frame loop did not complete a frame inside 16 slices");
+        panic("fast frame loop did not complete a frame inside 16 slices");
     }
     if ((frames % 2) == 0) {
         console.renderFrameSnapshot(machine);

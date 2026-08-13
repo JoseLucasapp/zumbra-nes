@@ -1,10 +1,19 @@
 import "catalog.zum" as catalog;
 import "../persistence/store.zum" as store;
-/// Installs the bundled offline achievement pack for one local ROM digest.
+/// Installs the deterministic offline achievement pack for one local ROM digest.
 pub fct install(db, info, timestamp) {
     store.recordRom(db, info, timestamp);
-    store.registerAchievementGame(db, info.digest, info.sourcePath, "bundled-offline", timestamp);
-    store.seedAchievements(db, info.digest, catalog.defaults());
+    var pack << catalog.packForInfo(info);
+    var current << store.achievementGameMetadata(db, info.digest);
+    var replacePack << sizeOf(current) == 0;
+    if (!replacePack) {
+        replacePack << current[0]["source"] != pack["id"] or toInt(current[0]["pack_version"]) != toInt(pack["version"]);
+    }
+    if (replacePack) {
+        store.clearAchievementsForGame(db, info.digest);
+    }
+    store.registerAchievementGame(db, info.digest, pack["title"], pack["id"], pack["version"], timestamp);
+    store.seedAchievements(db, info.digest, pack["definitions"]);
     store.achievementSummary(db, info.digest);
 }
 
@@ -28,4 +37,9 @@ pub fct importBackup(db, path) {
 /// Returns a compact local-only achievement summary for a ROM digest.
 pub fct summary(db, digest) {
     store.achievementSummary(db, digest);
+}
+
+/// Returns all local achievement definitions/progress for the current ROM.
+pub fct rows(db, digest) {
+    store.achievementRows(db, digest);
 }

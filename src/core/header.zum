@@ -69,7 +69,7 @@ pub fct inspect(data) {
         var prgHigh << u8(data[9] band 0x0Fu8);
         var chrHigh << u8(data[9] shr 4);
         if (prgHigh == 0x0Fu8 or chrHigh == 0x0Fu8) {
-            return HeaderInspection(false, "NES 2.0 exponent/multiplier ROM sizes are reserved for Z20", emptyHeader());
+            return HeaderInspection(false, "NES 2.0 exponent/multiplier ROM sizes are not supported", emptyHeader());
         }
         prgBanks << linearNes2Banks(data[4], prgHigh);
         chrBanks << linearNes2Banks(data[5], chrHigh);
