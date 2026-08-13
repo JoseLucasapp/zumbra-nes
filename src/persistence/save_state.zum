@@ -1,6 +1,6 @@
 import "../core/mapper.zum" as mapper;
 pub const SCHEMA_VERSION << 1;
-pub const FORMAT_VERSION << "Z23-0.5.0";
+pub const FORMAT_VERSION << "zumbra-nes-save-v1";
 /// Non-fatal save-state load result.
 pub struct LoadResult {
     ok: bool;
@@ -223,9 +223,6 @@ pub fct restore(machine, value) {
     if (value["schema"] != SCHEMA_VERSION) {
         return LoadResult(false, "unsupported save-state schema");
     }
-    if (value["format"] != FORMAT_VERSION) {
-        return LoadResult(false, "save-state format version mismatch");
-    }
     if (value["romDigest"] != info.digest) {
         return LoadResult(false, "save-state ROM digest mismatch");
     }
@@ -261,7 +258,7 @@ pub fct restore(machine, value) {
 
 /// Serializes a portable save state atomically.
 pub fct save(path, machine) {
-    createFile(path + ".parent", "Z23");
+    createFile(path + ".parent", "zumbra-nes");
     binaryWriteFile(path, snapshot(machine));
     true;
 }

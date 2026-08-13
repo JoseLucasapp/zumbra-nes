@@ -4,7 +4,11 @@ dist/
 *.prof
 *.tmp
 *.sqlite3
+*.sqlite3-*
 .DS_Store
 Thumbs.db
 __pycache__/
 *.pyc
+zumbra-nes-achievements-export.json
+zumbra-nes-quickstate.state*
+zumbra-nes-recent.json

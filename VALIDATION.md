@@ -1,19 +1,32 @@
-## 0.5.61 validation — Z28 compatibility and mapper expansion
+## 0.5.62 validation — local achievements offline
 
-Critérios de aprovação:
+Acceptance criteria:
 
-1. Rodar `zumbra fmt` nos arquivos alterados.
-2. Rodar `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` até o gate completo passar.
-3. Confirmar `project test: 79 test file(s) executed`.
-4. Confirmar `mapper.supportedCount()` reportando `15`.
-5. Confirmar que Mapper 5 continua rejeitado com mensagem expandida de compatibilidade.
-6. Abrir `./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"` e validar que áudio, input, settings, recent ROM e quick save/load continuam ok.
-7. Testar uma ROM própria de mapper recém-suportado quando disponível, especialmente 11, 30, 66, 71, 87, 94 ou 180.
+1. Run `zumbra fmt` on the modified Zumbra files.
+2. Run `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` until the complete gate passes.
+3. Confirm `project test: 83 test file(s) executed`.
+4. Confirm schema version `5` and `mapper.supportedCount()` = `15`.
+5. Confirm unsupported mapper diagnostics are in English.
+6. Launch a real ROM and verify audio/input/settings/recent ROM/quick save/load still work.
+7. Open Nintendo Tetris: `F6` must show 8 Tetris goals such as lines, level and score. It must not show emulator-use goals.
+8. Open Nintendo Popeye: `F6` must show 8 Popeye goals based on score/round state. It must not reuse the Tetris list.
+9. An unknown ROM with no bundled semantic pack must show `NO GAME-SPECIFIC PACK`; it must not fabricate frame/time/input achievements.
+10. Unlock at least one supported-game achievement and confirm the toast/status shows its English name.
+11. Play for at least 3 minutes and confirm audio is not bit-crushed, dragged or progressively delayed. With `F3`, `SAMPLES` should remain near one frame of 44.1 kHz audio and `QUEUE` must not grow continuously.
+12. Confirm `F9` exports `zumbra-nes-achievements-export.json`; with F6 open, `E` performs the same export.
+13. Confirm no login, account, online sync or achievement server exists.
+14. Confirm the main menu contains no development-phase label and no Xbox-specific label.
+15. Open `Controls` from the main menu, remap at least one key, press `F2` to reset, and use `Esc` to return.
+16. Connect an SDL-recognized USB/Bluetooth gamepad and confirm menu/game input works without vendor-specific configuration.
+17. During gameplay, press `Esc` once and confirm it returns to the emulator main menu instead of closing the application.
+18. Open Controls/Achievements/About and confirm one `Esc` closes only the current overlay; `Quit` or `F12` remains the explicit exit path.
+19. In Controls, press `1`, release it, then press a new letter key such as `Q`; confirm the overlay shows `Q` (not `SC`), the binding works in-game, and reopening the emulator preserves it.
+20. Confirm the normal gate does not run the known-failing 119-file aggregate diagnostic precheck; it must proceed directly through the explicit `83` test files. Set `ZUMBRA_RUN_AGGREGATE_PROJECT_TEST=1` only when intentionally investigating compiler diagnostics.
 
-Resultado esperado do gate:
+Expected gate line:
 
 ```text
-Z28 compatibility, mapper expansion, persistence and debugger gate passed.
+Zumbra NES release gate passed.
 ```
 
 ## 0.5.60 validation — Z27 typed settings persistence
@@ -268,3 +281,12 @@ z23-fast-frame-loop: ok
 ```
 
 This validates the desktop fast-timing path against the legal Zebra homebrew ROM before package creation.
+
+## 0.5.62 final desktop polish
+
+- F6 lifetime/numeric crash: manually confirmed fixed.
+- Tetris and Popeye: manually confirmed to use different game-specific achievement packs.
+- Audio: manually confirmed working after the output-boundary correction.
+- Intro image: manually confirmed fitting correctly after aspect-ratio-aware scaling.
+- Final checks added here: production phase labels removed from UI/runtime, Xbox-specific wording removed, Controls made functional from the main menu, external SDL Gamepad polling corrected to both 1-based slots, and Escape changed to deterministic back/menu behavior.
+- Final local gate and one last controller/Controls/Escape manual pass remain required before commit/tag.

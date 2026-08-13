@@ -11,5 +11,5 @@ test.assertBool(gxrom["ok"], "Mapper66 compatibility");
 test.assertString(gxrom["name"], "GxROM", "Mapper66 name");
 var rejected << mapper.compatibility(5u16);
 test.assertBool(!rejected["ok"], "Mapper5 rejected");
-test.assertString(rejected["message"], "ROM incompatível: mapper 5. Suportados: 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 10 (MMC4), 11 (Color Dreams), 30 (UNROM 512), 66 (GxROM), 71 (Camerica), 87 (Jaleco), 94 (UN1ROM), 180 (UNROM reverse), 227 (multicart)", "compatibility message");
+test.assertString(rejected["message"], "Incompatible ROM: mapper 5. Supported: 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3), 7 (AxROM), 10 (MMC4), 11 (Color Dreams), 30 (UNROM 512), 66 (GxROM), 71 (Camerica), 87 (Jaleco), 94 (UN1ROM), 180 (UNROM reverse), 227 (multicart)", "compatibility message");
 show("mapper_compatibility_test: ok");

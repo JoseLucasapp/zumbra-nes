@@ -19,4 +19,23 @@ while (index < 40) {
 }
 var next << output.drain(state, cursor);
 test.assertInt(sizeOf(next), 1, "incremental audio drain");
+// Desktop path: 100 raw /40 samples become 98 exact-rate 44.1 kHz samples.
+var desktopState << apu.create();
+apu.cpuWrite(desktopState, 0x4015, 0x01u8);
+apu.cpuWrite(desktopState, 0x4000, 0x9Fu8);
+apu.cpuWrite(desktopState, 0x4002, 0x20u8);
+apu.cpuWrite(desktopState, 0x4003, 0x08u8);
+index << 0;
+while (index < 4000) {
+    apu.tick(desktopState);
+    index << index + 1;
+}
+var desktopCursor << output.createCursor();
+var clean << output.drainClean(desktopState, desktopCursor);
+test.assertInt(sizeOf(clean), 98, "desktop resampler removes 40-cycle sample-rate drift");
+index << 0;
+while (index < sizeOf(clean)) {
+    test.assertBool(toInt(clean[index]) >= 0 and toInt(clean[index]) <= 63, "desktop PCM stays inside native S16-safe byte range");
+    index << index + 1;
+}
 show("audio_output_test: ok");

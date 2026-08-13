@@ -1,4 +1,4 @@
-## 0.5.61 Z28 compatibility and mapper expansion check
+## 0.5.62 Z29 local achievements offline check
 
 Run:
 
@@ -9,8 +9,8 @@ EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
 Expected highlights:
 
 ```text
-project test: 79 test file(s) executed
-Z28 compatibility, mapper expansion, persistence and debugger gate passed.
+project test: 83 test file(s) executed
+Z29 local achievements, compatibility, mapper expansion, persistence and debugger gate passed.
 ```
 
 Manual follow-up:
@@ -19,7 +19,7 @@ Manual follow-up:
 ./build/zumbra-nes "$HOME/Downloads/1200-in-1.nes"
 ```
 
-Confirm that the Z27 settings persistence, audio, input, recent ROM and quick save/load behavior still work after the mapper expansion.
+Confirm that Z27 settings persistence, Z28 mapper compatibility, audio, input, recent ROM, quick save/load and Z29 local achievements all work. `F6` must open the game-specific achievements overlay and `F9` must export a local JSON backup with visible confirmation; `E` while F6 is open is the alternate export path.
 
 ## 0.5.60 Z27 settings persistence check
 

@@ -3,9 +3,10 @@ import "apu.zum" as apu;
 /// Cursor used by a frontend while draining the APU ring buffer.
 pub struct AudioCursor {
     absolute: u64;
+    resamplePhase: int;
 }
 pub fct createCursor() {
-    AudioCursor(0u64);
+    AudioCursor(0u64, 0);
 }
 
 /// Copies all samples produced since the cursor, capped to one ring-buffer span.
@@ -40,38 +41,86 @@ fct clampByte(value) {
     return value;
 }
 
+/// The frozen Zumbra 0.14.5 SDL bridge treats byte value 32 as silence and
+/// expands every byte step by 1024 into signed 16-bit PCM. Feeding the APU's
+/// full 0..255 mixer range directly into that bridge wraps int16 and creates
+/// severe digital distortion. Compress only at the frontend boundary so the
+/// deterministic/headless APU remains unchanged.
+fct desktopSafeSample(value) {
+    var centered << toInt(value) - 32;
+    var safe << 32 +(centered / 7);
+    if (safe < 0) {
+        safe << 0;
+    }
+    if (safe > 63) {
+        safe << 63;
+    }
+    return safe;
+}
+
+/// APU's established 40-CPU-cycle sample divider produces 1,789,773/40 Hz.
+/// SDL consumes 44,100 Hz. Resample only the desktop stream with an exact
+/// integer accumulator, avoiding both queue drift and changes to NES/APU timing.
+fct resampleForDesktop(samples, cursor) {
+    var count << sizeOf(samples);
+    if (count == 0) {
+        return samples;
+    }
+    var numerator << 1764000;
+    var denominator << 1789773;
+    var startPhase << cursor.resamplePhase;
+    var outputCount <<(startPhase +(count * numerator)) / denominator;
+    var output << bytes(outputCount);
+    var phase << startPhase;
+    var sourceIndex << 0;
+    var outputIndex << 0;
+    while (sourceIndex < count) {
+        phase << phase + numerator;
+        if (phase >= denominator) {
+            phase << phase - denominator;
+            output[outputIndex] << u8(desktopSafeSample(samples[sourceIndex]));
+            outputIndex << outputIndex + 1;
+        }
+        sourceIndex << sourceIndex + 1;
+    }
+    cursor.resamplePhase << phase;
+    return output;
+}
+
 /// Drains audio for the live desktop path with a small cleanup filter.
-///
-/// The APU still produces deterministic 8-bit PCM, but direct square/noise edges
-/// can sound harsh in SDL when frame pacing jitters. This keeps latency low while
-/// applying a light 3-tap low-pass and tiny de-click ramp at chunk edges.
+/// The APU itself is untouched; filtering, safe-range conversion and 44.1 kHz
+/// resampling happen only at the SDL boundary.
 pub fct drainClean(state, cursor) {
     var raw << drain(state, cursor);
     var count << sizeOf(raw);
-    if (count <= 2) {
+    if (count == 0) {
         return raw;
     }
-    var output << bytes(count);
-    output[0] << raw[0];
+    var filtered << bytes(count);
+    if (count <= 2) {
+        var smallIndex << 0;
+        while (smallIndex < count) {
+            filtered[smallIndex] << raw[smallIndex];
+            smallIndex << smallIndex + 1;
+        }
+        return resampleForDesktop(filtered, cursor);
+    }
+    filtered[0] << raw[0];
     var index << 1;
     while (index < count - 1) {
         var previous << toInt(raw[index - 1]);
         var current << toInt(raw[index]);
         var next << toInt(raw[index + 1]);
-        // 0.5.45: light cleanup. Keeps NES bite, but removes some static from
-        // sharp frame-boundary transitions and raw noise-channel edges.
-        var filtered <<(previous + current + current + next) / 4;
-        output[index] << u8(clampByte(filtered));
+        var sample <<(previous + current + current + next) / 4;
+        filtered[index] << u8(clampByte(sample));
         index << index + 1;
     }
-    output[count - 1] << raw[count - 1];
-    // Tiny edge softening. This prevents the first/last two bytes of each
-    // queued chunk from popping when SDL drains buffers at uneven intervals.
+    filtered[count - 1] << raw[count - 1];
     if (count > 8) {
-        output[0] << u8((toInt(output[0]) + toInt(output[1])) / 2);
-        output[1] << u8((toInt(output[0]) + toInt(output[1]) + toInt(output[2])) / 3);
-        output[count - 2] << u8((toInt(output[count - 3]) + toInt(output[count - 2]) + toInt(output[count - 1])) / 3);
-        output[count - 1] << u8((toInt(output[count - 2]) + toInt(output[count - 1])) / 2);
+        filtered[0] << u8((toInt(filtered[0]) + toInt(filtered[1])) / 2);
+        filtered[1] << u8((toInt(filtered[0]) + toInt(filtered[1]) + toInt(filtered[2])) / 3);
+        filtered[count - 2] << u8((toInt(filtered[count - 3]) + toInt(filtered[count - 2]) + toInt(filtered[count - 1])) / 3);
+        filtered[count - 1] << u8((toInt(filtered[count - 2]) + toInt(filtered[count - 1])) / 2);
     }
-    output;
+    return resampleForDesktop(filtered, cursor);
 }

@@ -1,8 +1,10 @@
 import "../src/achievements/catalog.zum" as catalog;
 import "../src/achievements/engine.zum" as engine;
+import "../src/core/bus.zum" as bus;
 import "../src/core/cartridge.zum" as cartridge;
 import "../src/core/console.zum" as console;
 import "../src/persistence/store.zum" as store;
+import "../src/stdlib/database.zum" as database;
 import "../src/testing/assert.zum" as test;
 var db << store.memory();
 var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
@@ -13,7 +15,38 @@ var first << engine.evaluate(db, digest, machine, 1, 0, 0, 100u64);
 test.assertInt(sizeOf(first), 1, "first-frame unlock");
 var repeated << engine.evaluate(db, digest, machine, 1, 0, 0, 101u64);
 test.assertInt(sizeOf(repeated), 0, "unlock is idempotent");
-var inputUnlock << engine.evaluate(db, digest, machine, 1, 1, 0, 102u64);
+var changesBefore << database.query(db, "SELECT total_changes() AS changes", {
+})[0]["changes"];
+var unchanged << engine.evaluate(db, digest, machine, 1, 0, 0, 102u64);
+var changesAfter << database.query(db, "SELECT total_changes() AS changes", {
+})[0]["changes"];
+test.assertInt(sizeOf(unchanged), 0, "unchanged evaluation stays locked/unlocked stable");
+test.assertInt(changesAfter, changesBefore, "unchanged evaluation performs no SQLite writes");
+var inputUnlock << engine.evaluate(db, digest, machine, 1, 1, 0, 103u64);
 test.assertInt(sizeOf(inputUnlock), 1, "controller achievement");
+var tetrisDigest << "tetris-engine-test";
+var tetrisPack << catalog.packFor("acab10f2dbad4d4ef5d56b31cd4cea208bb6e2e2c5dba5eb339d711ec04e3535");
+store.seedAchievements(db, tetrisDigest, tetrisPack["definitions"]);
+bus.write(machine["bus"], 0x0070, 0x10u8);
+var tenLines << engine.evaluate(db, tetrisDigest, machine, 1, 0, 0, 104u64);
+test.assertInt(sizeOf(tenLines), 2, "Tetris player-one BCD lines unlock 1 and 10 lines");
+bus.write(machine["bus"], 0x0073, 0x00u8);
+bus.write(machine["bus"], 0x0074, 0x00u8);
+bus.write(machine["bus"], 0x0075, 0x01u8);
+var tenThousand << engine.evaluate(db, tetrisDigest, machine, 1, 0, 0, 105u64);
+test.assertBool(sizeOf(tenThousand) >= 1, "Tetris BCD score unlocks 10K score");
+var popeyeDigest << "popeye-engine-test";
+var popeyeDefinitions <<[{
+    "id": "popeye-score-test", "title": "10K Score", "description": "Score 10,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 10000
+}];
+store.seedAchievements(db, popeyeDigest, popeyeDefinitions);
+bus.write(machine["bus"], 0x0340, 0u8);
+bus.write(machine["bus"], 0x0341, 1u8);
+bus.write(machine["bus"], 0x0342, 0u8);
+bus.write(machine["bus"], 0x0343, 0u8);
+bus.write(machine["bus"], 0x0344, 0u8);
+bus.write(machine["bus"], 0x0345, 0u8);
+var popeyeScore << engine.evaluate(db, popeyeDigest, machine, 1, 0, 0, 106u64);
+test.assertInt(sizeOf(popeyeScore), 1, "Popeye six-digit score rule unlocks 10K score");
 store.close(db);
 show("achievement_engine_test: ok");

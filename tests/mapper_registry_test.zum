@@ -1,7 +1,7 @@
 import "../src/core/mapper.zum" as mapper;
 import "../src/testing/assert.zum" as test;
 var ids << mapper.supportedIds();
-test.assertInt(sizeOf(ids), 15, "fifteen Z28 mappers");
+test.assertInt(sizeOf(ids), 15, "fifteen supported mappers");
 test.assertInt(mapper.supportedCount(), sizeOf(ids), "reported mapper count matches registry");
 test.assertBool(mapper.supports(0u16), "NROM");
 test.assertBool(mapper.supports(1u16), "MMC1");

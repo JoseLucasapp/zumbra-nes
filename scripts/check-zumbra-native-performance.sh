@@ -60,7 +60,7 @@ fi
 if (( missing != 0 )); then
     cat >&2 <<'MSG'
 Install/apply the Zumbra 0.14.5 native performance/runtime patch, rebuild zumbra,
-and make sure this project uses that rebuilt compiler before running the Z23 gate.
+and make sure this project uses that rebuilt compiler before running the release gate.
 The public zumbra --version must be 0.14.5 for this release.
 MSG
     exit 1

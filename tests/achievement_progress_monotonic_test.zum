@@ -1,0 +1,25 @@
+import "../src/achievements/offline.zum" as offline;
+import "../src/achievements/engine.zum" as engine;
+import "../src/core/cartridge.zum" as cartridge;
+import "../src/core/console.zum" as console;
+import "../src/persistence/store.zum" as store;
+import "../src/testing/assert.zum" as test;
+var db << store.memory();
+var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
+var machine << console.create(cart);
+var digest << cart["info"].digest;
+offline.install(db, cart["info"], 1u64);
+engine.evaluate(db, digest, machine, 100, 0, 0, 2u64);
+engine.evaluate(db, digest, machine, 1, 0, 0, 3u64);
+var rows << store.achievementRows(db, digest);
+var progress << 0;
+var index << 0;
+while (index < sizeOf(rows)) {
+    if (rows[index]["id"] == "hundred-frames") {
+        progress << rows[index]["progress"];
+    }
+    index << index + 1;
+}
+test.assertInt(progress, 100, "progress remains monotonic");
+store.close(db);
+show("achievement_progress_monotonic_test: ok");

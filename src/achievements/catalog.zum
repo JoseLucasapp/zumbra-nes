@@ -1,14 +1,117 @@
-/// Default offline achievement set attached to every locally indexed ROM.
-pub fct defaults() {
+/// Synthetic/dev pack used only by repository fixtures and tests.
+fct developmentDefinitions() {
     [{
-        "id": "first-frame", "title": "Primeiro frame", "description": "Execute o primeiro frame completo.", "type": "frame_count", "address": 0, "target": 1
+        "id": "first-frame", "title": "First frame", "description": "Complete the first emulated frame.", "type": "frame_count", "address": 0, "target": 1
     }, {
-        "id": "hundred-frames", "title": "Aquecimento", "description": "Execute 100 frames em uma sessão.", "type": "frame_count", "address": 0, "target": 100
+        "id": "hundred-frames", "title": "100 frames", "description": "Run 100 frames in one session.", "type": "frame_count", "address": 0, "target": 100
     }, {
-        "id": "first-input", "title": "Controle conectado", "description": "Pressione qualquer botão do primeiro controle.", "type": "controller_mask", "address": 0, "target": 1
+        "id": "first-input", "title": "First input", "description": "Press any button on controller one.", "type": "controller_mask", "address": 0, "target": 1
     }, {
-        "id": "hundred-thousand-instructions", "title": "6502 em movimento", "description": "Execute 100.000 instruções da CPU.", "type": "instruction_count", "address": 0, "target": 100000
+        "id": "hundred-thousand-instructions", "title": "100K instructions", "description": "Execute 100,000 CPU instructions.", "type": "instruction_count", "address": 0, "target": 100000
     }, {
-        "id": "one-minute", "title": "Um minuto", "description": "Jogue por 60 segundos em uma sessão.", "type": "session_seconds", "address": 0, "target": 60
+        "id": "one-minute", "title": "One minute", "description": "Play for 60 seconds in one session.", "type": "session_seconds", "address": 0, "target": 60
     }];
+}
+
+/// Nintendo Tetris (NES) uses packed BCD counters in player-one RAM.
+/// These are real game-state goals, not emulator-use milestones.
+fct tetrisNintendoDefinitions() {
+    [{
+        "id": "tetris-line-1", "title": "First Line", "description": "Clear your first line.", "type": "bcd16_at_least", "address": 0x0070, "target": 1
+    }, {
+        "id": "tetris-lines-10", "title": "Ten Lines", "description": "Clear 10 lines in a game.", "type": "bcd16_at_least", "address": 0x0070, "target": 10
+    }, {
+        "id": "tetris-lines-50", "title": "Fifty Lines", "description": "Clear 50 lines in a game.", "type": "bcd16_at_least", "address": 0x0070, "target": 50
+    }, {
+        "id": "tetris-lines-100", "title": "Century", "description": "Clear 100 lines in a game.", "type": "bcd16_at_least", "address": 0x0070, "target": 100
+    }, {
+        "id": "tetris-level-5", "title": "Level 5", "description": "Reach level 5.", "type": "memory_at_least", "address": 0x0064, "target": 5
+    }, {
+        "id": "tetris-level-10", "title": "Level 10", "description": "Reach level 10.", "type": "memory_at_least", "address": 0x0064, "target": 10
+    }, {
+        "id": "tetris-score-10000", "title": "10K Score", "description": "Score 10,000 points.", "type": "bcd24_at_least", "address": 0x0073, "target": 10000
+    }, {
+        "id": "tetris-score-100000", "title": "100K Score", "description": "Score 100,000 points.", "type": "bcd24_at_least", "address": 0x0073, "target": 100000
+    }];
+}
+
+/// Popeye stores its displayed score as six decimal digits and the current
+/// round in work RAM. Keep this first bundled set deliberately observable and
+/// stable across the supported Nintendo revisions.
+fct popeyeDefinitions() {
+    [{
+        "id": "popeye-score-5000", "title": "5K Score", "description": "Score 5,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 5000
+    }, {
+        "id": "popeye-score-10000", "title": "10K Score", "description": "Score 10,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 10000
+    }, {
+        "id": "popeye-score-30000", "title": "30K Score", "description": "Score 30,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 30000
+    }, {
+        "id": "popeye-score-60000", "title": "60K Score", "description": "Score 60,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 60000
+    }, {
+        "id": "popeye-score-100000", "title": "100K Score", "description": "Score 100,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 100000
+    }, {
+        "id": "popeye-score-200000", "title": "200K Score", "description": "Score 200,000 points.", "type": "decimal6_at_least", "address": 0x0340, "target": 200000
+    }, {
+        "id": "popeye-round-2", "title": "Round Two", "description": "Reach round 2.", "type": "memory_at_least", "address": 0x0408, "target": 1
+    }, {
+        "id": "popeye-round-3", "title": "Round Three", "description": "Reach round 3.", "type": "memory_at_least", "address": 0x0408, "target": 2
+    }];
+}
+
+/// Legacy helper kept for tests that exercise the generic achievement engine.
+pub fct defaults() {
+    developmentDefinitions();
+}
+
+/// SHA-256 aliases retained for existing fixtures/known dumps.
+pub fct packFor(digest) {
+    // Repository-only synthetic ROMs use the development pack so end-to-end
+    // headless fixtures can exercise achievement unlocks without assigning
+    // emulator-use achievements to unknown commercial games.
+    if (digest == "81c17d638dce851b4859216d61fa2bb897b95e30827b9ae727295fec3e5729e0" or digest == "b0010ae082e5dbdcb237b312cefcb68645ef420da7ad00f22d6889763dc76af5") {
+        return {
+            "id": "zumbra-dev-nrom", "title": "Zumbra synthetic fixture", "version": 2, "definitions": developmentDefinitions()
+        };
+    }
+    if (digest == "acab10f2dbad4d4ef5d56b31cd4cea208bb6e2e2c5dba5eb339d711ec04e3535") {
+        return {
+            "id": "tetris-nintendo-nes", "title": "Tetris (Nintendo NES)", "version": 2, "definitions": tetrisNintendoDefinitions()
+        };
+    }
+    return {
+        "id": "none", "title": "No game-specific achievement pack", "version": 2, "definitions":[]
+    };
+}
+fct crcPairMatches(imageCrc, contentCrc, crc) {
+    return imageCrc == crc or contentCrc == crc;
+}
+
+/// Resolves a bundled game-specific pack from stable ROM fingerprints.
+/// Exposed for tests and tooling; live gameplay calls packForInfo().
+pub fct packForFingerprints(digest, imageCrc, contentCrc) {
+    var byDigest << packFor(digest);
+    if (sizeOf(byDigest["definitions"]) > 0) {
+        return byDigest;
+    } // Tetris (Nintendo, USA): canonical PRG+CHR CRC-32.
+    if (crcPairMatches(imageCrc, contentCrc, 0x1394F57Eu64)) {
+        return {
+            "id": "tetris-nintendo-nes", "title": "Tetris (Nintendo NES)", "version": 2, "definitions": tetrisNintendoDefinitions()
+        };
+    } // Popeye Nintendo revisions: USA/Europe Rev A and Japan PRG0 content CRCs.
+    // Also accept common full-image CRC aliases used by established ROM sets.
+    if (crcPairMatches(imageCrc, contentCrc, 0x70860FCAu64) or crcPairMatches(imageCrc, contentCrc, 0x5581E835u64) or crcPairMatches(imageCrc, contentCrc, 0xFB1A91D0u64) or crcPairMatches(imageCrc, contentCrc, 0xDE1D762Fu64)) {
+        return {
+            "id": "popeye-nintendo-nes", "title": "Popeye (Nintendo NES)", "version": 2, "definitions": popeyeDefinitions()
+        };
+    }
+    return {
+        "id": "none", "title": "No game-specific achievement pack", "version": 2, "definitions":[]
+    };
+}
+
+/// Resolves a bundled game-specific pack from the loaded ROM itself.
+/// SHA-256 remains the progress identity; CRC-32 is only an offline recognition
+/// alias so equivalent iNES header variants can share the same game rules.
+pub fct packForInfo(info) {
+    return packForFingerprints(info.digest, info.imageCrc32, info.contentCrc32);
 }

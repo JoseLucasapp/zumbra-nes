@@ -18,7 +18,7 @@ actual_version="$($zumbra_bin --version)"
 [[ "$actual_version" == "$expected_version" ]] || { echo "Zumbra version mismatch: expected $expected_version, got $actual_version" >&2; exit 1; }
 scripts/check-zumbra-native-performance.sh "$zumbra_bin"
 
-echo "Running Z23 compatibility, persistence and debugger gate with Zumbra $actual_version..."
+echo "Running local achievements, compatibility and debugger gate with Zumbra $actual_version..."
 rm -rf build dist
 mkdir -p build dist
 
@@ -31,28 +31,26 @@ python3 -m py_compile scripts/generate-synthetic-fixtures.py scripts/generate-ze
 "$zumbra_bin" project info | tee build/project-info.txt
 grep -q '^project: Zumbra NES$' build/project-info.txt
 grep -q "^version: ${project_version}$" build/project-info.txt
-# Z23 intentionally keeps many modules available for the next desktop/menu pass.
+# The project intentionally keeps modules available for the desktop/menu release path.
 # Current Zumbra 0.14.5 returns a non-zero status for `project check` in this
 # repository when diagnostics are warning-only/unused-symbol reports. Do not let
 # that command block this gate; the authoritative checks below are fmt, lint,
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z28 0.5.61; continuing to test/build."
+    echo "Project check is advisory for 0.5.62; continuing to test/build."
 else
     cat build/project-check.txt
 fi
 
-# Current Zumbra 0.14.5 may stop `project test` during the aggregate
-# project-wide diagnostic precheck even when the project can execute its tests
-# file-by-file. Z23 keeps the aggregate command as a diagnostic trace, but the
-# release gate uses the explicit test runner below as the authoritative test
-# execution step.
-if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
-    cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z28 0.5.61; running tests individually."
-else
-    cat build/project-test-aggregate.txt
+# Zumbra 0.14.5 `project test` treats project-wide unused-symbol diagnostics
+# as a failed aggregate precheck (36 src + 83 test files = 119 files), even
+# though the executable test files are valid. The release gate therefore uses
+# the explicit 83-file test runner as its authoritative test execution step.
+# Opt into the aggregate diagnostic trace only when investigating compiler
+# diagnostics; it is intentionally off for normal release validation.
+if [[ "${ZUMBRA_RUN_AGGREGATE_PROJECT_TEST:-0}" == "1" ]]; then
+    "$zumbra_bin" project test | tee build/project-test-aggregate.txt || true
 fi
 scripts/run-z23-tests.sh "$zumbra_bin"
 grep -Eq '^project test: [0-9]+ test file\(s\) executed$' build/project-tests.txt
@@ -62,7 +60,7 @@ grep -Eq '^project test: [0-9]+ test file\(s\) executed$' build/project-tests.tx
 awk '!/^semantic warning in /' build/vm-run-raw.txt > build/vm-smoke.txt
 cat build/vm-smoke.txt
 mapfile -t smoke < build/vm-smoke.txt
-[[ "${smoke[0]:-}" == "Zumbra NES Z23 compatibility" ]]
+[[ "${smoke[0]:-}" == "Zumbra NES compatibility" ]]
 [[ "${smoke[1]:-}" == "$project_version" ]]
 [[ "${smoke[2]:-}" == "0" ]]
 [[ "${smoke[3]:-}" == "NROM" ]]
@@ -70,7 +68,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[5]:-}" == "245760" ]]
 [[ "${#smoke[6]}" -eq 64 ]]
 [[ "${#smoke[8]}" -eq 64 ]]
-[[ "${smoke[9]:-}" == "4" ]]
+[[ "${smoke[9]:-}" == "5" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
 [[ "${smoke[12]:-}" == "15" ]]
@@ -88,26 +86,26 @@ if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then
     cat build/app-doctor.json
     if ! grep -q '"ready": true' build/app-doctor.json; then
         cat build/app-doctor.err >&2 || true
-        echo "Z23 desktop app doctor failed; see build/app-doctor.json" >&2
+        echo "Desktop app doctor failed; see build/app-doctor.json" >&2
         exit 1
     fi
     "$zumbra_bin" app build --manifest zumbra-app.toml --target linux --arch amd64 --release -o build/zumbra-nes 2> build/app-build.err || { cat build/app-build.err >&2; exit 1; }
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes > build/desktop-smoke.txt
-    grep -q '^Z23 desktop session complete$' build/desktop-smoke.txt
+    grep -q '^Zumbra NES desktop session complete$' build/desktop-smoke.txt
     grep -q '^2$' build/desktop-smoke.txt
 
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/synthetic/mapper227-multicart.nes > build/mapper227-desktop-smoke.txt
-    grep -q '^Z23 desktop session complete$' build/mapper227-desktop-smoke.txt
+    grep -q '^Zumbra NES desktop session complete$' build/mapper227-desktop-smoke.txt
     grep -q '^2$' build/mapper227-desktop-smoke.txt
 
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/synthetic/unsupported-mapper5.nes > build/unsupported-mapper.txt 2>&1 || true
-    grep -q 'ROM incompatível: mapper 5' build/unsupported-mapper.txt
+    grep -q 'Incompatible ROM: mapper 5' build/unsupported-mapper.txt
     grep -q '0 (NROM)' build/unsupported-mapper.txt
     grep -q '180 (UNROM reverse)' build/unsupported-mapper.txt
 grep -q '227 (multicart)' build/unsupported-mapper.txt
 
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/homebrew/zebra-platformer.nes > build/zebra-platformer-smoke.txt
-    grep -q '^Z23 desktop session complete$' build/zebra-platformer-smoke.txt
+    grep -q '^Zumbra NES desktop session complete$' build/zebra-platformer-smoke.txt
     grep -q '^2$' build/zebra-platformer-smoke.txt
 
     if [[ "${Z23_SKIP_PACKAGES:-0}" != "1" ]]; then
@@ -115,6 +113,16 @@ grep -q '227 (multicart)' build/unsupported-mapper.txt
     fi
 fi
 
+# Production UI/input polish must not regress.
+! grep -qE '\bZ[0-9]+\b|Xbox|XBOX' src/frontend/desktop.zum
+grep -q 'native.gamepadButton(context, 1, button) or native.gamepadButton(context, 2, button)' src/frontend/desktop.zum
+grep -q 'fct drawMainMenu' src/frontend/desktop.zum
+grep -q 'controlsVisible << true' src/frontend/desktop.zum
+grep -q 'returnToMenu << true' src/frontend/desktop.zum
+grep -q 'pub fct firstKeyDown(context)' src/frontend/native_bridge.zum
+grep -q 'fct saveRemapCode(context, controls, action, code)' src/frontend/desktop.zum
+grep -q 'captureReady << true' src/frontend/desktop.zum
+
 scripts/check-repository-hygiene.sh
 
-echo "Z28 compatibility, mapper expansion, persistence and debugger gate passed."
+echo "Zumbra NES release gate passed."

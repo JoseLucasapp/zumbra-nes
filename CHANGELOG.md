@@ -1,3 +1,28 @@
+## 0.5.62 — local achievements offline
+
+- Adds a complete local-only achievements layer backed by SQLite.
+- Keeps achievements on the user's PC with no account, cloud sync, leaderboard or remote server.
+- Adds local achievement game metadata, progress summaries, unlock events and backup/export helpers.
+- Adds `F6` achievements overlay, `F9` local JSON export, an `E` export fallback inside F6 and SQLite save-state metadata recording.
+- Adds local achievement install, summary, export/import and monotonic progress tests.
+- Keeps Zumbra-lang pinned to 0.14.5 and preserves Z28 mapper compatibility.
+- Keeps achievement SQLite work after audio queueing and suppresses unchanged progress writes.
+- Fixes the live desktop PCM boundary: samples are compressed to the byte range expected by the frozen 0.14.5 S16 bridge, then resampled from the established APU /40 stream to exactly 44.1 kHz without changing APU timing.
+- Replaces the placeholder F6 panel with real per-ROM achievement rows, explicit game goals, locked progress, unlocked state and named unlock toasts.
+- Makes all emulator-facing status/remap/compatibility text English.
+- Removes procedural emulator-use achievements for unknown games; no more `use A`, `play N seconds`, frame-count or CPU-count goals presented as game achievements.
+- Adds CRC-32 ROM recognition alongside SHA-256 persistence identity so known iNES header variants resolve the same bundled game pack.
+- Bundles 8 game-specific achievements for Nintendo Tetris and 8 for Nintendo Popeye, based on each game's documented work-RAM state.
+- Removes development-phase labels from the production UI/runtime and keeps only the public emulator version.
+- Makes the main-menu Controls entry functional with in-window remapping/reset and automatic vendor-neutral SDL Gamepad input.
+- Fixes external controller polling to use the runtime's 1-based gamepad slots, polling both available slots instead of an invalid slot 0.
+- Removes Xbox-specific wording; supported SDL gamepads hot-plug automatically regardless of vendor mapping.
+- Makes Escape edge-triggered: overlays go back, gameplay returns to the emulator menu, and only Quit/F12/window-close exits the app.
+- Fixes the final achievement-engine test typing regression by passing explicit `u8` RAM bytes to `bus.write`.
+- Reworks keyboard remapping into a non-blocking in-window capture flow so the overlay remains visible while waiting for the new key.
+- Displays normal A-Z/0-9/common-key names instead of the ambiguous `SC` placeholder, and makes remapping replace the old binding instead of keeping hidden fallback keys active.
+- Keeps Zumbra 0.14.5 aggregate `project test` diagnostics opt-in; the normal release gate executes the authoritative 83 `*_test.zum` files directly without printing the known 119-file unused-symbol precheck failure.
+
 ## 0.5.61 — Z28 compatibility and mapper expansion
 
 - Expands the supported mapper registry from 8 to 15 mapper families.
@@ -229,3 +254,10 @@
 - Adiciona ajuda de controles em C/H e documenta o mapa oficial da versão.
 - Ativa CI em `main`, pull requests, tags versionadas e execução manual.
 - Corrige os gates de oito mappers, 76 testes, ROM homebrew e SQLite local ignorado.
+
+### Z29 stabilization follow-up
+- Unknown ROMs now receive a deterministic procedural achievement pack derived from ROM SHA-256 and cartridge metadata instead of an empty F6 screen.
+- Curated per-game packs still take precedence when exact game semantics are known.
+- Generated packs are identical for the same ROM across players/PCs but differ across ROM hashes.
+- Generated achievement rows show current/target progress and explicit units/goals instead of vague labels.
+- Reverted the experimental Z29 APU rescaling/fractional sample-clock changes to the last 0.5.61-derived audio path after real-device validation reported severely dragged audio.
