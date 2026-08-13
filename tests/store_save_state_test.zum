@@ -12,6 +12,6 @@ test.assertInt(rows[1]["slot"], 3, "save-state middle slot");
 test.assertInt(rows[1]["frame"], 90, "save-state middle frame");
 test.assertInt(rows[2]["slot"], 9, "save-state last slot");
 test.assertString(rows[2]["path"], "/tmp/state-9.zst", "save-state last path");
-test.assertInt(store.schemaVersion(db), 4, "Z23 schema version");
+test.assertInt(store.schemaVersion(db), 5, "Z29 schema version");
 store.close(db);
 show("store_save_state_test: ok");

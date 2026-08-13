@@ -8,3 +8,6 @@ dist/
 Thumbs.db
 __pycache__/
 *.pyc
+zumbra-nes-achievements-export.json
+zumbra-nes-quickstate.state*
+zumbra-nes-recent.json

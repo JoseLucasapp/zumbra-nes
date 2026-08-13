@@ -18,7 +18,7 @@ actual_version="$($zumbra_bin --version)"
 [[ "$actual_version" == "$expected_version" ]] || { echo "Zumbra version mismatch: expected $expected_version, got $actual_version" >&2; exit 1; }
 scripts/check-zumbra-native-performance.sh "$zumbra_bin"
 
-echo "Running Z23 compatibility, persistence and debugger gate with Zumbra $actual_version..."
+echo "Running Z29 local achievements, compatibility and debugger gate with Zumbra $actual_version..."
 rm -rf build dist
 mkdir -p build dist
 
@@ -38,7 +38,7 @@ grep -q "^version: ${project_version}$" build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory in Z28 0.5.61; continuing to test/build."
+    echo "Project check is advisory in Z29 0.5.62; continuing to test/build."
 else
     cat build/project-check.txt
 fi
@@ -50,7 +50,7 @@ fi
 # execution step.
 if ! "$zumbra_bin" project test > build/project-test-aggregate.txt 2>&1; then
     cat build/project-test-aggregate.txt
-    echo "Project test aggregate precheck is advisory in Z28 0.5.61; running tests individually."
+    echo "Project test aggregate precheck is advisory in Z29 0.5.62; running tests individually."
 else
     cat build/project-test-aggregate.txt
 fi
@@ -70,7 +70,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[5]:-}" == "245760" ]]
 [[ "${#smoke[6]}" -eq 64 ]]
 [[ "${#smoke[8]}" -eq 64 ]]
-[[ "${smoke[9]:-}" == "4" ]]
+[[ "${smoke[9]:-}" == "5" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
 [[ "${smoke[12]:-}" == "15" ]]
@@ -117,4 +117,4 @@ fi
 
 scripts/check-repository-hygiene.sh
 
-echo "Z28 compatibility, mapper expansion, persistence and debugger gate passed."
+echo "Z29 local achievements, compatibility, mapper expansion, persistence and debugger gate passed."

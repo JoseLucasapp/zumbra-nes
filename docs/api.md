@@ -20,7 +20,7 @@ Default offline achievement set attached to every locally indexed ROM.
 pub fct evaluate(db, digest, machine, frames, controllerMask, seconds, timestamp)
 ```
 
-Evaluates and persists achievement progress, returning newly unlocked rows.
+Evaluates and persists local offline achievement progress, returning newly unlocked rows.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -31,6 +31,69 @@ Evaluates and persists achievement progress, returning newly unlocked rows.
 | `controllerMask` | parameter | `` |
 | `seconds` | parameter | `` |
 | `timestamp` | parameter | `` |
+
+## `/home/joselucasapp/projects/zumbra-nes/src/achievements/offline.zum`
+
+### install
+
+```zumbra
+pub fct install(db, info, timestamp)
+```
+
+Installs the bundled offline achievement pack for one local ROM digest.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `info` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### backupPath
+
+```zumbra
+pub fct backupPath()
+```
+
+Default manual backup path for local achievement and library data.
+
+### exportBackup
+
+```zumbra
+pub fct exportBackup(db, path)
+```
+
+Exports the local offline achievement database snapshot to a JSON file.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `path` | parameter | `` |
+
+### importBackup
+
+```zumbra
+pub fct importBackup(db, path)
+```
+
+Imports a local offline achievement database snapshot from a JSON file.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `path` | parameter | `` |
+
+### summary
+
+```zumbra
+pub fct summary(db, digest)
+```
+
+Returns a compact local-only achievement summary for a ROM digest.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
 
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/apu.zum`
 
@@ -3389,7 +3452,7 @@ Loads and validates a save state without aborting on normal incompatibility.
 pub fct open(path)
 ```
 
-Opens the local store and applies all Z22/Z23 migrations.
+Opens the local store and applies all local emulator migrations.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -3536,6 +3599,20 @@ pub fct finishSession(db, sessionId, digest, endedAt, seconds, frames)
 | `seconds` | parameter | `` |
 | `frames` | parameter | `` |
 
+### registerAchievementGame
+
+```zumbra
+pub fct registerAchievementGame(db, digest, title, source, timestamp)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `title` | parameter | `` |
+| `source` | parameter | `` |
+| `timestamp` | parameter | `` |
+
 ### seedAchievements
 
 ```zumbra
@@ -3559,6 +3636,39 @@ pub fct achievementRows(db, digest)
 | `db` | parameter | `` |
 | `digest` | parameter | `` |
 
+### unlockedAchievements
+
+```zumbra
+pub fct unlockedAchievements(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### lockedAchievements
+
+```zumbra
+pub fct lockedAchievements(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### achievementSummary
+
+```zumbra
+pub fct achievementSummary(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
 ### updateAchievement
 
 ```zumbra
@@ -3573,6 +3683,43 @@ pub fct updateAchievement(db, digest, id, progress, unlocked, unlockedAt)
 | `progress` | parameter | `` |
 | `unlocked` | parameter | `` |
 | `unlockedAt` | parameter | `` |
+
+### recordAchievementEvent
+
+```zumbra
+pub fct recordAchievementEvent(db, digest, id, title, description, unlockedAt)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `id` | parameter | `` |
+| `title` | parameter | `` |
+| `description` | parameter | `` |
+| `unlockedAt` | parameter | `` |
+
+### achievementEvents
+
+```zumbra
+pub fct achievementEvents(db, digest, limit)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `limit` | parameter | `` |
+
+### achievementGameRows
+
+```zumbra
+pub fct achievementGameRows(db)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
 
 ### recordSaveState
 

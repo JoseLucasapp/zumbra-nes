@@ -43,7 +43,7 @@ fi
 
 (
     cd "$output_dir"
-    find . -maxdepth 1 -type f ! -name 'SHA256SUMS-Z23.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-Z23.txt
+    find . -maxdepth 1 -type f ! -name 'SHA256SUMS-Z29.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-Z29.txt
 )
 
-echo "Z23 Linux packages created in $output_dir."
+echo "Z29 Linux packages created in $output_dir."

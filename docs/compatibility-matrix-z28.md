@@ -27,4 +27,4 @@ Z28 expands the mapper compatibility layer without changing the Zumbra-lang base
 - `mapper.supportedCount()` must report `15`.
 - Unsupported mapper diagnostics must include the expanded list.
 - Existing audio, settings, input, save state and desktop behavior must remain untouched.
-- The full gate must finish with `Z28 compatibility, mapper expansion, persistence and debugger gate passed.`
+- The full gate must finish with `Z29 local achievements, compatibility, mapper expansion, persistence and debugger gate passed.`

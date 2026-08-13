@@ -1,6 +1,6 @@
-# zumbra-nes 0.5.61
+# zumbra-nes 0.5.62
 
-**Z28 compatibility and mapper expansion:** the emulator now supports 15 mapper families while keeping the Zumbra-lang baseline frozen at **0.14.5**. Z27 typed settings persistence, recent ROM persistence, audio ON/OFF, controller remaps, quick save/load and the desktop UX remain intact.
+**Z29 local achievements offline:** the emulator now keeps achievements entirely on the PC where it is installed. Progress, unlock events, ROM library metadata, recent ROMs, settings and save-state metadata are stored in local SQLite. There is no account, no cloud sync, no leaderboard and no remote achievement service.
 
 Zumbra NES is a local-first NES/Famicom emulator written in **Zumbra**. The application repository keeps the emulator code in `.zum`; video, audio, input, packaging and desktop integration come from the official Zumbra runtime.
 
@@ -28,7 +28,7 @@ Supported mappers:
 
 The implementation covers common iNES behavior for those families. Specific board revisions, copy-protection behavior, unusual submappers, extra audio chips and ROMs depending on unofficial 6502 opcodes may still require future compatibility work.
 
-See `docs/compatibility-matrix-z28.md` and `docs/mappers-z23.md` for mapper details.
+See `docs/compatibility-matrix-z28.md`, `docs/mappers-z23.md` and `docs/local-achievements-z29.md` for details.
 
 ## Features
 
@@ -37,9 +37,10 @@ See `docs/compatibility-matrix-z28.md` and `docs/mappers-z23.md` for mapper deta
 - PPU 2C02 background, sprites, scrolling, VBlank/NMI and OAM DMA;
 - APU pulse 1/2, triangle, noise and DMC;
 - keyboard and gamepad input;
-- SQLite-backed local settings and ROM history;
+- SQLite-backed local settings, ROM history and achievements;
+- local offline achievement unlocks, summaries and JSON backup/export;
 - SRAM persistence;
-- ten save-state slots;
+- ten save-state slots plus SQLite save-state metadata;
 - debugger with stepping, breakpoints, memory inspection and mapper state;
 - Linux AppDir and `.deb` packaging;
 - AppImage optional when `appimagetool` is available.
@@ -106,7 +107,7 @@ The gate validates:
 - CPU opcode table;
 - formatter and linter;
 - project info/check diagnostics;
-- 79 direct test files;
+- 83 direct test files;
 - docs generation;
 - VM smoke;
 - native C11 smoke;
@@ -120,7 +121,7 @@ The gate validates:
 Expected final line:
 
 ```text
-Z28 compatibility, mapper expansion, persistence and debugger gate passed.
+Z29 local achievements, compatibility, mapper expansion, persistence and debugger gate passed.
 ```
 
 ## Packaging
@@ -132,15 +133,16 @@ scripts/package-z23-linux.sh
 Main artifacts:
 
 ```text
-dist/zumbra-nes-0.5.61-linux-amd64.AppDir/
-dist/zumbra-nes_0.5.61_amd64.deb
+dist/zumbra-nes-0.5.62-linux-amd64.AppDir/
+dist/zumbra-nes_0.5.62_amd64.deb
 ```
 
 ## Current status
 
 ```text
 Zumbra-lang baseline: 0.14.5
-zumbra-nes release: 0.5.61
-phase: Z28 compatibility and mapper expansion
+zumbra-nes release: 0.5.62
+phase: Z29 local achievements offline
 supported mappers: 15
+local achievements: SQLite-only, offline
 ```

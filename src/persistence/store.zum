@@ -12,6 +12,9 @@ fct migrations() {
     indexSql << indexSql + "CREATE INDEX IF NOT EXISTS achievement_progress_game_idx ON achievement_progress(game_digest, unlocked, achievement_id);";
     var stateSql << "CREATE TABLE IF NOT EXISTS save_states (game_digest TEXT NOT NULL, slot INTEGER NOT NULL, path TEXT NOT NULL, updated_at INTEGER NOT NULL, frame INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(game_digest, slot)); ";
     stateSql << stateSql + "CREATE INDEX IF NOT EXISTS save_states_game_idx ON save_states(game_digest, updated_at DESC);";
+    var localAchievementSql << "CREATE TABLE IF NOT EXISTS achievement_game_metadata (game_digest TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, pack_version INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL); ";
+    localAchievementSql << localAchievementSql + "CREATE TABLE IF NOT EXISTS achievement_events (id INTEGER PRIMARY KEY AUTOINCREMENT, game_digest TEXT NOT NULL, achievement_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, unlocked_at INTEGER NOT NULL); ";
+    localAchievementSql << localAchievementSql + "CREATE INDEX IF NOT EXISTS achievement_events_game_idx ON achievement_events(game_digest, unlocked_at DESC);";
     [{
         "version": 1, "name": "z22_core", "sql": coreSql
     }, {
@@ -20,10 +23,12 @@ fct migrations() {
         "version": 3, "name": "z22_indexes", "sql": indexSql
     }, {
         "version": 4, "name": "z23_save_states", "sql": stateSql
+    }, {
+        "version": 5, "name": "z29_local_achievements", "sql": localAchievementSql
     }];
 }
 
-/// Opens the local store and applies all Z22/Z23 migrations.
+/// Opens the local store and applies all local emulator migrations.
 pub fct open(path) {
     var db << database.open(path);
     database.migrate(db, migrations());
@@ -1706,6 +1711,12 @@ pub fct finishSession(db, sessionId, digest, endedAt, seconds, frames) {
     });
     true;
 }
+pub fct registerAchievementGame(db, digest, title, source, timestamp) {
+    database.exec(db, "INSERT INTO achievement_game_metadata(game_digest, title, source, pack_version, created_at, updated_at) VALUES (:digest, :title, :source, 1, :created, :updated) ON CONFLICT(game_digest) DO UPDATE SET title = excluded.title, source = excluded.source, updated_at = excluded.updated_at", {
+        "digest": digest, "title": title, "source": source, "created": timestamp, "updated": timestamp
+    });
+    true;
+}
 pub fct seedAchievements(db, digest, definitions) {
     var index << 0;
     while (index < sizeOf(definitions)) {
@@ -1727,9 +1738,53 @@ pub fct achievementRows(db, digest) {
         "digest": digest
     });
 }
+pub fct unlockedAchievements(db, digest) {
+    database.query(db, "SELECT d.achievement_id AS id, d.title, d.description, p.progress, p.unlocked_at FROM achievement_definitions d JOIN achievement_progress p ON p.game_digest = d.game_digest AND p.achievement_id = d.achievement_id WHERE d.game_digest = :digest AND p.unlocked = 1 ORDER BY p.unlocked_at DESC, d.achievement_id", {
+        "digest": digest
+    });
+}
+pub fct lockedAchievements(db, digest) {
+    database.query(db, "SELECT d.achievement_id AS id, d.title, d.description, d.target, p.progress FROM achievement_definitions d JOIN achievement_progress p ON p.game_digest = d.game_digest AND p.achievement_id = d.achievement_id WHERE d.game_digest = :digest AND p.unlocked = 0 ORDER BY d.achievement_id", {
+        "digest": digest
+    });
+}
+pub fct achievementSummary(db, digest) {
+    var rows << database.query(db, "SELECT COUNT(*) AS total, COUNT(CASE WHEN unlocked = 1 THEN 1 END) AS unlocked FROM achievement_progress WHERE game_digest = :digest", {
+        "digest": digest
+    });
+    if (sizeOf(rows) == 0) {
+        return {
+            "digest": digest, "total": 0, "unlocked": 0, "locked": 0, "percent": 0
+        };
+    }
+    var total << rows[0]["total"];
+    var unlocked << rows[0]["unlocked"];
+    var percent << 0;
+    if (total > 0) {
+        percent <<(unlocked * 100) / total;
+    }
+    return {
+        "digest": digest, "total": total, "unlocked": unlocked, "locked": total - unlocked, "percent": percent
+    };
+}
 pub fct updateAchievement(db, digest, id, progress, unlocked, unlockedAt) {
-    database.exec(db, "UPDATE achievement_progress SET progress = :progress, unlocked = CASE WHEN unlocked = 1 THEN 1 ELSE :unlocked END, unlocked_at = CASE WHEN unlocked_at > 0 THEN unlocked_at ELSE :unlockedAt END WHERE game_digest = :digest AND achievement_id = :id", {
+    database.exec(db, "UPDATE achievement_progress SET progress = CASE WHEN progress > :progress THEN progress ELSE :progress END, unlocked = CASE WHEN unlocked = 1 THEN 1 ELSE :unlocked END, unlocked_at = CASE WHEN unlocked_at > 0 THEN unlocked_at ELSE :unlockedAt END WHERE game_digest = :digest AND achievement_id = :id", {
         "progress": progress, "unlocked": unlocked, "unlockedAt": unlockedAt, "digest": digest, "id": id
+    });
+}
+pub fct recordAchievementEvent(db, digest, id, title, description, unlockedAt) {
+    database.exec(db, "INSERT INTO achievement_events(game_digest, achievement_id, title, description, unlocked_at) VALUES (:digest, :id, :title, :description, :unlockedAt)", {
+        "digest": digest, "id": id, "title": title, "description": description, "unlockedAt": unlockedAt
+    });
+    true;
+}
+pub fct achievementEvents(db, digest, limit) {
+    database.query(db, "SELECT game_digest, achievement_id, title, description, unlocked_at FROM achievement_events WHERE game_digest = :digest ORDER BY unlocked_at DESC, id DESC LIMIT :limit", {
+        "digest": digest, "limit": limit
+    });
+}
+pub fct achievementGameRows(db) {
+    database.query(db, "SELECT game_digest, title, source, pack_version, created_at, updated_at FROM achievement_game_metadata ORDER BY updated_at DESC", {
     });
 }
 
@@ -1749,7 +1804,10 @@ pub fct snapshot(db) {
     {
         "settings": database.query(db, "SELECT key, value FROM settings ORDER BY key", {
         }), "roms": database.query(db, "SELECT * FROM rom_library ORDER BY last_opened DESC", {
+        }), "achievementGames": database.query(db, "SELECT * FROM achievement_game_metadata ORDER BY game_digest", {
+        }), "achievementDefinitions": database.query(db, "SELECT * FROM achievement_definitions ORDER BY game_digest, achievement_id", {
         }), "achievements": database.query(db, "SELECT * FROM achievement_progress ORDER BY game_digest, achievement_id", {
+        }), "achievementEvents": database.query(db, "SELECT * FROM achievement_events ORDER BY game_digest, unlocked_at, id", {
         }), "saveStates": database.query(db, "SELECT * FROM save_states ORDER BY game_digest, slot", {
         })
     };
@@ -1778,11 +1836,33 @@ pub fct importSnapshot(db, snapshot) {
         database.exec(db, importRomSql, row);
         index << index + 1;
     }
+    var gameRows << snapshot["achievementGames"];
+    index << 0;
+    while (index < sizeOf(gameRows)) {
+        var gameRow << gameRows[index];
+        registerAchievementGame(db, gameRow["game_digest"], gameRow["title"], gameRow["source"], gameRow["updated_at"]);
+        index << index + 1;
+    }
+    var definitionRows << snapshot["achievementDefinitions"];
+    index << 0;
+    while (index < sizeOf(definitionRows)) {
+        var definition << definitionRows[index];
+        database.exec(db, "INSERT INTO achievement_definitions(game_digest, achievement_id, title, description, rule_type, address, target) VALUES (:game_digest, :achievement_id, :title, :description, :rule_type, :address, :target) ON CONFLICT(game_digest, achievement_id) DO UPDATE SET title = excluded.title, description = excluded.description, rule_type = excluded.rule_type, address = excluded.address, target = excluded.target", definition);
+        database.exec(db, "INSERT OR IGNORE INTO achievement_progress(game_digest, achievement_id) VALUES (:game_digest, :achievement_id)", definition);
+        index << index + 1;
+    }
     var achievementRowsValue << snapshot["achievements"];
     index << 0;
     while (index < sizeOf(achievementRowsValue)) {
         var progress << achievementRowsValue[index];
         database.exec(db, "INSERT INTO achievement_progress(game_digest, achievement_id, progress, unlocked, unlocked_at) VALUES (:game_digest, :achievement_id, :progress, :unlocked, :unlocked_at) ON CONFLICT(game_digest, achievement_id) DO UPDATE SET progress = excluded.progress, unlocked = excluded.unlocked, unlocked_at = excluded.unlocked_at", progress);
+        index << index + 1;
+    }
+    var eventRows << snapshot["achievementEvents"];
+    index << 0;
+    while (index < sizeOf(eventRows)) {
+        var eventRow << eventRows[index];
+        recordAchievementEvent(db, eventRow["game_digest"], eventRow["achievement_id"], eventRow["title"], eventRow["description"], eventRow["unlocked_at"]);
         index << index + 1;
     }
     var stateRows << snapshot["saveStates"];

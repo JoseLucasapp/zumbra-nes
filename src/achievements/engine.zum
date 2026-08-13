@@ -29,21 +29,29 @@ fct valueFor(machine, row, frames, controllerMask, seconds) {
     }
     0;
 }
+fct stableProgress(row, progress) {
+    if (row["progress"] > progress) {
+        return row["progress"];
+    }
+    return progress;
+}
 
-/// Evaluates and persists achievement progress, returning newly unlocked rows.
+/// Evaluates and persists local offline achievement progress, returning newly unlocked rows.
 pub fct evaluate(db, digest, machine, frames, controllerMask, seconds, timestamp) {
     var rows << store.achievementRows(db, digest);
     var unlocked <<[];
     var index << 0;
     while (index < sizeOf(rows)) {
         var row << rows[index];
-        var progress << valueFor(machine, row, frames, controllerMask, seconds);
+        var rawProgress << valueFor(machine, row, frames, controllerMask, seconds);
+        var progress << stableProgress(row, rawProgress);
         var complete << progress >= row["target"];
         var wasUnlocked << row["unlocked"] == 1;
         store.updateAchievement(db, digest, row["id"], progress, complete, timestamp);
         if (complete and!wasUnlocked) {
+            store.recordAchievementEvent(db, digest, row["id"], row["title"], row["description"], timestamp);
             addToArrayEnd(unlocked, {
-                "id": row["id"], "title": row["title"], "description": row["description"]
+                "id": row["id"], "title": row["title"], "description": row["description"], "progress": progress
             });
         }
         index << index + 1;

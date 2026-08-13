@@ -9,5 +9,5 @@
   <launchable type="desktop-id">dev.zumbra.nes.desktop</launchable>
   <url type="homepage">https://github.com/JoseLucasapp/zumbra-nes</url>
   <provides><binary>zumbra-nes</binary></provides>
-  <releases><release version="0.5.61" date="2026-08-11"/><release version="0.5.60" date="2026-08-11"/><release version="0.5.53" date="2026-08-04"/><release version="0.5.0" date="2026-08-03"/><release version="0.4.0" date="2026-08-03"/></releases>
+  <releases><release version="0.5.62" date="2026-08-13"/><release version="0.5.61" date="2026-08-12"/><release version="0.5.60" date="2026-08-11"/><release version="0.5.53" date="2026-08-04"/><release version="0.5.0" date="2026-08-03"/><release version="0.4.0" date="2026-08-03"/></releases>
 </component>

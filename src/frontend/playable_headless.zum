@@ -1,4 +1,4 @@
-import "../achievements/catalog.zum" as catalog;
+import "../achievements/offline.zum" as offlineAchievements;
 import "../achievements/engine.zum" as achievements;
 import "../core/audio_output.zum" as audioOutput;
 import "../core/cartridge.zum" as cartridge;
@@ -32,11 +32,10 @@ pub fct runFile(path) {
     var pixels << palette.rgba(machine["bus"]["ppu"]["framebuffer"]);
     var cursor << audioOutput.createCursor();
     var samples << audioOutput.drain(machine["bus"]["apu"], cursor);
-    store.recordRom(db, info, 1u64);
-    store.seedAchievements(db, info.digest, catalog.defaults());
+    offlineAchievements.install(db, info, 1u64);
     var unlocked << achievements.evaluate(db, info.digest, machine, 1, 0, 0, 1u64);
     var recent << store.recentRoms(db, 10);
-    var report << PlayableReport("0.5.61", info.header.mapper, mapper.name(info.header.mapper), machine["bus"]["ppu"]["core"].frame, sizeOf(pixels), sha256(pixels), sizeOf(samples), sha256(samples), store.schemaVersion(db), sizeOf(unlocked), sizeOf(recent), mapper.supportedCount(), saveState.SCHEMA_VERSION);
+    var report << PlayableReport("0.5.62", info.header.mapper, mapper.name(info.header.mapper), machine["bus"]["ppu"]["core"].frame, sizeOf(pixels), sha256(pixels), sizeOf(samples), sha256(samples), store.schemaVersion(db), sizeOf(unlocked), sizeOf(recent), mapper.supportedCount(), saveState.SCHEMA_VERSION);
     store.close(db);
     report;
 }

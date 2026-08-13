@@ -1,3 +1,12 @@
+## 0.5.62 — Z29 local achievements offline
+
+- Adds a complete local-only achievements layer backed by SQLite.
+- Keeps achievements on the user's PC with no account, cloud sync, leaderboard or remote server.
+- Adds local achievement game metadata, progress summaries, unlock events and backup/export helpers.
+- Adds `F6` achievements overlay, `F9` local JSON export and SQLite save-state metadata recording.
+- Adds local achievement install, summary, export/import and monotonic progress tests.
+- Keeps Zumbra-lang pinned to 0.14.5 and preserves Z28 mapper compatibility.
+
 ## 0.5.61 — Z28 compatibility and mapper expansion
 
 - Expands the supported mapper registry from 8 to 15 mapper families.

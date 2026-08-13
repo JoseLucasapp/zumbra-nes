@@ -1,0 +1,31 @@
+import "catalog.zum" as catalog;
+import "../persistence/store.zum" as store;
+/// Installs the bundled offline achievement pack for one local ROM digest.
+pub fct install(db, info, timestamp) {
+    store.recordRom(db, info, timestamp);
+    store.registerAchievementGame(db, info.digest, info.sourcePath, "bundled-offline", timestamp);
+    store.seedAchievements(db, info.digest, catalog.defaults());
+    store.achievementSummary(db, info.digest);
+}
+
+/// Default manual backup path for local achievement and library data.
+pub fct backupPath() {
+    return "zumbra-nes-achievements-export.json";
+}
+
+/// Exports the local offline achievement database snapshot to a JSON file.
+pub fct exportBackup(db, path) {
+    store.exportJson(db, path);
+    return fileExists(path);
+}
+
+/// Imports a local offline achievement database snapshot from a JSON file.
+pub fct importBackup(db, path) {
+    store.importJson(db, path);
+    true;
+}
+
+/// Returns a compact local-only achievement summary for a ROM digest.
+pub fct summary(db, digest) {
+    store.achievementSummary(db, digest);
+}
