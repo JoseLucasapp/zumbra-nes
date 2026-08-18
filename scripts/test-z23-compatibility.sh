@@ -38,13 +38,13 @@ grep -q "^version: ${project_version}$" build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory for 0.5.63; continuing to test/build."
+    echo "Project check is advisory for 0.5.64; continuing to test/build."
 else
     cat build/project-check.txt
 fi
 
 # Zumbra 0.14.5 `project test` treats project-wide unused-symbol diagnostics
-# as a failed aggregate precheck (37 src + 84 test files = 121 files), even
+# as a failed aggregate precheck (38 src + 85 test files = 123 files), even
 # though the executable test files are valid. The release gate therefore uses
 # the explicit per-file test runner as its authoritative test execution step.
 # Opt into the aggregate diagnostic trace only when investigating compiler
@@ -68,7 +68,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[5]:-}" == "245760" ]]
 [[ "${#smoke[6]}" -eq 64 ]]
 [[ "${#smoke[8]}" -eq 64 ]]
-[[ "${smoke[9]:-}" == "6" ]]
+[[ "${smoke[9]:-}" == "7" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
 [[ "${smoke[12]:-}" == "15" ]]
@@ -102,7 +102,7 @@ if [[ "${Z23_SKIP_NATIVE:-0}" != "1" ]]; then
     grep -q 'Incompatible ROM: mapper 5' build/unsupported-mapper.txt
     grep -q '0 (NROM)' build/unsupported-mapper.txt
     grep -q '180 (UNROM reverse)' build/unsupported-mapper.txt
-grep -q '227 (multicart)' build/unsupported-mapper.txt
+    grep -q '227 (multicart)' build/unsupported-mapper.txt
 
     ZUMBRA_DESKTOP_HEADLESS=1 ./build/zumbra-nes fixtures/homebrew/zebra-platformer.nes > build/zebra-platformer-smoke.txt
     grep -q '^Zumbra NES desktop session complete$' build/zebra-platformer-smoke.txt
@@ -122,12 +122,20 @@ grep -q 'returnToMenu << true' src/frontend/desktop.zum
 grep -q 'pub fct firstKeyDown(context)' src/frontend/native_bridge.zum
 grep -q 'fct saveRemapCode(context, controls, action, code)' src/frontend/desktop.zum
 grep -q 'captureReady << true' src/frontend/desktop.zum
-# 0.5.63 game-library UX must remain wired to local SQLite state.
+# 0.5.64 game-library UX must remain wired to local SQLite state.
 grep -q 'fct drawGameLibrary' src/frontend/desktop.zum
 grep -q 'fct drawGameDetails' src/frontend/desktop.zum
 grep -q 'fct drawLibraryAchievements' src/frontend/desktop.zum
 grep -q 'pub fct libraryRows' src/persistence/store.zum
 grep -q 'pub fct pageState' src/frontend/library.zum
+
+# 0.5.64 local ROM compatibility database must remain wired end-to-end.
+grep -q '"version": 7, "name": "rom_compatibility"' src/persistence/store.zum
+grep -q 'pub fct recordCompatibility' src/persistence/store.zum
+grep -q 'pub fct exportCompatibilityJson' src/persistence/store.zum
+grep -q 'pub fct importCompatibilityJson' src/persistence/store.zum
+grep -q 'pub fct diagnostics(mapperId, submapper)' src/core/mapper.zum
+grep -q 'F10 EXPORT F11 IMPORT' src/frontend/desktop.zum
 
 scripts/check-repository-hygiene.sh
 

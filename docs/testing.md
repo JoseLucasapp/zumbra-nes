@@ -1,3 +1,25 @@
+## 0.5.64 local compatibility database check
+
+```bash
+EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
+```
+
+Expected direct-test summary:
+
+```text
+project test: 85 test file(s) executed
+```
+
+Focused regression:
+
+```bash
+zumbra tests/compatibility_database_test.zum
+zumbra tests/game_library_test.zum
+zumbra tests/playable_headless_test.zum
+```
+
+Manual desktop QA must cover compatibility filters, supported/unsupported ROM registration, Game Details compatibility fields, F10 report export, F11 report import, and all 0.5.63 library/audio/input/save/achievement regressions.
+
 ## 0.5.63 Game Library check
 
 ```bash

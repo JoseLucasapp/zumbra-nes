@@ -1,4 +1,5 @@
 import "../persistence/store.zum" as store;
+import "../compatibility/local.zum" as compatibility;
 pub fct filterName(index) {
     if (index == 1) {
         return "known";
@@ -86,6 +87,18 @@ pub fct previousSort(index) {
         next << 4;
     }
     return next;
+}
+pub fct compatibilityFilterLabel(index) {
+    return compatibility.filterLabel(index);
+}
+pub fct nextCompatibilityFilter(index) {
+    return compatibility.nextFilter(index);
+}
+pub fct previousCompatibilityFilter(index) {
+    return compatibility.previousFilter(index);
+}
+pub fct compatibilityStatusLabel(row) {
+    return compatibility.statusLabel(row["compatibility_status"]);
 }
 
 /// Returns a friendly file name without parent directories and the final extension.
@@ -197,11 +210,17 @@ pub fct lastPlayedLabel(timestampValue, nowValue) {
     }
     return toString(age / 86400) + "D AGO";
 }
+pub fct pageWithCompatibility(db, filterIndex, compatibilityFilterIndex, sortIndex, search, limit, offset) {
+    return store.libraryRowsCompat(db, filterName(filterIndex), compatibility.filterName(compatibilityFilterIndex), sortName(sortIndex), search, limit, offset);
+}
 pub fct page(db, filterIndex, sortIndex, search, limit, offset) {
-    return store.libraryRows(db, filterName(filterIndex), sortName(sortIndex), search, limit, offset);
+    return pageWithCompatibility(db, filterIndex, 0, sortIndex, search, limit, offset);
+}
+pub fct countWithCompatibility(db, filterIndex, compatibilityFilterIndex, search) {
+    return store.libraryCountCompat(db, filterName(filterIndex), compatibility.filterName(compatibilityFilterIndex), search);
 }
 pub fct count(db, filterIndex, search) {
-    return store.libraryCount(db, filterName(filterIndex), search);
+    return countWithCompatibility(db, filterIndex, 0, search);
 }
 pub fct detail(db, digest) {
     return store.libraryGame(db, digest);
@@ -258,8 +277,8 @@ pub fct prefix(text, limit) {
     }
     return result;
 }
-pub fct pageState(db, filterIndex, sortIndex, search, cursor, pageSize) {
-    var total << count(db, filterIndex, search);
+pub fct pageStateWithCompatibility(db, filterIndex, compatibilityFilterIndex, sortIndex, search, cursor, pageSize) {
+    var total << countWithCompatibility(db, filterIndex, compatibilityFilterIndex, search);
     var nextCursor << cursor;
     if (total <= 0) {
         nextCursor << 0;
@@ -276,8 +295,11 @@ pub fct pageState(db, filterIndex, sortIndex, search, cursor, pageSize) {
         offset <<(nextCursor / pageSize) * pageSize;
     }
     return {
-        "rows": page(db, filterIndex, sortIndex, search, pageSize, offset), "total": total, "cursor": nextCursor, "offset": offset
+        "rows": pageWithCompatibility(db, filterIndex, compatibilityFilterIndex, sortIndex, search, pageSize, offset), "total": total, "cursor": nextCursor, "offset": offset
     };
+}
+pub fct pageState(db, filterIndex, sortIndex, search, cursor, pageSize) {
+    return pageStateWithCompatibility(db, filterIndex, 0, sortIndex, search, cursor, pageSize);
 }
 pub fct achievementState(db, digest, filterIndex, cursor, pageSize) {
     var rows << achievements(db, digest, achievementFilterName(filterIndex));

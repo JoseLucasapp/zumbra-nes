@@ -1,0 +1,139 @@
+import "../achievements/catalog.zum" as catalog;
+import "../core/mapper.zum" as mapper;
+import "../persistence/store.zum" as store;
+/// Default portable report path for the local compatibility database.
+pub fct reportPath() {
+    return "zumbra-nes-compatibility-report.json";
+}
+pub fct statusLabel(status) {
+    if (status == "perfect") {
+        return "PERFECT";
+    }
+    if (status == "playable") {
+        return "PLAYABLE";
+    }
+    if (status == "issues") {
+        return "ISSUES";
+    }
+    if (status == "unsupported") {
+        return "UNSUPPORTED";
+    }
+    return "UNTESTED";
+}
+pub fct supportLabel(value) {
+    if (value == "supported" or value == "passed" or value == "available" or value == "enabled") {
+        return "YES";
+    }
+    if (value == "none" or value == "unsupported") {
+        return "NO";
+    }
+    if (value == "disabled") {
+        return "OFF";
+    }
+    return "UNKNOWN";
+}
+pub fct filterName(index) {
+    if (index == 1) {
+        return "perfect";
+    }
+    if (index == 2) {
+        return "playable";
+    }
+    if (index == 3) {
+        return "issues";
+    }
+    if (index == 4) {
+        return "unsupported";
+    }
+    if (index == 5) {
+        return "untested";
+    }
+    return "all";
+}
+pub fct filterLabel(index) {
+    if (index == 1) {
+        return "PERFECT";
+    }
+    if (index == 2) {
+        return "PLAYABLE";
+    }
+    if (index == 3) {
+        return "ISSUES";
+    }
+    if (index == 4) {
+        return "UNSUPPORTED";
+    }
+    if (index == 5) {
+        return "UNTESTED";
+    }
+    return "ALL";
+}
+pub fct nextFilter(index) {
+    var next << index + 1;
+    if (next > 5) {
+        next << 0;
+    }
+    return next;
+}
+pub fct previousFilter(index) {
+    var next << index - 1;
+    if (next < 0) {
+        next << 5;
+    }
+    return next;
+}
+
+/// Registers the ROM and its static compatibility facts before emulation starts.
+pub fct register(db, info, timestamp) {
+    store.recordRom(db, info, timestamp);
+    var diagnostic << mapper.diagnostics(info.header.mapper, info.header.submapper);
+    var pack << catalog.packForInfo(info);
+    var achievementSupport << "none";
+    if (sizeOf(pack["definitions"]) > 0) {
+        achievementSupport << "supported";
+    }
+    var status << "untested";
+    var saveSupport << "supported";
+    var issues << "";
+    if (!diagnostic["ok"]) {
+        status << "unsupported";
+        saveSupport << "unsupported";
+        issues << diagnostic["message"];
+    }
+    store.recordCompatibility(db, info, diagnostic["name"], status, "automatic", "unknown", "unknown", "unknown", saveSupport, achievementSupport, issues, timestamp);
+    return store.compatibilityRecord(db, info.digest);
+}
+
+/// Records evidence from a completed interactive session without claiming perfection.
+pub fct recordSession(db, info, frames, audioEnabled, inputSeen, timestamp) {
+    var audioStatus << "disabled";
+    if (audioEnabled) {
+        audioStatus << "enabled";
+    }
+    var inputStatus << "available";
+    if (inputSeen) {
+        inputStatus << "passed";
+    }
+    var sessionStatus << "untested";
+    if (frames > 0u64) {
+        sessionStatus << "playable";
+    }
+    store.recordCompatibilitySession(db, info.digest, sessionStatus, "passed", audioStatus, inputStatus, timestamp, frames);
+    return store.compatibilityRecord(db, info.digest);
+}
+pub fct record(db, digest) {
+    return store.compatibilityRecord(db, digest);
+}
+pub fct review(db, digest, status, issues, timestamp) {
+    if (status != "perfect" and status != "playable" and status != "issues" and status != "unsupported" and status != "untested") {
+        return false;
+    }
+    store.reviewCompatibility(db, digest, status, issues, timestamp);
+    return true;
+}
+pub fct exportReport(db, timestamp) {
+    return store.exportCompatibilityJson(db, reportPath(), timestamp);
+}
+pub fct importReport(db) {
+    return store.importCompatibilityJson(db, reportPath());
+}

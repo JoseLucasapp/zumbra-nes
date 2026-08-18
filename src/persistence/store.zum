@@ -18,6 +18,11 @@ fct migrations() {
     var libraryUiSql << "CREATE INDEX IF NOT EXISTS rom_library_title_idx ON rom_library(title COLLATE NOCASE); ";
     libraryUiSql << libraryUiSql + "CREATE INDEX IF NOT EXISTS rom_library_playtime_idx ON rom_library(play_seconds DESC, last_opened DESC); ";
     libraryUiSql << libraryUiSql + "CREATE INDEX IF NOT EXISTS rom_library_sessions_idx ON rom_library(sessions DESC, last_opened DESC);";
+    var compatibilitySql << "CREATE TABLE IF NOT EXISTS rom_compatibility (rom_digest TEXT PRIMARY KEY, image_crc32 INTEGER NOT NULL DEFAULT 0, content_crc32 INTEGER NOT NULL DEFAULT 0, mapper INTEGER NOT NULL, submapper INTEGER NOT NULL DEFAULT 0, mapper_name TEXT NOT NULL DEFAULT '', rom_format TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'untested', status_source TEXT NOT NULL DEFAULT 'automatic', video_status TEXT NOT NULL DEFAULT 'unknown', audio_status TEXT NOT NULL DEFAULT 'unknown', input_status TEXT NOT NULL DEFAULT 'unknown', save_support TEXT NOT NULL DEFAULT 'unknown', achievement_support TEXT NOT NULL DEFAULT 'none', known_issues TEXT NOT NULL DEFAULT '', last_tested INTEGER NOT NULL DEFAULT 0, test_count INTEGER NOT NULL DEFAULT 0, last_frame INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL); ";
+    compatibilitySql << compatibilitySql + "CREATE INDEX IF NOT EXISTS rom_compatibility_status_idx ON rom_compatibility(status, updated_at DESC); ";
+    compatibilitySql << compatibilitySql + "CREATE INDEX IF NOT EXISTS rom_compatibility_mapper_idx ON rom_compatibility(mapper, status); ";
+    compatibilitySql << compatibilitySql + "CREATE INDEX IF NOT EXISTS rom_compatibility_tested_idx ON rom_compatibility(last_tested DESC); ";
+    compatibilitySql << compatibilitySql + "INSERT OR IGNORE INTO rom_compatibility(rom_digest, mapper, mapper_name, status, status_source, video_status, audio_status, input_status, save_support, achievement_support, known_issues, created_at, updated_at) SELECT r.digest, r.mapper, 'Mapper ' || r.mapper, CASE WHEN r.mapper IN (0,1,2,3,4,7,10,11,30,66,71,87,94,180,227) THEN 'untested' ELSE 'unsupported' END, 'migration', 'unknown', 'unknown', 'unknown', CASE WHEN r.mapper IN (0,1,2,3,4,7,10,11,30,66,71,87,94,180,227) THEN 'supported' ELSE 'unsupported' END, CASE WHEN EXISTS (SELECT 1 FROM achievement_progress p WHERE p.game_digest = r.digest) THEN 'supported' ELSE 'none' END, CASE WHEN r.mapper IN (0,1,2,3,4,7,10,11,30,66,71,87,94,180,227) THEN '' ELSE 'Mapper is not implemented by this emulator build' END, r.created_at, r.last_opened FROM rom_library r;";
     [{
         "version": 1, "name": "core", "sql": coreSql
     }, {
@@ -30,6 +35,8 @@ fct migrations() {
         "version": 5, "name": "local_achievements", "sql": localAchievementSql
     }, {
         "version": 6, "name": "game_library_ui", "sql": libraryUiSql
+    }, {
+        "version": 7, "name": "rom_compatibility", "sql": compatibilitySql
     }];
 }
 
@@ -1705,6 +1712,98 @@ pub fct recentRoms(db, limit) {
         "limit": limit
     });
 }
+
+/// Upserts one local ROM compatibility record without touching play history.
+pub fct recordCompatibility(db, info, mapperName, status, statusSource, videoStatus, audioStatus, inputStatus, saveSupport, achievementSupport, knownIssues, timestamp) {
+    var sql << "INSERT INTO rom_compatibility(rom_digest, image_crc32, content_crc32, mapper, submapper, mapper_name, rom_format, status, status_source, video_status, audio_status, input_status, save_support, achievement_support, known_issues, created_at, updated_at) ";
+    sql << sql + "VALUES (:digest, :imageCrc, :contentCrc, :mapper, :submapper, :mapperName, :format, :status, :source, :video, :audio, :input, :save, :achievements, :issues, :created, :updated) ";
+    sql << sql + "ON CONFLICT(rom_digest) DO UPDATE SET image_crc32 = excluded.image_crc32, content_crc32 = excluded.content_crc32, mapper = excluded.mapper, submapper = excluded.submapper, mapper_name = excluded.mapper_name, rom_format = excluded.rom_format, status = CASE WHEN rom_compatibility.status IN ('perfect','playable','issues') AND excluded.status = 'untested' THEN rom_compatibility.status ELSE excluded.status END, status_source = CASE WHEN rom_compatibility.status IN ('perfect','playable','issues') AND excluded.status = 'untested' THEN rom_compatibility.status_source ELSE excluded.status_source END, save_support = excluded.save_support, achievement_support = excluded.achievement_support, known_issues = CASE WHEN rom_compatibility.known_issues != '' AND excluded.known_issues = '' THEN rom_compatibility.known_issues ELSE excluded.known_issues END, updated_at = excluded.updated_at";
+    database.exec(db, sql, {
+        "digest": info.digest, "imageCrc": info.imageCrc32, "contentCrc": info.contentCrc32, "mapper": info.header.mapper, "submapper": info.header.submapper, "mapperName": mapperName, "format": info.header.format, "status": status, "source": statusSource, "video": videoStatus, "audio": audioStatus, "input": inputStatus, "save": saveSupport, "achievements": achievementSupport, "issues": knownIssues, "created": timestamp, "updated": timestamp
+    });
+    true;
+}
+
+/// Marks one successful local gameplay session as an emulator compatibility observation.
+pub fct recordCompatibilitySession(db, digest, status, videoStatus, audioStatus, inputStatus, testedAt, frame) {
+    database.exec(db, "UPDATE rom_compatibility SET status = CASE WHEN status IN ('perfect','issues','unsupported') THEN status ELSE :status END, status_source = CASE WHEN status IN ('perfect','issues','unsupported') THEN status_source ELSE 'automatic-session' END, video_status = :video, audio_status = :audio, input_status = :input, last_tested = :tested, test_count = test_count + 1, last_frame = :frame, updated_at = :tested WHERE rom_digest = :digest", {
+        "status": status, "video": videoStatus, "audio": audioStatus, "input": inputStatus, "tested": testedAt, "frame": frame, "digest": digest
+    });
+    true;
+}
+
+/// Applies a local/manual compatibility review while retaining automatic observations.
+pub fct reviewCompatibility(db, digest, status, knownIssues, timestamp) {
+    database.exec(db, "UPDATE rom_compatibility SET status = :status, status_source = 'local-review', known_issues = :issues, updated_at = :updated WHERE rom_digest = :digest", {
+        "status": status, "issues": knownIssues, "updated": timestamp, "digest": digest
+    });
+    true;
+}
+
+/// Returns one compatibility record with a stable shape for VM/native callers.
+pub fct compatibilityRecord(db, digest) {
+    var rows << database.query(db, "SELECT rom_digest, image_crc32, content_crc32, mapper, submapper, mapper_name, rom_format, status, status_source, video_status, audio_status, input_status, save_support, achievement_support, known_issues, last_tested, test_count, last_frame, created_at, updated_at FROM rom_compatibility WHERE rom_digest = :digest LIMIT 1", {
+        "digest": digest
+    });
+    if (sizeOf(rows) == 0) {
+        return {
+            "rom_digest": digest, "image_crc32": 0, "content_crc32": 0, "mapper": 0, "submapper": 0, "mapper_name": "", "rom_format": "", "status": "untested", "status_source": "none", "video_status": "unknown", "audio_status": "unknown", "input_status": "unknown", "save_support": "unknown", "achievement_support": "none", "known_issues": "", "last_tested": 0, "test_count": 0, "last_frame": 0, "created_at": 0, "updated_at": 0
+        };
+    }
+    return rows[0];
+}
+pub fct compatibilityRows(db) {
+    database.query(db, "SELECT rom_digest, image_crc32, content_crc32, mapper, submapper, mapper_name, rom_format, status, status_source, video_status, audio_status, input_status, save_support, achievement_support, known_issues, last_tested, test_count, last_frame, created_at, updated_at FROM rom_compatibility ORDER BY updated_at DESC, rom_digest", {
+    });
+}
+pub fct compatibilityCount(db, status) {
+    var rows << database.query(db, "SELECT COUNT(*) AS total FROM rom_compatibility", {
+    });
+    if (status != "all") {
+        rows << database.query(db, "SELECT COUNT(*) AS total FROM rom_compatibility WHERE status = :status", {
+            "status": status
+        });
+    }
+    if (sizeOf(rows) == 0) {
+        return 0;
+    }
+    return toInt(rows[0]["total"]);
+}
+
+/// Standalone compatibility-report payload; achievement/save backups remain separate.
+pub fct compatibilitySnapshot(db, generatedAt) {
+    return {
+        "format": "zumbra-nes-compatibility", "version": 1, "generated_at": generatedAt, "records": compatibilityRows(db)
+    };
+}
+pub fct exportCompatibilityJson(db, path, generatedAt) {
+    data.writeJson(path, compatibilitySnapshot(db, generatedAt), true);
+    return fileExists(path);
+}
+pub fct importCompatibilitySnapshot(db, snapshot) {
+    if (snapshot["format"] != "zumbra-nes-compatibility" or toInt(snapshot["version"]) != 1) {
+        return false;
+    }
+    var rows << snapshot["records"];
+    var index << 0;
+    while (index < sizeOf(rows)) {
+        var row << rows[index];
+        var sql << "INSERT INTO rom_compatibility(rom_digest, image_crc32, content_crc32, mapper, submapper, mapper_name, rom_format, status, status_source, video_status, audio_status, input_status, save_support, achievement_support, known_issues, last_tested, test_count, last_frame, created_at, updated_at) ";
+        sql << sql + "VALUES (:rom_digest, :image_crc32, :content_crc32, :mapper, :submapper, :mapper_name, :rom_format, :status, 'imported', :video_status, :audio_status, :input_status, :save_support, :achievement_support, :known_issues, :last_tested, :test_count, :last_frame, :created_at, :updated_at) ";
+        sql << sql + "ON CONFLICT(rom_digest) DO UPDATE SET image_crc32 = excluded.image_crc32, content_crc32 = excluded.content_crc32, mapper = excluded.mapper, submapper = excluded.submapper, mapper_name = excluded.mapper_name, rom_format = excluded.rom_format, status = excluded.status, status_source = 'imported', video_status = excluded.video_status, audio_status = excluded.audio_status, input_status = excluded.input_status, save_support = excluded.save_support, achievement_support = excluded.achievement_support, known_issues = excluded.known_issues, last_tested = excluded.last_tested, test_count = excluded.test_count, last_frame = excluded.last_frame, updated_at = excluded.updated_at";
+        database.exec(db, sql, {
+            "rom_digest": row["rom_digest"], "image_crc32": row["image_crc32"], "content_crc32": row["content_crc32"], "mapper": row["mapper"], "submapper": row["submapper"], "mapper_name": row["mapper_name"], "rom_format": row["rom_format"], "status": row["status"], "video_status": row["video_status"], "audio_status": row["audio_status"], "input_status": row["input_status"], "save_support": row["save_support"], "achievement_support": row["achievement_support"], "known_issues": row["known_issues"], "last_tested": row["last_tested"], "test_count": row["test_count"], "last_frame": row["last_frame"], "created_at": row["created_at"], "updated_at": row["updated_at"]
+        });
+        index << index + 1;
+    }
+    return true;
+}
+pub fct importCompatibilityJson(db, path) {
+    if (!fileExists(path)) {
+        return false;
+    }
+    return importCompatibilitySnapshot(db, data.readJson(path));
+}
 fct libraryFilterSql(filter) {
     if (filter == "known") {
         return " AND COALESCE(progress.total, 0) > 0";
@@ -1737,28 +1836,52 @@ fct librarySortSql(sort) {
 }
 fct libraryFromSql() {
     var sql << " FROM rom_library r LEFT JOIN achievement_game_metadata meta ON meta.game_digest = r.digest ";
+    sql << sql + "LEFT JOIN rom_compatibility compat ON compat.rom_digest = r.digest ";
     sql << sql + "LEFT JOIN (SELECT game_digest, COUNT(*) AS total, SUM(CASE WHEN unlocked = 1 THEN 1 ELSE 0 END) AS unlocked FROM achievement_progress GROUP BY game_digest) progress ON progress.game_digest = r.digest ";
     return sql;
 }
-fct libraryWhereSql(filter) {
+fct libraryCompatibilityFilterSql(filter) {
+    if (filter == "perfect") {
+        return " AND COALESCE(compat.status, 'untested') = 'perfect'";
+    }
+    if (filter == "playable") {
+        return " AND COALESCE(compat.status, 'untested') = 'playable'";
+    }
+    if (filter == "issues") {
+        return " AND COALESCE(compat.status, 'untested') = 'issues'";
+    }
+    if (filter == "unsupported") {
+        return " AND COALESCE(compat.status, 'untested') = 'unsupported'";
+    }
+    if (filter == "untested") {
+        return " AND COALESCE(compat.status, 'untested') = 'untested'";
+    }
+    return "";
+}
+fct libraryWhereSql(filter, compatibilityFilter) {
     var sql << " WHERE (LOWER(CASE WHEN COALESCE(meta.source, 'none') != 'none' THEN meta.title ELSE r.title END) LIKE LOWER(:search) OR LOWER(r.path) LIKE LOWER(:search))";
     sql << sql + libraryFilterSql(filter);
+    sql << sql + libraryCompatibilityFilterSql(compatibilityFilter);
     return sql;
 }
 fct librarySelectSql() {
     var sql << "SELECT r.digest, r.path, CASE WHEN COALESCE(meta.source, 'none') != 'none' THEN meta.title ELSE r.title END AS display_title, r.title AS library_title, r.mapper, r.last_opened, r.play_seconds, r.sessions, ";
     sql << sql + "COALESCE(meta.source, 'none') AS pack_source, COALESCE(meta.pack_version, 0) AS pack_version, COALESCE(progress.total, 0) AS achievement_total, COALESCE(progress.unlocked, 0) AS achievement_unlocked, ";
-    sql << sql + "CASE WHEN COALESCE(progress.total, 0) > 0 THEN (COALESCE(progress.unlocked, 0) * 100) / progress.total ELSE 0 END AS achievement_percent";
+    sql << sql + "CASE WHEN COALESCE(progress.total, 0) > 0 THEN (COALESCE(progress.unlocked, 0) * 100) / progress.total ELSE 0 END AS achievement_percent, ";
+    sql << sql + "COALESCE(compat.status, 'untested') AS compatibility_status, COALESCE(compat.status_source, 'none') AS compatibility_source, COALESCE(compat.mapper_name, '') AS mapper_name, COALESCE(compat.submapper, 0) AS submapper, COALESCE(compat.rom_format, '') AS rom_format, COALESCE(compat.image_crc32, 0) AS image_crc32, COALESCE(compat.content_crc32, 0) AS content_crc32, COALESCE(compat.video_status, 'unknown') AS video_status, COALESCE(compat.audio_status, 'unknown') AS audio_status, COALESCE(compat.input_status, 'unknown') AS input_status, COALESCE(compat.save_support, 'unknown') AS save_support, COALESCE(compat.achievement_support, 'none') AS achievement_support, COALESCE(compat.known_issues, '') AS known_issues, COALESCE(compat.last_tested, 0) AS last_tested, COALESCE(compat.test_count, 0) AS compatibility_tests, COALESCE(compat.last_frame, 0) AS compatibility_last_frame";
     return sql;
 } /// Returns the local game library with achievement progress, search, filtering and sorting.
-pub fct libraryRows(db, filter, sort, search, limit, offset) {
-    var sql << librarySelectSql() + libraryFromSql() + libraryWhereSql(filter) + librarySortSql(sort) + " LIMIT :limit OFFSET :offset";
+pub fct libraryRowsCompat(db, filter, compatibilityFilter, sort, search, limit, offset) {
+    var sql << librarySelectSql() + libraryFromSql() + libraryWhereSql(filter, compatibilityFilter) + librarySortSql(sort) + " LIMIT :limit OFFSET :offset";
     return database.query(db, sql, {
         "search": "%" + search + "%", "limit": limit, "offset": offset
     });
+}
+pub fct libraryRows(db, filter, sort, search, limit, offset) {
+    return libraryRowsCompat(db, filter, "all", sort, search, limit, offset);
 } /// Returns the number of local library entries matching the current search/filter.
-pub fct libraryCount(db, filter, search) {
-    var sql << "SELECT COUNT(*) AS total" + libraryFromSql() + libraryWhereSql(filter);
+pub fct libraryCountCompat(db, filter, compatibilityFilter, search) {
+    var sql << "SELECT COUNT(*) AS total" + libraryFromSql() + libraryWhereSql(filter, compatibilityFilter);
     var rows << database.query(db, sql, {
         "search": "%" + search + "%"
     });
@@ -1766,6 +1889,9 @@ pub fct libraryCount(db, filter, search) {
         return 0;
     }
     return toInt(rows[0]["total"]);
+}
+pub fct libraryCount(db, filter, search) {
+    return libraryCountCompat(db, filter, "all", search);
 } /// Returns one local library entry with achievement and play statistics.
 pub fct libraryGame(db, digest) {
     var sql << librarySelectSql() + libraryFromSql() + " WHERE r.digest = :digest LIMIT 1";
@@ -1774,7 +1900,7 @@ pub fct libraryGame(db, digest) {
     });
     if (sizeOf(rows) == 0) {
         return {
-            "digest": digest, "path": "", "display_title": "UNKNOWN ROM", "library_title": "", "mapper": 0, "last_opened": 0, "play_seconds": 0, "sessions": 0, "pack_source": "none", "pack_version": 0, "achievement_total": 0, "achievement_unlocked": 0, "achievement_percent": 0
+            "digest": digest, "path": "", "display_title": "UNKNOWN ROM", "library_title": "", "mapper": 0, "last_opened": 0, "play_seconds": 0, "sessions": 0, "pack_source": "none", "pack_version": 0, "achievement_total": 0, "achievement_unlocked": 0, "achievement_percent": 0, "compatibility_status": "untested", "compatibility_source": "none", "mapper_name": "", "submapper": 0, "rom_format": "", "image_crc32": 0, "content_crc32": 0, "video_status": "unknown", "audio_status": "unknown", "input_status": "unknown", "save_support": "unknown", "achievement_support": "none", "known_issues": "", "last_tested": 0, "compatibility_tests": 0, "compatibility_last_frame": 0
         };
     }
     return rows[0];

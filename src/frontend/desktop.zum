@@ -5,6 +5,7 @@ import "../core/console.zum" as console;
 import "../core/audio_output.zum" as audioOutput;
 import "../core/mapper.zum" as mapper;
 import "../core/palette.zum" as palette;
+import "../compatibility/local.zum" as localCompatibility;
 import "../persistence/save_state.zum" as saveState;
 import "../persistence/store.zum" as store;
 import "native_bridge.zum" as native;
@@ -1050,8 +1051,8 @@ fct drawMainMenu(output, selected, audioEnabled, libraryCount) {
     introRect(output, 8, 8, 240, 224, 6, 8, 18);
     introRect(output, 10, 10, 236, 220, 20, 24, 48);
     introRect(output, 14, 14, 228, 22, 42, 56, 116);
-    drawTinyText(output, 22, 22, 1, "ZUMBRA NES 0.5.63", 32, 236, 238, 236);
-    drawTinyText(output, 22, 46, 1, "LOCAL GAME LIBRARY + ACHIEVEMENTS", 35, 120, 220, 255);
+    drawTinyText(output, 22, 22, 1, "ZUMBRA NES 0.5.64", 32, 236, 238, 236);
+    drawTinyText(output, 22, 46, 1, "LOCAL LIBRARY + COMPATIBILITY", 35, 120, 220, 255);
     drawMenuRow(output, 68, selected == 0,[76, 79, 65, 68, 32, 82, 79, 77], 8);
     drawMenuRow(output, 84, selected == 1,[71, 65, 77, 69, 32, 76, 73, 66, 82, 65, 82, 89], 12);
     drawMenuRow(output, 100, selected == 2,[90, 69, 66, 82, 65, 32, 68, 69, 77, 79], 10);
@@ -1074,10 +1075,10 @@ fct drawMainMenu(output, selected, audioEnabled, libraryCount) {
 fct drawAboutOverlay(output) {
     introRect(output, 20, 42, 216, 150, 8, 12, 28);
     introRect(output, 22, 44, 212, 146, 24, 28, 58);
-    drawTinyText(output, 34, 58, 1, "ZUMBRA NES 0.5.63", 28, 255, 220, 120);
+    drawTinyText(output, 34, 58, 1, "ZUMBRA NES 0.5.64", 28, 255, 220, 120);
     drawTinyText(output, 34, 78, 1, "LOCAL GAME LIBRARY", 28, 236, 238, 236);
     drawTinyText(output, 34, 96, 1, "OFFLINE ACHIEVEMENTS", 28, 120, 220, 255);
-    drawTinyText(output, 34, 114, 1, "SQLITE LOCAL ONLY", 28, 120, 255, 160);
+    drawTinyText(output, 34, 114, 1, "ROM COMPATIBILITY DB", 28, 120, 255, 160);
     drawTinyText(output, 34, 132, 1, "NO ACCOUNT  NO CLOUD", 28, 255, 220, 120);
     drawTinyText(output, 34, 162, 1, "ESC BACK", 16, 236, 238, 236);
     return true;
@@ -1394,8 +1395,8 @@ fct drawTechnicalOverlay(output, mapperId, frames, queuedAudioBytes, lastAudioSa
 }
 fct drawLibraryRow(output, y, row, selected) {
     if (selected) {
-        introRect(output, 18, y - 3, 220, 25, 42, 56, 116);
-        drawTinyChar(output, 22, y + 1, 1, 62, 255, 220, 120);
+        introRect(output, 18, y - 3, 220, 23, 42, 56, 116);
+        drawTinyChar(output, 22, y, 1, 62, 255, 220, 120);
     }
     var titleRed << 236;
     var titleGreen << 238;
@@ -1405,55 +1406,56 @@ fct drawLibraryRow(output, y, row, selected) {
         titleGreen << 245;
         titleBlue << 180;
     }
-    drawTinyText(output, 32, y, 1, gameLibrary.displayTitle(row), 28, titleRed, titleGreen, titleBlue);
+    drawTinyText(output, 32, y, 1, gameLibrary.displayTitle(row), 27, titleRed, titleGreen, titleBlue);
     var total << toInt(row["achievement_total"]);
     var unlocked << toInt(row["achievement_unlocked"]);
-    var percent << toInt(row["achievement_percent"]);
-    var subtitle << "";
+    var subtitle << gameLibrary.compatibilityStatusLabel(row);
     if (total > 0) {
-        subtitle << "ACH " + toString(unlocked) + "/" + toString(total) + " " + toString(percent) + "%";
+        subtitle << subtitle + "  ACH " + toString(unlocked) + "/" + toString(total);
     } else {
-        subtitle << "NO PACK";
+        subtitle << subtitle + "  NO PACK";
     }
-    subtitle << subtitle + "  PLAY " + gameLibrary.playTimeLabel(row["play_seconds"]);
+    subtitle << subtitle + "  " + gameLibrary.playTimeLabel(row["play_seconds"]);
     drawTinyText(output, 32, y + 11, 1, subtitle, 31, 120, 220, 255);
     if (!fileExists(row["path"])) {
-        drawTinyText(output, 190, y + 11, 1, "MISSING", 7, 255, 150, 120);
+        drawTinyText(output, 194, y + 11, 1, "MISSING", 7, 255, 150, 120);
     }
     return true;
 }
-fct drawGameLibrary(output, rows, totalCount, cursor, offset, filterIndex, sortIndex, search, searchActive) {
+fct drawGameLibrary(output, rows, totalCount, cursor, offset, filterIndex, compatibilityFilterIndex, sortIndex, search, searchActive) {
     introRect(output, 0, 0, 256, 240, 8, 10, 22);
     introRect(output, 8, 8, 240, 224, 6, 8, 18);
     introRect(output, 10, 10, 236, 220, 20, 24, 48);
     introRect(output, 14, 14, 228, 22, 42, 56, 116);
     drawTinyText(output, 22, 22, 1, "GAME LIBRARY", 20, 255, 220, 120);
     drawTinyText(output, 150, 22, 1, toString(totalCount) + " GAMES", 13, 120, 255, 160);
-    drawTinyText(output, 20, 44, 1, "FILTER " + gameLibrary.filterLabel(filterIndex), 22, 236, 238, 236);
-    drawTinyText(output, 132, 44, 1, "SORT " + gameLibrary.sortLabel(sortIndex), 18, 236, 238, 236);
+    drawTinyText(output, 20, 43, 1, "ACH " + gameLibrary.filterLabel(filterIndex), 20, 236, 238, 236);
+    drawTinyText(output, 132, 43, 1, "SORT " + gameLibrary.sortLabel(sortIndex), 18, 236, 238, 236);
+    drawTinyText(output, 20, 55, 1, "COMPAT " + gameLibrary.compatibilityFilterLabel(compatibilityFilterIndex), 24, 120, 255, 160);
     if (searchActive) {
-        introRect(output, 16, 56, 224, 16, 72, 30, 30);
-        drawTinyText(output, 22, 61, 1, "SEARCH > " + search, 34, 255, 220, 120);
+        introRect(output, 16, 64, 224, 15, 72, 30, 30);
+        drawTinyText(output, 22, 68, 1, "SEARCH > " + search, 34, 255, 220, 120);
     } else {
         if (search != "") {
-            drawTinyText(output, 22, 61, 1, "SEARCH " + search, 34, 120, 255, 160);
+            drawTinyText(output, 22, 68, 1, "SEARCH " + search, 34, 120, 255, 160);
         } else {
-            drawTinyText(output, 22, 61, 1, "F4 SEARCH", 16, 120, 220, 255);
+            drawTinyText(output, 22, 68, 1, "F4 SEARCH", 16, 120, 220, 255);
         }
     }
     if (sizeOf(rows) == 0) {
-        drawTinyText(output, 40, 104, 1, "NO GAMES MATCH THIS VIEW", 30, 236, 238, 236);
-        drawTinyText(output, 40, 124, 1, "LOAD A ROM OR CHANGE FILTER", 30, 120, 220, 255);
+        drawTinyText(output, 40, 108, 1, "NO GAMES MATCH THIS VIEW", 30, 236, 238, 236);
+        drawTinyText(output, 40, 128, 1, "CHANGE ACH OR COMPAT FILTER", 31, 120, 220, 255);
     } else {
         var index << 0;
-        var rowY << 82;
+        var rowY << 86;
         while (index < sizeOf(rows) and index < 5) {
             drawLibraryRow(output, rowY, rows[index], cursor - offset == index);
-            rowY << rowY + 27;
+            rowY << rowY + 25;
             index << index + 1;
         }
     }
-    drawTinyText(output, 18, 218, 1, "A OPEN  B BACK  F2 FILTER  F3 SORT", 37, 236, 238, 236);
+    drawTinyText(output, 18, 214, 1, "A OPEN B BACK F2 ACH F5 COMPAT", 36, 236, 238, 236);
+    drawTinyText(output, 18, 226, 1, "F3 SORT F4 SEARCH F10 EXPORT F11 IMPORT", 42, 120, 220, 255);
     return true;
 }
 fct drawDetailMenuRow(output, y, selected, text) {
@@ -1472,34 +1474,48 @@ fct drawGameDetails(output, row, selected) {
     introRect(output, 10, 10, 236, 220, 20, 24, 48);
     introRect(output, 14, 14, 228, 22, 42, 56, 116);
     drawTinyText(output, 22, 22, 1, gameLibrary.displayTitle(row), 34, 255, 220, 120);
+    drawTinyText(output, 22, 46, 1, "COMPAT", 10, 236, 238, 236);
+    drawTinyText(output, 94, 46, 1, localCompatibility.statusLabel(row["compatibility_status"]), 16, 120, 255, 160);
+    drawTinyText(output, 22, 60, 1, "MAPPER", 10, 236, 238, 236);
+    var mapperLabel << row["mapper_name"];
+    if (mapperLabel == "") {
+        mapperLabel << mapper.name(row["mapper"]);
+    }
+    drawTinyText(output, 94, 60, 1, toString(row["mapper"]) + " " + mapperLabel, 24, 120, 220, 255);
+    drawTinyText(output, 22, 74, 1, "TESTS", 10, 236, 238, 236);
+    drawTinyText(output, 94, 74, 1, toString(row["compatibility_tests"]) + "  LAST " + gameLibrary.lastPlayedLabel(row["last_tested"], unixTimeSeconds()), 24, 120, 220, 255);
+    drawTinyText(output, 22, 88, 1, "VIDEO", 8, 236, 238, 236);
+    drawTinyText(output, 70, 88, 1, localCompatibility.supportLabel(row["video_status"]), 8, 120, 255, 160);
+    drawTinyText(output, 112, 88, 1, "AUDIO", 8, 236, 238, 236);
+    drawTinyText(output, 160, 88, 1, localCompatibility.supportLabel(row["audio_status"]), 8, 120, 255, 160);
+    drawTinyText(output, 194, 88, 1, "INPUT", 8, 236, 238, 236);
+    drawTinyText(output, 226, 88, 1, localCompatibility.supportLabel(row["input_status"]), 5, 120, 255, 160);
+    drawTinyText(output, 22, 102, 1, "SAVE", 8, 236, 238, 236);
+    drawTinyText(output, 70, 102, 1, localCompatibility.supportLabel(row["save_support"]), 8, 120, 255, 160);
+    drawTinyText(output, 112, 102, 1, "ACH", 8, 236, 238, 236);
+    drawTinyText(output, 160, 102, 1, localCompatibility.supportLabel(row["achievement_support"]), 8, 120, 255, 160);
     var total << toInt(row["achievement_total"]);
     var unlocked << toInt(row["achievement_unlocked"]);
-    drawTinyText(output, 22, 48, 1, "ACHIEVEMENTS", 14, 236, 238, 236);
+    drawTinyText(output, 22, 116, 1, "PROGRESS", 10, 236, 238, 236);
     if (total > 0) {
-        drawTinyText(output, 118, 48, 1, toString(unlocked) + "/" + toString(total) + "  " + toString(row["achievement_percent"]) + "%", 18, 120, 255, 160);
+        drawTinyText(output, 94, 116, 1, toString(unlocked) + "/" + toString(total) + " " + toString(row["achievement_percent"]) + "%", 18, 120, 255, 160);
     } else {
-        drawTinyText(output, 118, 48, 1, "NO PACK", 12, 255, 150, 120);
+        drawTinyText(output, 94, 116, 1, "NO ACHIEVEMENT PACK", 22, 255, 150, 120);
     }
-    drawTinyText(output, 22, 64, 1, "PLAY TIME", 12, 236, 238, 236);
-    drawTinyText(output, 118, 64, 1, gameLibrary.playTimeLabel(row["play_seconds"]), 18, 120, 220, 255);
-    drawTinyText(output, 22, 80, 1, "SESSIONS", 12, 236, 238, 236);
-    drawTinyText(output, 118, 80, 1, toString(row["sessions"]), 18, 120, 220, 255);
-    drawTinyText(output, 22, 96, 1, "LAST PLAYED", 14, 236, 238, 236);
-    drawTinyText(output, 118, 96, 1, gameLibrary.lastPlayedLabel(row["last_opened"], unixTimeSeconds()), 18, 120, 220, 255);
-    drawTinyText(output, 22, 112, 1, "MAPPER", 10, 236, 238, 236);
-    drawTinyText(output, 118, 112, 1, toString(row["mapper"]), 18, 120, 220, 255);
-    drawTinyText(output, 22, 128, 1, "ROM", 10, 236, 238, 236);
-    if (fileExists(row["path"])) {
-        drawTinyText(output, 118, 128, 1, "READY", 18, 120, 255, 160);
+    drawTinyText(output, 22, 130, 1, "PLAY", 8, 236, 238, 236);
+    drawTinyText(output, 94, 130, 1, gameLibrary.playTimeLabel(row["play_seconds"]) + "  " + toString(row["sessions"]) + " SESSIONS", 26, 120, 220, 255);
+    drawTinyText(output, 22, 144, 1, "ISSUES", 10, 236, 238, 236);
+    if (row["known_issues"] == "") {
+        drawTinyText(output, 94, 144, 1, "NONE RECORDED", 18, 120, 255, 160);
     } else {
-        drawTinyText(output, 118, 128, 1, "FILE MISSING", 18, 255, 150, 120);
+        drawTinyText(output, 94, 144, 1, gameLibrary.prefix(row["known_issues"], 25), 25, 255, 150, 120);
     }
-    drawTinyText(output, 22, 144, 1, "ID", 10, 236, 238, 236);
-    drawTinyText(output, 118, 144, 1, gameLibrary.prefix(row["digest"], 16), 18, 120, 220, 255);
-    drawDetailMenuRow(output, 172, selected == 0, "PLAY");
-    drawDetailMenuRow(output, 190, selected == 1, "ACHIEVEMENTS");
-    drawDetailMenuRow(output, 208, selected == 2, "BACK");
-    drawTinyText(output, 22, 224, 1, "A SELECT  B/ESC BACK", 30, 236, 238, 236);
+    drawTinyText(output, 22, 158, 1, "ROM ID", 8, 236, 238, 236);
+    drawTinyText(output, 94, 158, 1, gameLibrary.prefix(row["digest"], 16), 18, 120, 220, 255);
+    drawDetailMenuRow(output, 174, selected == 0, "PLAY");
+    drawDetailMenuRow(output, 192, selected == 1, "ACHIEVEMENTS");
+    drawDetailMenuRow(output, 210, selected == 2, "BACK");
+    drawTinyText(output, 22, 226, 1, "A SELECT  B/ESC BACK", 30, 236, 238, 236);
     return true;
 }
 fct drawLibraryAchievementRow(output, y, row, selected) {
@@ -1555,7 +1571,13 @@ fct saveRecentPath(path) {
 fct saveStatePath() {
     return "zumbra-nes-quickstate.state";
 }
-fct stableShell(context, headlessMode) {
+fct drawShellNotice(output, notice) {
+    introRect(output, 18, 186, 220, 40, 72, 30, 30);
+    drawTinyText(output, 26, 194, 1, "ROM COMPATIBILITY", 22, 255, 220, 120);
+    drawTinyText(output, 26, 208, 1, gameLibrary.prefix(notice, 31), 31, 255, 150, 120);
+    return true;
+}
+fct stableShell(context, headlessMode, initialNotice) {
     var pixels << bytes(256 * 240 * 4);
     var controls << loadControlSettings();
     var audioEnabled << loadAudioSetting();
@@ -1575,31 +1597,36 @@ fct stableShell(context, headlessMode) {
     var lastLibraryF2 << false;
     var lastLibraryF3 << false;
     var lastLibraryF4 << false;
+    var lastLibraryF5 << false;
     var lastLibraryF9 << false;
+    var lastLibraryF10 << false;
+    var lastLibraryF11 << false;
     var lastSearchCode <<-1;
     // 0 main, 1 library, 2 game details, 3 achievement browser.
     var shellView << 0;
     var libraryDb << store.open(desktopSettingsPath());
     var libraryFilter << 0;
+    var libraryCompatibilityFilter << 0;
     var librarySort << 0;
     var librarySearch << "";
+    var shellNotice << initialNotice;
     var librarySearchActive << false;
     var libraryCursor << 0;
-    var libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+    var libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
     var libraryRows << libraryState["rows"];
     var libraryTotal << toInt(libraryState["total"]);
     var libraryOffset << toInt(libraryState["offset"]);
     libraryCursor << toInt(libraryState["cursor"]);
     var mainLibraryCount << gameLibrary.count(libraryDb, 0, "");
     var detailRow << {
-        "digest": "", "path": "", "display_title": "UNKNOWN ROM", "library_title": "", "mapper": 0, "last_opened": 0, "play_seconds": 0, "sessions": 0, "pack_source": "none", "pack_version": 0, "achievement_total": 0, "achievement_unlocked": 0, "achievement_percent": 0
+        "digest": "", "path": "", "display_title": "UNKNOWN ROM", "library_title": "", "mapper": 0, "last_opened": 0, "play_seconds": 0, "sessions": 0, "pack_source": "none", "pack_version": 0, "achievement_total": 0, "achievement_unlocked": 0, "achievement_percent": 0, "compatibility_status": "untested", "compatibility_source": "none", "mapper_name": "", "submapper": 0, "rom_format": "", "image_crc32": 0, "content_crc32": 0, "video_status": "unknown", "audio_status": "unknown", "input_status": "unknown", "save_support": "unknown", "achievement_support": "none", "known_issues": "", "last_tested": 0, "compatibility_tests": 0, "compatibility_last_frame": 0
     };
     var detailSelected << 0;
     var achievementFilter << 0;
     var achievementCursor << 0;
     var achievementOffset << 0;
     var libraryAchievementRows <<[];
-    native.setStatus(context, "Zumbra NES 0.5.63 | Load ROM | Game Library | Controls | Audio | Achievements");
+    native.setStatus(context, "Zumbra NES 0.5.64 | Load ROM | Game Library | Controls | Audio | Achievements");
     while (running and!native.shouldClose(context)) {
         native.pollAll(context, 32);
         var controllerMask << externalControllerMask(context);
@@ -1612,7 +1639,7 @@ fct stableShell(context, headlessMode) {
         if (escNow and!lastEsc) {
             if (aboutVisible) {
                 aboutVisible << false;
-                native.setStatus(context, "Zumbra NES 0.5.63 | Main menu");
+                native.setStatus(context, "Zumbra NES 0.5.64 | Main menu");
             } else {
                 if (controlsVisible) {
                     if (captureAction != "") {
@@ -1621,7 +1648,7 @@ fct stableShell(context, headlessMode) {
                         showControlSettings(context, controls);
                     } else {
                         controlsVisible << false;
-                        native.setStatus(context, "Zumbra NES 0.5.63 | Main menu");
+                        native.setStatus(context, "Zumbra NES 0.5.64 | Main menu");
                     }
                 } else {
                     if (librarySearchActive) {
@@ -1635,11 +1662,11 @@ fct stableShell(context, headlessMode) {
                         } else {
                             if (shellView == 2) {
                                 shellView << 1;
-                                native.setStatus(context, "GAME LIBRARY | F2 filter | F3 sort | F4 search");
+                                native.setStatus(context, "GAME LIBRARY | F2 ach | F5 compat | F3 sort | F4 search");
                             } else {
                                 if (shellView == 1) {
                                     shellView << 0;
-                                    native.setStatus(context, "Zumbra NES 0.5.63 | Main menu");
+                                    native.setStatus(context, "Zumbra NES 0.5.64 | Main menu");
                                 }
                             }
                         }
@@ -1713,15 +1740,16 @@ fct stableShell(context, headlessMode) {
                     if (selected == 1) {
                         shellView << 1;
                         libraryFilter << 0;
+                        libraryCompatibilityFilter << 0;
                         librarySearch << "";
                         librarySearchActive << false;
                         libraryCursor << 0;
-                        libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                        libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                         libraryRows << libraryState["rows"];
                         libraryTotal << toInt(libraryState["total"]);
                         libraryOffset << toInt(libraryState["offset"]);
                         libraryCursor << toInt(libraryState["cursor"]);
-                        native.setStatus(context, "GAME LIBRARY | F2 filter | F3 sort | F4 search | gamepad D-pad/A/B");
+                        native.setStatus(context, "GAME LIBRARY | F2 ach | F5 compat | F3 sort | F4 search | gamepad D-pad/A/B");
                     }
                     if (selected == 2 and fileExists("fixtures/homebrew/zebra-platformer.nes")) {
                         selectedPath << "fixtures/homebrew/zebra-platformer.nes";
@@ -1746,10 +1774,11 @@ fct stableShell(context, headlessMode) {
                     if (selected == 5) {
                         shellView << 1;
                         libraryFilter << 1;
+                        libraryCompatibilityFilter << 0;
                         librarySearch << "";
                         librarySearchActive << false;
                         libraryCursor << 0;
-                        libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                        libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                         libraryRows << libraryState["rows"];
                         libraryTotal << toInt(libraryState["total"]);
                         libraryOffset << toInt(libraryState["offset"]);
@@ -1767,7 +1796,7 @@ fct stableShell(context, headlessMode) {
                 if (shellView == 1) {
                     if (backPressed and!librarySearchActive) {
                         shellView << 0;
-                        native.setStatus(context, "Zumbra NES 0.5.63 | Main menu");
+                        native.setStatus(context, "Zumbra NES 0.5.64 | Main menu");
                     }
                     if (librarySearchActive) {
                         var searchCode << native.firstKeyDown(context);
@@ -1788,7 +1817,7 @@ fct stableShell(context, headlessMode) {
                                     }
                                 }
                                 libraryCursor << 0;
-                                libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                                libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                                 libraryRows << libraryState["rows"];
                                 libraryTotal << toInt(libraryState["total"]);
                                 libraryOffset << toInt(libraryState["offset"]);
@@ -1802,7 +1831,7 @@ fct stableShell(context, headlessMode) {
                             if (libraryCursor < 0) {
                                 libraryCursor << 0;
                             }
-                            libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                            libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                             libraryRows << libraryState["rows"];
                             libraryOffset << toInt(libraryState["offset"]);
                             libraryCursor << toInt(libraryState["cursor"]);
@@ -1812,7 +1841,7 @@ fct stableShell(context, headlessMode) {
                             if (libraryCursor >= libraryTotal) {
                                 libraryCursor << libraryTotal - 1;
                             }
-                            libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                            libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                             libraryRows << libraryState["rows"];
                             libraryOffset << toInt(libraryState["offset"]);
                             libraryCursor << toInt(libraryState["cursor"]);
@@ -1820,6 +1849,9 @@ fct stableShell(context, headlessMode) {
                         var libraryF2Now << native.keyDown(context, 59);
                         var libraryF3Now << native.keyDown(context, 60);
                         var libraryF4Now << native.keyDown(context, 61);
+                        var libraryF5Now << native.keyDown(context, 62);
+                        var libraryF10Now << native.keyDown(context, 67);
+                        var libraryF11Now << native.keyDown(context, 68);
                         var filterChanged << false;
                         if ((edges band 0x80) != 0) {
                             libraryFilter << gameLibrary.nextFilter(libraryFilter);
@@ -1835,7 +1867,7 @@ fct stableShell(context, headlessMode) {
                         }
                         if (filterChanged) {
                             libraryCursor << 0;
-                            libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                            libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                             libraryRows << libraryState["rows"];
                             libraryTotal << toInt(libraryState["total"]);
                             libraryOffset << toInt(libraryState["offset"]);
@@ -1844,7 +1876,7 @@ fct stableShell(context, headlessMode) {
                         if (((edges band 0x04) != 0) or(libraryF3Now and!lastLibraryF3)) {
                             librarySort << gameLibrary.nextSort(librarySort);
                             libraryCursor << 0;
-                            libraryState << gameLibrary.pageState(libraryDb, libraryFilter, librarySort, librarySearch, libraryCursor, 5);
+                            libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
                             libraryRows << libraryState["rows"];
                             libraryTotal << toInt(libraryState["total"]);
                             libraryOffset << toInt(libraryState["offset"]);
@@ -1855,9 +1887,42 @@ fct stableShell(context, headlessMode) {
                             lastSearchCode <<-1;
                             native.setStatus(context, "GAME LIBRARY SEARCH | type | Backspace erase | Enter done | Esc leave search");
                         }
+                        if (libraryF5Now and!lastLibraryF5) {
+                            libraryCompatibilityFilter << gameLibrary.nextCompatibilityFilter(libraryCompatibilityFilter);
+                            libraryCursor << 0;
+                            libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
+                            libraryRows << libraryState["rows"];
+                            libraryTotal << toInt(libraryState["total"]);
+                            libraryOffset << toInt(libraryState["offset"]);
+                            libraryCursor << toInt(libraryState["cursor"]);
+                            native.setStatus(context, "GAME LIBRARY | COMPAT " + gameLibrary.compatibilityFilterLabel(libraryCompatibilityFilter));
+                        }
+                        if (libraryF10Now and!lastLibraryF10) {
+                            if (localCompatibility.exportReport(libraryDb, unixTimeSeconds())) {
+                                native.setStatus(context, "COMPATIBILITY REPORT EXPORTED | " + localCompatibility.reportPath());
+                            } else {
+                                native.setStatus(context, "COMPATIBILITY REPORT EXPORT FAILED");
+                            }
+                        }
+                        if (libraryF11Now and!lastLibraryF11) {
+                            if (localCompatibility.importReport(libraryDb)) {
+                                libraryCursor << 0;
+                                libraryState << gameLibrary.pageStateWithCompatibility(libraryDb, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, libraryCursor, 5);
+                                libraryRows << libraryState["rows"];
+                                libraryTotal << toInt(libraryState["total"]);
+                                libraryOffset << toInt(libraryState["offset"]);
+                                libraryCursor << toInt(libraryState["cursor"]);
+                                native.setStatus(context, "COMPATIBILITY REPORT IMPORTED | " + localCompatibility.reportPath());
+                            } else {
+                                native.setStatus(context, "NO VALID COMPATIBILITY REPORT TO IMPORT");
+                            }
+                        }
                         lastLibraryF2 << libraryF2Now;
                         lastLibraryF3 << libraryF3Now;
                         lastLibraryF4 << libraryF4Now;
+                        lastLibraryF5 << libraryF5Now;
+                        lastLibraryF10 << libraryF10Now;
+                        lastLibraryF11 << libraryF11Now;
                         if (confirmPressed and libraryTotal > 0 and sizeOf(libraryRows) > 0) {
                             var localIndex << libraryCursor - libraryOffset;
                             if (localIndex >= 0 and localIndex < sizeOf(libraryRows)) {
@@ -1872,7 +1937,7 @@ fct stableShell(context, headlessMode) {
                     if (shellView == 2) {
                         if (backPressed) {
                             shellView << 1;
-                            native.setStatus(context, "GAME LIBRARY | F2 filter | F3 sort | F4 search");
+                            native.setStatus(context, "GAME LIBRARY | F2 ach | F5 compat | F3 sort | F4 search");
                         }
                         if ((edges band 0x10) != 0) {
                             detailSelected << detailSelected - 1;
@@ -1912,7 +1977,7 @@ fct stableShell(context, headlessMode) {
                             }
                             if (detailSelected == 2) {
                                 shellView << 1;
-                                native.setStatus(context, "GAME LIBRARY | F2 filter | F3 sort | F4 search");
+                                native.setStatus(context, "GAME LIBRARY | F2 ach | F5 compat | F3 sort | F4 search");
                             }
                         }
                     } else {
@@ -1978,9 +2043,12 @@ fct stableShell(context, headlessMode) {
             if (controlsVisible) {
                 drawSettingsOverlay(pixels, controls, captureAction);
             }
+            if (!aboutVisible and!controlsVisible and shellNotice != "") {
+                drawShellNotice(pixels, shellNotice);
+            }
         } else {
             if (shellView == 1) {
-                drawGameLibrary(pixels, libraryRows, libraryTotal, libraryCursor, libraryOffset, libraryFilter, librarySort, librarySearch, librarySearchActive);
+                drawGameLibrary(pixels, libraryRows, libraryTotal, libraryCursor, libraryOffset, libraryFilter, libraryCompatibilityFilter, librarySort, librarySearch, librarySearchActive);
             }
             if (shellView == 2) {
                 drawGameDetails(pixels, detailRow, detailSelected);
@@ -2007,7 +2075,7 @@ fct stableShell(context, headlessMode) {
         "frames": frames, "path": selectedPath, "audio": audioEnabled
     };
 }
-fct openGameRuntime(path) {
+fct openGameRuntime(path, compatibilityDb, openedAt) {
     if (path == "" or!fileExists(path)) {
         return {
             "ok": false, "message": "ROM file not found", "path": path
@@ -2023,7 +2091,8 @@ fct openGameRuntime(path) {
     var cart << cartridge.fromBytes(romBytes, path);
     var info << cart["info"];
     var mapperId << info.header.mapper;
-    var compatibility << mapper.compatibility(mapperId);
+    localCompatibility.register(compatibilityDb, info, openedAt);
+    var compatibility << mapper.diagnostics(mapperId, info.header.submapper);
     if (!compatibility["ok"]) {
         return {
             "ok": false, "message": compatibility["message"], "path": path
@@ -2042,23 +2111,30 @@ fct inputLockedMask(rawMask, lockFrames) {
 } /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 // Desktop build compatibility helpers.
 fct runGameSession(context, path, audioEnabled, headlessMode) {
-    var game << openGameRuntime(path);
+    var gameDb << store.memory();
+    if (!headlessMode) {
+        store.close(gameDb);
+        gameDb << store.open(desktopSettingsPath());
+    }
+    var openedAt << unixTimeSeconds();
+    var game << openGameRuntime(path, gameDb, openedAt);
     if (!game["ok"]) {
+        store.close(gameDb);
         return {
             "ok": false, "message": game["message"], "frames": 0u64, "audio": audioEnabled, "returnToMenu": true
         };
     }
     if (headlessMode) {
+        store.close(gameDb);
         return {
             "ok": true, "message": "ok", "frames": 2u64, "audio": audioEnabled, "returnToMenu": false
         };
     }
     saveRecentPath(path);
-    var gameDb << store.open(desktopSettingsPath());
     var gameInfo << game["info"];
     var gameDigest << game["digest"];
     var sessionStartedTicks << native.ticks(context);
-    var sessionStartedAt << unixTimeSeconds();
+    var sessionStartedAt << openedAt;
     offlineAchievements.install(gameDb, gameInfo, sessionStartedAt);
     var sessionId << store.beginSession(gameDb, gameDigest, sessionStartedAt);
     console.setPerformanceMode(game["machine"], true);
@@ -2071,6 +2147,7 @@ fct runGameSession(context, path, audioEnabled, headlessMode) {
     var returnToMenu << false;
     var paused << false;
     var frames << 0u64;
+    var compatibilityInputSeen << false;
     var pendingFrame << true;
     var lastPresent << native.ticks(context);
     var lastP << false;
@@ -2097,7 +2174,7 @@ fct runGameSession(context, path, audioEnabled, headlessMode) {
     var backupNoticeOk << false;
     var achievementNoticeId << "";
     var lastAchievementInputMask << 0;
-    native.setStatus(context, "Zumbra NES 0.5.63 | mapper " + toString(mapperId) + " | Esc menu | F1 controls | F3 overlay | F5 save | F6 achievements | F8 load | F12 quit");
+    native.setStatus(context, "Zumbra NES 0.5.64 | mapper " + toString(mapperId) + " | Esc menu | F1 controls | F3 overlay | F5 save | F6 achievements | F8 load | F12 quit");
     // Achievement rows/summary are heap-backed SQLite values. Keep a base mark
     // before the cache so refreshes can free the previous snapshot without
     // leaving dangling dictionaries across runtimeMemoryReset().
@@ -2123,12 +2200,12 @@ fct runGameSession(context, path, audioEnabled, headlessMode) {
                     settingsVisible << false;
                     paused << false;
                     inputLock << 10;
-                    native.setStatus(context, "Zumbra NES 0.5.63 | mapper " + toString(mapperId) + " | Esc menu | F1 controls | F3 overlay | F5 save | F6 achievements | F8 load | F12 quit");
+                    native.setStatus(context, "Zumbra NES 0.5.64 | mapper " + toString(mapperId) + " | Esc menu | F1 controls | F3 overlay | F5 save | F6 achievements | F8 load | F12 quit");
                 }
             } else {
                 if (achievementsVisible) {
                     achievementsVisible << false;
-                    native.setStatus(context, "Zumbra NES 0.5.63 | mapper " + toString(mapperId) + " | Esc menu | F6 achievements");
+                    native.setStatus(context, "Zumbra NES 0.5.64 | mapper " + toString(mapperId) + " | Esc menu | F6 achievements");
                 } else {
                     returnToMenu << true;
                     running << false;
@@ -2257,6 +2334,9 @@ fct runGameSession(context, path, audioEnabled, headlessMode) {
             rawPlayerOneMask << 0;
         }
         var playerOneMask << inputLockedMask(rawPlayerOneMask, inputLock);
+        if (playerOneMask != 0) {
+            compatibilityInputSeen << true;
+        }
         console.setController(game["machine"], 1, playerOneMask);
         console.setController(game["machine"], 2, 0);
         if (!paused) {
@@ -2396,13 +2476,14 @@ fct runGameSession(context, path, audioEnabled, headlessMode) {
     var sessionEndedAt << unixTimeSeconds();
     var finalSeconds <<(sessionEndedTicks - sessionStartedTicks) / 1000u64;
     store.finishSession(gameDb, sessionId, gameDigest, sessionEndedAt, finalSeconds, frames);
+    localCompatibility.recordSession(gameDb, gameInfo, frames, audioEnabled, compatibilityInputSeen, sessionEndedAt);
     store.close(gameDb);
     return {
         "ok": true, "message": "ok", "frames": frames, "audio": audioEnabled, "returnToMenu": returnToMenu
     };
 } /// Runs the interactive SDL3 frontend, or a deterministic two-frame headless smoke.
 pub fct run() {
-    var context << native.create("Zumbra NES 0.5.63", 3, true, false, false);
+    var context << native.create("Zumbra NES 0.5.64", 3, true, false, false);
     var headlessMode << native.headless(context);
     if (!native.valid(context)) {
         show(native.error(context));
@@ -2420,9 +2501,11 @@ pub fct run() {
     }
     var appRunning << true;
     var totalFrames << 0u64;
+    var shellNotice << "";
     while (appRunning and!native.shouldClose(context)) {
         if (activePath == "") {
-            var shellResult << stableShell(context, headlessMode);
+            var shellResult << stableShell(context, headlessMode, shellNotice);
+            shellNotice << "";
             totalFrames << totalFrames + u64(shellResult["frames"]);
             activePath << shellResult["path"];
             audioEnabled << shellResult["audio"];
@@ -2435,6 +2518,7 @@ pub fct run() {
             audioEnabled << sessionResult["audio"];
             if (!sessionResult["ok"]) {
                 show(sessionResult["message"]);
+                shellNotice << sessionResult["message"];
                 activePath << "";
                 if (headlessMode) {
                     appRunning << false;
@@ -2445,7 +2529,7 @@ pub fct run() {
                 } else {
                     if (sessionResult["returnToMenu"]) {
                         activePath << "";
-                        native.setStatus(context, "Zumbra NES 0.5.63 | Main menu");
+                        native.setStatus(context, "Zumbra NES 0.5.64 | Main menu");
                     } else {
                         appRunning << false;
                     }

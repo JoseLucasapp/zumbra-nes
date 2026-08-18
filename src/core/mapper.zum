@@ -129,15 +129,30 @@ pub fct name(mapperId) {
     };
 }
 
-/// Structured compatibility result for frontend and CLI diagnostics.
+/// Structured mapper diagnostic used by compatibility persistence and frontend errors.
+pub fct diagnostics(mapperId, submapper) {
+    if (supports(mapperId)) {
+        return {
+            "ok": true, "mapper": mapperId, "submapper": submapper, "name": name(mapperId), "status": "implemented", "message": "Mapper " + toString(mapperId) + " (" + name(mapperId) + ") is implemented locally"
+        };
+    }
+    return {
+        "ok": false, "mapper": mapperId, "submapper": submapper, "name": "Unsupported", "status": "unsupported", "message": "Incompatible ROM: mapper " + toString(mapperId) + " submapper " + toString(submapper) + " is not implemented. Supported: " + supportedText()
+    };
+}
+
+/// Backward-compatible mapper-only result for existing CLI/tests.
+///
+/// Keep the historical mapper-only message stable here. The richer diagnostics()
+/// API includes submapper context for the compatibility database and desktop UI.
 pub fct compatibility(mapperId) {
     if (supports(mapperId)) {
         return {
-            "ok": true, "mapper": mapperId, "name": name(mapperId), "message": "supported"
+            "ok": true, "mapper": mapperId, "submapper": 0u8, "name": name(mapperId), "status": "implemented", "message": "Mapper " + toString(mapperId) + " (" + name(mapperId) + ") is implemented locally"
         };
     }
     {
-        "ok": false, "mapper": mapperId, "name": "Unsupported", "message": "Incompatible ROM: mapper " + toString(mapperId) + ". Supported: " + supportedText()
+        "ok": false, "mapper": mapperId, "submapper": 0u8, "name": "Unsupported", "status": "unsupported", "message": "Incompatible ROM: mapper " + toString(mapperId) + ". Supported: " + supportedText()
     };
 }
 

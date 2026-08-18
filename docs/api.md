@@ -152,6 +152,153 @@ Returns all local achievement definitions/progress for the current ROM.
 | `db` | parameter | `` |
 | `digest` | parameter | `` |
 
+## `/home/joselucasapp/projects/zumbra-nes/src/compatibility/local.zum`
+
+### reportPath
+
+```zumbra
+pub fct reportPath()
+```
+
+Default portable report path for the local compatibility database.
+
+### statusLabel
+
+```zumbra
+pub fct statusLabel(status)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `status` | parameter | `` |
+
+### supportLabel
+
+```zumbra
+pub fct supportLabel(value)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `value` | parameter | `` |
+
+### filterName
+
+```zumbra
+pub fct filterName(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### filterLabel
+
+```zumbra
+pub fct filterLabel(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### nextFilter
+
+```zumbra
+pub fct nextFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### previousFilter
+
+```zumbra
+pub fct previousFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### register
+
+```zumbra
+pub fct register(db, info, timestamp)
+```
+
+Registers the ROM and its static compatibility facts before emulation starts.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `info` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### recordSession
+
+```zumbra
+pub fct recordSession(db, info, frames, audioEnabled, inputSeen, timestamp)
+```
+
+Records evidence from a completed interactive session without claiming perfection.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `info` | parameter | `` |
+| `frames` | parameter | `` |
+| `audioEnabled` | parameter | `` |
+| `inputSeen` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### record
+
+```zumbra
+pub fct record(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### review
+
+```zumbra
+pub fct review(db, digest, status, issues, timestamp)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `status` | parameter | `` |
+| `issues` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### exportReport
+
+```zumbra
+pub fct exportReport(db, timestamp)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### importReport
+
+```zumbra
+pub fct importReport(db)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/core/apu.zum`
 
 ### Envelope
@@ -1788,13 +1935,29 @@ pub fct name(mapperId)
 |---|---|---|
 | `mapperId` | parameter | `` |
 
+### diagnostics
+
+```zumbra
+pub fct diagnostics(mapperId, submapper)
+```
+
+Structured mapper diagnostic used by compatibility persistence and frontend errors.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `mapperId` | parameter | `` |
+| `submapper` | parameter | `` |
+
 ### compatibility
 
 ```zumbra
 pub fct compatibility(mapperId)
 ```
 
-Structured compatibility result for frontend and CLI diagnostics.
+Backward-compatible mapper-only result for existing CLI/tests.  
+  
+Keep the historical mapper-only message stable here. The richer diagnostics()  
+API includes submapper context for the compatibility database and desktop UI.
 
 | Member | Kind | Type / Signature |
 |---|---|---|
@@ -2735,6 +2898,46 @@ pub fct previousSort(index)
 |---|---|---|
 | `index` | parameter | `` |
 
+### compatibilityFilterLabel
+
+```zumbra
+pub fct compatibilityFilterLabel(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### nextCompatibilityFilter
+
+```zumbra
+pub fct nextCompatibilityFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### previousCompatibilityFilter
+
+```zumbra
+pub fct previousCompatibilityFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### compatibilityStatusLabel
+
+```zumbra
+pub fct compatibilityStatusLabel(row)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `row` | parameter | `` |
+
 ### titleFromPath
 
 ```zumbra
@@ -2808,6 +3011,22 @@ pub fct lastPlayedLabel(timestampValue, nowValue)
 | `timestampValue` | parameter | `` |
 | `nowValue` | parameter | `` |
 
+### pageWithCompatibility
+
+```zumbra
+pub fct pageWithCompatibility(db, filterIndex, compatibilityFilterIndex, sortIndex, search, limit, offset)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `compatibilityFilterIndex` | parameter | `` |
+| `sortIndex` | parameter | `` |
+| `search` | parameter | `` |
+| `limit` | parameter | `` |
+| `offset` | parameter | `` |
+
 ### page
 
 ```zumbra
@@ -2822,6 +3041,19 @@ pub fct page(db, filterIndex, sortIndex, search, limit, offset)
 | `search` | parameter | `` |
 | `limit` | parameter | `` |
 | `offset` | parameter | `` |
+
+### countWithCompatibility
+
+```zumbra
+pub fct countWithCompatibility(db, filterIndex, compatibilityFilterIndex, search)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `compatibilityFilterIndex` | parameter | `` |
+| `search` | parameter | `` |
 
 ### count
 
@@ -2920,6 +3152,22 @@ pub fct prefix(text, limit)
 |---|---|---|
 | `text` | parameter | `` |
 | `limit` | parameter | `` |
+
+### pageStateWithCompatibility
+
+```zumbra
+pub fct pageStateWithCompatibility(db, filterIndex, compatibilityFilterIndex, sortIndex, search, cursor, pageSize)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `compatibilityFilterIndex` | parameter | `` |
+| `sortIndex` | parameter | `` |
+| `search` | parameter | `` |
+| `cursor` | parameter | `` |
+| `pageSize` | parameter | `` |
 
 ### pageState
 
@@ -3927,6 +4175,161 @@ pub fct recentRoms(db, limit)
 | `db` | parameter | `` |
 | `limit` | parameter | `` |
 
+### recordCompatibility
+
+```zumbra
+pub fct recordCompatibility(db, info, mapperName, status, statusSource, videoStatus, audioStatus, inputStatus, saveSupport, achievementSupport, knownIssues, timestamp)
+```
+
+Upserts one local ROM compatibility record without touching play history.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `info` | parameter | `` |
+| `mapperName` | parameter | `` |
+| `status` | parameter | `` |
+| `statusSource` | parameter | `` |
+| `videoStatus` | parameter | `` |
+| `audioStatus` | parameter | `` |
+| `inputStatus` | parameter | `` |
+| `saveSupport` | parameter | `` |
+| `achievementSupport` | parameter | `` |
+| `knownIssues` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### recordCompatibilitySession
+
+```zumbra
+pub fct recordCompatibilitySession(db, digest, status, videoStatus, audioStatus, inputStatus, testedAt, frame)
+```
+
+Marks one successful local gameplay session as an emulator compatibility observation.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `status` | parameter | `` |
+| `videoStatus` | parameter | `` |
+| `audioStatus` | parameter | `` |
+| `inputStatus` | parameter | `` |
+| `testedAt` | parameter | `` |
+| `frame` | parameter | `` |
+
+### reviewCompatibility
+
+```zumbra
+pub fct reviewCompatibility(db, digest, status, knownIssues, timestamp)
+```
+
+Applies a local/manual compatibility review while retaining automatic observations.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `status` | parameter | `` |
+| `knownIssues` | parameter | `` |
+| `timestamp` | parameter | `` |
+
+### compatibilityRecord
+
+```zumbra
+pub fct compatibilityRecord(db, digest)
+```
+
+Returns one compatibility record with a stable shape for VM/native callers.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### compatibilityRows
+
+```zumbra
+pub fct compatibilityRows(db)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+
+### compatibilityCount
+
+```zumbra
+pub fct compatibilityCount(db, status)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `status` | parameter | `` |
+
+### compatibilitySnapshot
+
+```zumbra
+pub fct compatibilitySnapshot(db, generatedAt)
+```
+
+Standalone compatibility-report payload; achievement/save backups remain separate.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `generatedAt` | parameter | `` |
+
+### exportCompatibilityJson
+
+```zumbra
+pub fct exportCompatibilityJson(db, path, generatedAt)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `path` | parameter | `` |
+| `generatedAt` | parameter | `` |
+
+### importCompatibilitySnapshot
+
+```zumbra
+pub fct importCompatibilitySnapshot(db, snapshot)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `snapshot` | parameter | `` |
+
+### importCompatibilityJson
+
+```zumbra
+pub fct importCompatibilityJson(db, path)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `path` | parameter | `` |
+
+### libraryRowsCompat
+
+```zumbra
+pub fct libraryRowsCompat(db, filter, compatibilityFilter, sort, search, limit, offset)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filter` | parameter | `` |
+| `compatibilityFilter` | parameter | `` |
+| `sort` | parameter | `` |
+| `search` | parameter | `` |
+| `limit` | parameter | `` |
+| `offset` | parameter | `` |
+
 ### libraryRows
 
 ```zumbra
@@ -3941,6 +4344,19 @@ pub fct libraryRows(db, filter, sort, search, limit, offset)
 | `search` | parameter | `` |
 | `limit` | parameter | `` |
 | `offset` | parameter | `` |
+
+### libraryCountCompat
+
+```zumbra
+pub fct libraryCountCompat(db, filter, compatibilityFilter, search)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filter` | parameter | `` |
+| `compatibilityFilter` | parameter | `` |
+| `search` | parameter | `` |
 
 ### libraryCount
 

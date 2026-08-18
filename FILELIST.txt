@@ -83,9 +83,11 @@ docs/release-0.5.60.md
 docs/release-0.5.61.md
 docs/release-0.5.62.md
 docs/release-0.5.63.md
+docs/release-0.5.64.md
 docs/release-0.5.7.md
 docs/release-0.5.8.md
 docs/release-0.5.9.md
+docs/rom-compatibility-0.5.64.md
 docs/save-states-z23.md
 docs/testing.md
 docs/z19-completion.md
@@ -103,8 +105,8 @@ fixtures/synthetic/nrom-256-chr-ram.nes
 fixtures/synthetic/nrom-trainer.nes
 fixtures/synthetic/truncated.bin
 fixtures/synthetic/unsupported-mapper5.nes
-fixtures/synthetic/z22-playable-loop.nes
 fixtures/synthetic/visible-frame.nes
+fixtures/synthetic/z22-playable-loop.nes
 github/workflows/ci.yml
 gitignore
 packaging/linux/dev.zumbra.nes.desktop
@@ -148,6 +150,7 @@ scripts/tag-release-0.5.60.sh
 scripts/tag-release-0.5.61.sh
 scripts/tag-release-0.5.62.sh
 scripts/tag-release-0.5.63.sh
+scripts/tag-release-0.5.64.sh
 scripts/test-z19-foundation.sh
 scripts/test-z20-cpu.sh
 scripts/test-z21-hardware.sh
@@ -157,6 +160,7 @@ scripts/verify-cpu-table.py
 src/achievements/catalog.zum
 src/achievements/engine.zum
 src/achievements/offline.zum
+src/compatibility/local.zum
 src/core/apu.zum
 src/core/audio_output.zum
 src/core/bus.zum
@@ -210,6 +214,7 @@ tests/bus_test.zum
 tests/cartridge_test.zum
 tests/chr_bus_test.zum
 tests/clock_test.zum
+tests/compatibility_database_test.zum
 tests/console_dma_test.zum
 tests/console_nmi_test.zum
 tests/console_sync_test.zum

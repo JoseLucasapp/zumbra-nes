@@ -1,3 +1,18 @@
+## 0.5.64 — local ROM compatibility database
+
+- Adds SQLite schema version 7 and persistent `rom_compatibility` records keyed by ROM SHA-256.
+- Records image/content CRC-32, mapper/submapper, format, compatibility status/source, video/audio/input observations, save support, achievement support, known issues, test count, last tested time and last tested frame.
+- Backfills existing 0.5.63 Game Library rows non-destructively without deleting settings, achievements, saves, sessions or play history.
+- Registers unsupported-but-valid ROMs before rejecting execution so Mapper diagnostics remain visible in the library.
+- Adds structured mapper/submapper diagnostics while preserving the existing compatibility API.
+- Marks a successfully completed interactive session as `PLAYABLE` without ever auto-claiming `PERFECT`; local/imported issue/perfect reviews are preserved across later automatic sessions.
+- Adds compatibility filters `ALL`, `PERFECT`, `PLAYABLE`, `ISSUES`, `UNSUPPORTED`, `UNTESTED` to Game Library.
+- Expands Game Details with compatibility, test history, video/audio/input, save/achievement support and known-issue information.
+- Adds standalone local compatibility JSON export/import on F10/F11.
+- Adds an in-window compatibility notice when a ROM cannot run because its mapper is unsupported.
+- Adds `tests/compatibility_database_test.zum` and raises the direct release test inventory to 85 files.
+- Keeps Zumbra-lang frozen at 0.14.5 and preserves the 0.5.63 library, achievements, audio, controls and save-state paths.
+
 ## 0.5.63 — Game Library and achievement UI
 
 - Adds a complete in-emulator Game Library backed by the existing local SQLite database.

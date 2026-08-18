@@ -1,3 +1,28 @@
+## 0.5.64 validation — local ROM compatibility database
+
+Acceptance criteria:
+
+1. Run `zumbra fmt --check src tests` and the release lint with Zumbra 0.14.5.
+2. Run `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` through `Zumbra NES release gate passed.`
+3. Confirm `project test: 85 test file(s) executed` and SQLite schema version `7`.
+4. Confirm the Game Library still lists previous 0.5.63 ROMs; existing settings, achievements, sessions, play time and save-state metadata must remain intact.
+5. Open a supported ROM and verify its initial compatibility is `UNTESTED`; after a real gameplay session and return to menu it becomes `PLAYABLE` with test count/last-tested updated.
+6. Verify Game Details shows mapper/name, compatibility, video/audio/input observation, save support, achievement support, known issues, test count, last tested and ROM identity.
+7. Verify F5 cycles `ALL / PERFECT / PLAYABLE / ISSUES / UNSUPPORTED / UNTESTED` independently of the existing achievement filter.
+8. Verify F10 exports `zumbra-nes-compatibility-report.json` and F11 imports a valid report without altering achievement/save backups.
+9. Load `fixtures/synthetic/unsupported-mapper5.nes` (or another valid unsupported ROM), confirm the emulator returns to the menu instead of crashing, shows an English mapper diagnostic and persists the ROM as `UNSUPPORTED`.
+10. Confirm mapper diagnostics include mapper, submapper and the supported mapper list.
+11. Re-verify search/sort/achievement filters, Game Details launch, achievement browser, keyboard/gamepad navigation and Esc/B behavior.
+12. Re-verify intro, audio, remap persistence, generic SDL gamepad input, F5/F8 save-state and F6 game-specific achievements.
+13. Confirm AppDir and `.deb` are generated; AppImage remains optional when `appimagetool` is unavailable.
+14. Confirm repository hygiene passes.
+
+Expected final line:
+
+```text
+Zumbra NES release gate passed.
+```
+
 ## 0.5.63 validation — Game Library and achievement UI
 
 Acceptance criteria:

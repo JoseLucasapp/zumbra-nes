@@ -6,7 +6,7 @@ import "../src/testing/assert.zum" as test;
 var db << store.memory();
 var cart << cartridge.load("fixtures/synthetic/nrom-128-horizontal.nes");
 var summary << offline.install(db, cart["info"], 123u64);
-test.assertInt(store.schemaVersion(db), 6, "local store schema version");
+test.assertInt(store.schemaVersion(db), 7, "local store schema version");
 test.assertInt(summary["total"], 5, "bundled development achievement count");
 test.assertInt(summary["unlocked"], 0, "nothing unlocked during install");
 test.assertInt(sizeOf(store.achievementGameRows(db)), 1, "local achievement game registered");
