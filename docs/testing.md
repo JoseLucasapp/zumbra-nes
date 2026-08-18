@@ -1,3 +1,17 @@
+## 0.5.63 Game Library check
+
+```bash
+EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh
+```
+
+Expected direct-test summary:
+
+```text
+project test: 84 test file(s) executed
+```
+
+Manual desktop QA must cover Game Library search/filter/sort, Game Details, achievement browsing, keyboard/gamepad navigation and launch/back-to-menu refresh.
+
 ## 0.5.62 Z29 local achievements offline check
 
 Run:
@@ -104,7 +118,7 @@ Todas as ROMs versionadas são sintéticas e legalmente redistribuíveis.
 
 ## Fixtures novas
 
-- `z23-visible-frame.nes`: Mapper 0 com paleta, CHR e nametable visíveis;
+- `visible-frame.nes`: Mapper 0 com paleta, CHR e nametable visíveis;
 - `mapper227-multicart.nes`: 512 KiB PRG e CHR RAM;
 - `unsupported-mapper5.nes`: valida o diagnóstico de incompatibilidade.
 

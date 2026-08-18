@@ -18,7 +18,7 @@ actual_version="$($zumbra_bin --version)"
 [[ "$actual_version" == "$expected_version" ]] || { echo "Zumbra version mismatch: expected $expected_version, got $actual_version" >&2; exit 1; }
 scripts/check-zumbra-native-performance.sh "$zumbra_bin"
 
-echo "Running local achievements, compatibility and debugger gate with Zumbra $actual_version..."
+echo "Running game library, local achievements, compatibility and debugger gate with Zumbra $actual_version..."
 rm -rf build dist
 mkdir -p build dist
 
@@ -38,15 +38,15 @@ grep -q "^version: ${project_version}$" build/project-info.txt
 # project test, VM smoke, native headless smoke and desktop smoke.
 if ! "$zumbra_bin" project check > build/project-check.txt 2>&1; then
     cat build/project-check.txt
-    echo "Project check is advisory for 0.5.62; continuing to test/build."
+    echo "Project check is advisory for 0.5.63; continuing to test/build."
 else
     cat build/project-check.txt
 fi
 
 # Zumbra 0.14.5 `project test` treats project-wide unused-symbol diagnostics
-# as a failed aggregate precheck (36 src + 83 test files = 119 files), even
+# as a failed aggregate precheck (37 src + 84 test files = 121 files), even
 # though the executable test files are valid. The release gate therefore uses
-# the explicit 83-file test runner as its authoritative test execution step.
+# the explicit per-file test runner as its authoritative test execution step.
 # Opt into the aggregate diagnostic trace only when investigating compiler
 # diagnostics; it is intentionally off for normal release validation.
 if [[ "${ZUMBRA_RUN_AGGREGATE_PROJECT_TEST:-0}" == "1" ]]; then
@@ -68,7 +68,7 @@ mapfile -t smoke < build/vm-smoke.txt
 [[ "${smoke[5]:-}" == "245760" ]]
 [[ "${#smoke[6]}" -eq 64 ]]
 [[ "${#smoke[8]}" -eq 64 ]]
-[[ "${smoke[9]:-}" == "5" ]]
+[[ "${smoke[9]:-}" == "6" ]]
 [[ "${smoke[10]:-}" == "1" ]]
 [[ "${smoke[11]:-}" == "1" ]]
 [[ "${smoke[12]:-}" == "15" ]]
@@ -122,6 +122,12 @@ grep -q 'returnToMenu << true' src/frontend/desktop.zum
 grep -q 'pub fct firstKeyDown(context)' src/frontend/native_bridge.zum
 grep -q 'fct saveRemapCode(context, controls, action, code)' src/frontend/desktop.zum
 grep -q 'captureReady << true' src/frontend/desktop.zum
+# 0.5.63 game-library UX must remain wired to local SQLite state.
+grep -q 'fct drawGameLibrary' src/frontend/desktop.zum
+grep -q 'fct drawGameDetails' src/frontend/desktop.zum
+grep -q 'fct drawLibraryAchievements' src/frontend/desktop.zum
+grep -q 'pub fct libraryRows' src/persistence/store.zum
+grep -q 'pub fct pageState' src/frontend/library.zum
 
 scripts/check-repository-hygiene.sh
 

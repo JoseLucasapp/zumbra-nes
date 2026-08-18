@@ -1,0 +1,303 @@
+import "../persistence/store.zum" as store;
+pub fct filterName(index) {
+    if (index == 1) {
+        return "known";
+    }
+    if (index == 2) {
+        return "in-progress";
+    }
+    if (index == 3) {
+        return "completed";
+    }
+    if (index == 4) {
+        return "no-pack";
+    }
+    return "all";
+}
+pub fct filterLabel(index) {
+    if (index == 1) {
+        return "KNOWN";
+    }
+    if (index == 2) {
+        return "IN PROGRESS";
+    }
+    if (index == 3) {
+        return "COMPLETED";
+    }
+    if (index == 4) {
+        return "NO PACK";
+    }
+    return "ALL";
+}
+pub fct nextFilter(index) {
+    var next << index + 1;
+    if (next > 4) {
+        next << 0;
+    }
+    return next;
+}
+pub fct previousFilter(index) {
+    var next << index - 1;
+    if (next < 0) {
+        next << 4;
+    }
+    return next;
+}
+pub fct sortName(index) {
+    if (index == 1) {
+        return "title";
+    }
+    if (index == 2) {
+        return "progress";
+    }
+    if (index == 3) {
+        return "playtime";
+    }
+    if (index == 4) {
+        return "sessions";
+    }
+    return "recent";
+}
+pub fct sortLabel(index) {
+    if (index == 1) {
+        return "TITLE";
+    }
+    if (index == 2) {
+        return "PROGRESS";
+    }
+    if (index == 3) {
+        return "PLAY TIME";
+    }
+    if (index == 4) {
+        return "SESSIONS";
+    }
+    return "RECENT";
+}
+pub fct nextSort(index) {
+    var next << index + 1;
+    if (next > 4) {
+        next << 0;
+    }
+    return next;
+}
+pub fct previousSort(index) {
+    var next << index - 1;
+    if (next < 0) {
+        next << 4;
+    }
+    return next;
+}
+
+/// Returns a friendly file name without parent directories and the final extension.
+pub fct titleFromPath(path) {
+    var length << sizeOf(path);
+    if (length == 0) {
+        return "UNKNOWN ROM";
+    }
+    var start << 0;
+    var index << length - 1;
+    while (index >= 0) {
+        var character << path[index];
+        if (character == "/" or character == "\\") {
+            start << index + 1;
+            index <<-1;
+        } else {
+            index << index - 1;
+        }
+    }
+    var end << length;
+    index << start;
+    while (index < length) {
+        if (path[index] == ".") {
+            end << index;
+        }
+        index << index + 1;
+    }
+    if (end <= start) {
+        end << length;
+    }
+    var title << "";
+    index << start;
+    while (index < end) {
+        title << title + path[index];
+        index << index + 1;
+    }
+    if (title == "") {
+        return "UNKNOWN ROM";
+    }
+    return title;
+}
+pub fct displayTitle(row) {
+    if (row["pack_source"] != "none") {
+        return row["display_title"];
+    }
+    return titleFromPath(row["path"]);
+}
+pub fct hasAchievementPack(row) {
+    return toInt(row["achievement_total"]) > 0;
+}
+pub fct completionPercent(row) {
+    return toInt(row["achievement_percent"]);
+}
+pub fct completionLabel(row) {
+    var total << toInt(row["achievement_total"]);
+    var unlocked << toInt(row["achievement_unlocked"]);
+    if (total <= 0) {
+        return "NO PACK";
+    }
+    if (unlocked >= total) {
+        return "COMPLETE";
+    }
+    if (unlocked > 0) {
+        return "IN PROGRESS";
+    }
+    return "NOT STARTED";
+}
+pub fct playTimeLabel(secondsValue) {
+    var seconds << toInt(secondsValue);
+    if (seconds < 0) {
+        seconds << 0;
+    }
+    if (seconds < 60) {
+        return toString(seconds) + "S";
+    }
+    var minutes << seconds / 60;
+    if (minutes < 60) {
+        return toString(minutes) + "M";
+    }
+    var hours << minutes / 60;
+    var remainingMinutes << minutes % 60;
+    if (remainingMinutes == 0) {
+        return toString(hours) + "H";
+    }
+    return toString(hours) + "H " + toString(remainingMinutes) + "M";
+}
+pub fct lastPlayedLabel(timestampValue, nowValue) {
+    var timestamp << toInt(timestampValue);
+    var now << toInt(nowValue);
+    if (timestamp <= 0) {
+        return "NEVER";
+    } // Older builds stored SDL process ticks here. Keep those databases readable and
+    // clearly mark legacy rows until the ROM is launched again with wall-clock timestamps.
+    if (timestamp < 1000000000) {
+        return "LEGACY";
+    }
+    var age << now - timestamp;
+    if (age < 0) {
+        age << 0;
+    }
+    if (age < 60) {
+        return "JUST NOW";
+    }
+    if (age < 3600) {
+        return toString(age / 60) + "M AGO";
+    }
+    if (age < 86400) {
+        return toString(age / 3600) + "H AGO";
+    }
+    return toString(age / 86400) + "D AGO";
+}
+pub fct page(db, filterIndex, sortIndex, search, limit, offset) {
+    return store.libraryRows(db, filterName(filterIndex), sortName(sortIndex), search, limit, offset);
+}
+pub fct count(db, filterIndex, search) {
+    return store.libraryCount(db, filterName(filterIndex), search);
+}
+pub fct detail(db, digest) {
+    return store.libraryGame(db, digest);
+}
+pub fct achievements(db, digest, filter) {
+    return store.libraryAchievementRows(db, digest, filter);
+}
+pub fct sessions(db, digest, limit) {
+    return store.librarySessionRows(db, digest, limit);
+}
+pub fct achievementFilterName(index) {
+    if (index == 1) {
+        return "locked";
+    }
+    if (index == 2) {
+        return "unlocked";
+    }
+    return "all";
+}
+pub fct achievementFilterLabel(index) {
+    if (index == 1) {
+        return "LOCKED";
+    }
+    if (index == 2) {
+        return "UNLOCKED";
+    }
+    return "ALL";
+}
+pub fct nextAchievementFilter(index) {
+    var next << index + 1;
+    if (next > 2) {
+        next << 0;
+    }
+    return next;
+}
+pub fct previousAchievementFilter(index) {
+    var next << index - 1;
+    if (next < 0) {
+        next << 2;
+    }
+    return next;
+}
+pub fct prefix(text, limit) {
+    var value << toString(text);
+    var count << sizeOf(value);
+    if (count > limit) {
+        count << limit;
+    }
+    var result << "";
+    var index << 0;
+    while (index < count) {
+        result << result + value[index];
+        index << index + 1;
+    }
+    return result;
+}
+pub fct pageState(db, filterIndex, sortIndex, search, cursor, pageSize) {
+    var total << count(db, filterIndex, search);
+    var nextCursor << cursor;
+    if (total <= 0) {
+        nextCursor << 0;
+    } else {
+        if (nextCursor < 0) {
+            nextCursor << 0;
+        }
+        if (nextCursor >= total) {
+            nextCursor << total - 1;
+        }
+    }
+    var offset << 0;
+    if (pageSize > 0) {
+        offset <<(nextCursor / pageSize) * pageSize;
+    }
+    return {
+        "rows": page(db, filterIndex, sortIndex, search, pageSize, offset), "total": total, "cursor": nextCursor, "offset": offset
+    };
+}
+pub fct achievementState(db, digest, filterIndex, cursor, pageSize) {
+    var rows << achievements(db, digest, achievementFilterName(filterIndex));
+    var total << sizeOf(rows);
+    var nextCursor << cursor;
+    if (total <= 0) {
+        nextCursor << 0;
+    } else {
+        if (nextCursor < 0) {
+            nextCursor << 0;
+        }
+        if (nextCursor >= total) {
+            nextCursor << total - 1;
+        }
+    }
+    var offset << 0;
+    if (pageSize > 0) {
+        offset <<(nextCursor / pageSize) * pageSize;
+    }
+    return {
+        "rows": rows, "total": total, "cursor": nextCursor, "offset": offset
+    };
+}

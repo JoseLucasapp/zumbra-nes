@@ -1,3 +1,31 @@
+## 0.5.63 validation — Game Library and achievement UI
+
+Acceptance criteria:
+
+1. Run `zumbra fmt --check src tests` and the release lint with Zumbra 0.14.5.
+2. Run `EXPECTED_ZUMBRA_VERSION=0.14.5 scripts/test-z23-compatibility.sh` through `Zumbra NES release gate passed.`
+3. Confirm `project test: 84 test file(s) executed` and SQLite schema version `6`.
+4. Confirm the main menu shows `GAME LIBRARY` and no development-stage/Xbox wording.
+5. Open at least three previously played ROMs and verify the library lists them with play time/session/progress data.
+6. Verify F2 cycles `ALL / KNOWN / IN PROGRESS / COMPLETED / NO PACK`.
+7. Verify F3 cycles `RECENT / TITLE / PROGRESS / PLAY TIME / SESSIONS`.
+8. Verify F4 search accepts letters/numbers/space, Backspace edits, Enter finishes and Esc leaves search without closing the library.
+9. Verify keyboard and an SDL-recognized external controller can navigate rows, open details and go back consistently.
+10. Open Game Details and verify ROM READY/MISSING, mapper, identity prefix, achievements, play time, sessions and last played.
+11. Open the per-game achievement browser and verify ALL/LOCKED/UNLOCKED views plus descriptions/progress.
+12. Confirm the main Achievements entry opens the known-games library instead of the old placeholder.
+13. Confirm F9 exports the local achievement JSON from the achievement browser.
+14. Launch a game from Game Details, play, return with Esc, and confirm play time/session/last-played values refresh on reopening the library.
+15. Re-verify intro, audio, remap, generic gamepad input, F5/F8 save-state, F6 in-game achievements, Tetris and Popeye packs.
+16. Confirm AppDir and `.deb` are generated; AppImage remains optional when `appimagetool` is unavailable.
+17. Confirm repository hygiene passes.
+
+Expected final line:
+
+```text
+Zumbra NES release gate passed.
+```
+
 ## 0.5.62 validation — local achievements offline
 
 Acceptance criteria:
@@ -174,7 +202,7 @@ ROM incompatível: mapper 5
 ## Validação visual
 
 ```bash
-./build/zumbra-nes fixtures/synthetic/z23-visible-frame.nes
+./build/zumbra-nes fixtures/synthetic/visible-frame.nes
 ```
 
 Confirmar:

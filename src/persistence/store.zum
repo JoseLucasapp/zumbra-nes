@@ -15,16 +15,21 @@ fct migrations() {
     var localAchievementSql << "CREATE TABLE IF NOT EXISTS achievement_game_metadata (game_digest TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, pack_version INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL); ";
     localAchievementSql << localAchievementSql + "CREATE TABLE IF NOT EXISTS achievement_events (id INTEGER PRIMARY KEY AUTOINCREMENT, game_digest TEXT NOT NULL, achievement_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, unlocked_at INTEGER NOT NULL); ";
     localAchievementSql << localAchievementSql + "CREATE INDEX IF NOT EXISTS achievement_events_game_idx ON achievement_events(game_digest, unlocked_at DESC);";
+    var libraryUiSql << "CREATE INDEX IF NOT EXISTS rom_library_title_idx ON rom_library(title COLLATE NOCASE); ";
+    libraryUiSql << libraryUiSql + "CREATE INDEX IF NOT EXISTS rom_library_playtime_idx ON rom_library(play_seconds DESC, last_opened DESC); ";
+    libraryUiSql << libraryUiSql + "CREATE INDEX IF NOT EXISTS rom_library_sessions_idx ON rom_library(sessions DESC, last_opened DESC);";
     [{
-        "version": 1, "name": "z22_core", "sql": coreSql
+        "version": 1, "name": "core", "sql": coreSql
     }, {
-        "version": 2, "name": "z22_achievements", "sql": achievementSql
+        "version": 2, "name": "achievements", "sql": achievementSql
     }, {
-        "version": 3, "name": "z22_indexes", "sql": indexSql
+        "version": 3, "name": "indexes", "sql": indexSql
     }, {
-        "version": 4, "name": "z23_save_states", "sql": stateSql
+        "version": 4, "name": "save_states", "sql": stateSql
     }, {
         "version": 5, "name": "local_achievements", "sql": localAchievementSql
+    }, {
+        "version": 6, "name": "game_library_ui", "sql": libraryUiSql
     }];
 }
 
@@ -1698,6 +1703,98 @@ pub fct recordRom(db, info, openedAt) {
 pub fct recentRoms(db, limit) {
     database.query(db, "SELECT digest, path, title, mapper, last_opened, play_seconds, sessions FROM rom_library ORDER BY last_opened DESC LIMIT :limit", {
         "limit": limit
+    });
+}
+fct libraryFilterSql(filter) {
+    if (filter == "known") {
+        return " AND COALESCE(progress.total, 0) > 0";
+    }
+    if (filter == "in-progress") {
+        return " AND COALESCE(progress.total, 0) > 0 AND COALESCE(progress.unlocked, 0) > 0 AND COALESCE(progress.unlocked, 0) < COALESCE(progress.total, 0)";
+    }
+    if (filter == "completed") {
+        return " AND COALESCE(progress.total, 0) > 0 AND COALESCE(progress.unlocked, 0) = COALESCE(progress.total, 0)";
+    }
+    if (filter == "no-pack") {
+        return " AND COALESCE(progress.total, 0) = 0";
+    }
+    return "";
+}
+fct librarySortSql(sort) {
+    if (sort == "title") {
+        return " ORDER BY display_title COLLATE NOCASE ASC, r.last_opened DESC";
+    }
+    if (sort == "progress") {
+        return " ORDER BY achievement_percent DESC, achievement_unlocked DESC, r.last_opened DESC";
+    }
+    if (sort == "playtime") {
+        return " ORDER BY r.play_seconds DESC, r.last_opened DESC";
+    }
+    if (sort == "sessions") {
+        return " ORDER BY r.sessions DESC, r.last_opened DESC";
+    }
+    return " ORDER BY r.last_opened DESC";
+}
+fct libraryFromSql() {
+    var sql << " FROM rom_library r LEFT JOIN achievement_game_metadata meta ON meta.game_digest = r.digest ";
+    sql << sql + "LEFT JOIN (SELECT game_digest, COUNT(*) AS total, SUM(CASE WHEN unlocked = 1 THEN 1 ELSE 0 END) AS unlocked FROM achievement_progress GROUP BY game_digest) progress ON progress.game_digest = r.digest ";
+    return sql;
+}
+fct libraryWhereSql(filter) {
+    var sql << " WHERE (LOWER(CASE WHEN COALESCE(meta.source, 'none') != 'none' THEN meta.title ELSE r.title END) LIKE LOWER(:search) OR LOWER(r.path) LIKE LOWER(:search))";
+    sql << sql + libraryFilterSql(filter);
+    return sql;
+}
+fct librarySelectSql() {
+    var sql << "SELECT r.digest, r.path, CASE WHEN COALESCE(meta.source, 'none') != 'none' THEN meta.title ELSE r.title END AS display_title, r.title AS library_title, r.mapper, r.last_opened, r.play_seconds, r.sessions, ";
+    sql << sql + "COALESCE(meta.source, 'none') AS pack_source, COALESCE(meta.pack_version, 0) AS pack_version, COALESCE(progress.total, 0) AS achievement_total, COALESCE(progress.unlocked, 0) AS achievement_unlocked, ";
+    sql << sql + "CASE WHEN COALESCE(progress.total, 0) > 0 THEN (COALESCE(progress.unlocked, 0) * 100) / progress.total ELSE 0 END AS achievement_percent";
+    return sql;
+} /// Returns the local game library with achievement progress, search, filtering and sorting.
+pub fct libraryRows(db, filter, sort, search, limit, offset) {
+    var sql << librarySelectSql() + libraryFromSql() + libraryWhereSql(filter) + librarySortSql(sort) + " LIMIT :limit OFFSET :offset";
+    return database.query(db, sql, {
+        "search": "%" + search + "%", "limit": limit, "offset": offset
+    });
+} /// Returns the number of local library entries matching the current search/filter.
+pub fct libraryCount(db, filter, search) {
+    var sql << "SELECT COUNT(*) AS total" + libraryFromSql() + libraryWhereSql(filter);
+    var rows << database.query(db, sql, {
+        "search": "%" + search + "%"
+    });
+    if (sizeOf(rows) == 0) {
+        return 0;
+    }
+    return toInt(rows[0]["total"]);
+} /// Returns one local library entry with achievement and play statistics.
+pub fct libraryGame(db, digest) {
+    var sql << librarySelectSql() + libraryFromSql() + " WHERE r.digest = :digest LIMIT 1";
+    var rows << database.query(db, sql, {
+        "digest": digest
+    });
+    if (sizeOf(rows) == 0) {
+        return {
+            "digest": digest, "path": "", "display_title": "UNKNOWN ROM", "library_title": "", "mapper": 0, "last_opened": 0, "play_seconds": 0, "sessions": 0, "pack_source": "none", "pack_version": 0, "achievement_total": 0, "achievement_unlocked": 0, "achievement_percent": 0
+        };
+    }
+    return rows[0];
+} /// Returns achievement rows for the library detail screen.
+pub fct libraryAchievementRows(db, digest, filter) {
+    var condition << "";
+    if (filter == "locked") {
+        condition << " AND p.unlocked = 0";
+    }
+    if (filter == "unlocked") {
+        condition << " AND p.unlocked = 1";
+    }
+    var sql << "SELECT d.achievement_id AS id, d.title, d.description, d.target, p.progress, p.unlocked, p.unlocked_at FROM achievement_definitions d JOIN achievement_progress p ON p.game_digest = d.game_digest AND p.achievement_id = d.achievement_id WHERE d.game_digest = :digest" + condition + " ORDER BY p.unlocked DESC, p.unlocked_at DESC, d.achievement_id";
+    return database.query(db, sql, {
+        "digest": digest
+    });
+} /// Returns recent completed sessions for one game, newest first.
+pub fct librarySessionRows(db, digest, limit) {
+    return database.query(db, "SELECT started_at, ended_at, seconds, frames FROM play_sessions WHERE rom_digest = :digest AND ended_at IS NOT NULL ORDER BY started_at DESC LIMIT :limit", {
+        "digest": digest, "limit": limit
     });
 }
 pub fct mostRecentPath(db) {

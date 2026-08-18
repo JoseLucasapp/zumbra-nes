@@ -1,6 +1,6 @@
 [app]
 name = "Zumbra NES"
-version = "0.5.62"
+version = "0.5.63"
 identifier = "dev.zumbra.nes"
 entry = "src/desktop_main.zum"
 icon = "assets/zumbra-nes.png"

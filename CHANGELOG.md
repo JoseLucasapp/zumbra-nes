@@ -1,3 +1,19 @@
+## 0.5.63 — Game Library and achievement UI
+
+- Adds a complete in-emulator Game Library backed by the existing local SQLite database.
+- Replaces the single Recent ROM launcher entry with a browsable library while preserving direct Load ROM.
+- Adds search, five library filters (`ALL`, `KNOWN`, `IN PROGRESS`, `COMPLETED`, `NO PACK`) and five sort modes (`RECENT`, `TITLE`, `PROGRESS`, `PLAY TIME`, `SESSIONS`).
+- Adds per-ROM rows showing achievement completion, play time and missing-file state.
+- Adds a Game Details screen with mapper, SHA-256 identity prefix, ROM availability, achievement completion, play time, session count and relative last-played status.
+- Adds a dedicated per-game achievement browser with `ALL`, `LOCKED` and `UNLOCKED` views.
+- Adds full keyboard/gamepad navigation for library, details and achievement views; F2/F3/F4 provide filter/sort/search shortcuts.
+- Makes the main Achievements entry open the known-games achievement library instead of a placeholder panel.
+- Adds F9 local JSON export from the library achievement browser.
+- Adds SQLite schema version 6 indexes for library title/play-time/session queries while preserving existing local progress.
+- Separates monotonic SDL timing from persisted wall-clock timestamps: sessions, last-opened, save-state metadata and new achievement unlocks now use `unixTimeSeconds()`. Existing 0.5.62 tick-based rows remain readable and are labeled `LEGACY` until replayed.
+- Adds `src/frontend/library.zum` as the library view-model layer and `tests/game_library_test.zum` covering search, filters, sorting state, progress, sessions and display helpers.
+- Raises the direct release test inventory to 84 files and keeps Zumbra-lang frozen at 0.14.5.
+
 ## 0.5.62 — local achievements offline
 
 - Adds a complete local-only achievements layer backed by SQLite.

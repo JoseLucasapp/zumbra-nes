@@ -108,7 +108,7 @@ def chr_data(size: int) -> bytearray:
 files: dict[str, bytes] = {}
 files["nrom-128-horizontal.nes"] = bytes(header(1, 1) + prg(16384, 0x3FFC) + chr_data(8192))
 files["z22-playable-loop.nes"] = bytes(header(1, 1) + playable_prg(16384) + chr_data(8192))
-files["z23-visible-frame.nes"] = bytes(header(1, 1) + visible_prg(16384) + visible_chr())
+files["visible-frame.nes"] = bytes(header(1, 1) + visible_prg(16384) + visible_chr())
 files["mapper227-multicart.nes"] = bytes(header(32, 0, flags6=0x31, flags7=0xE0) + mapper227_prg())
 files["unsupported-mapper5.nes"] = bytes(header(1, 1, flags6=0x50) + playable_prg(16384) + chr_data(8192))
 files["nrom-256-chr-ram.nes"] = bytes(header(2, 0, flags6=0x03) + prg(32768, 0x7FFC))

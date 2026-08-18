@@ -1,6 +1,6 @@
-# zumbra-nes 0.5.62
+# zumbra-nes 0.5.63
 
-**Local achievements in 0.5.62:** the emulator now keeps achievements entirely on the PC where it is installed. Progress, unlock events, ROM library metadata, recent ROMs, settings and save-state metadata are stored in local SQLite. There is no account, no cloud sync, no leaderboard and no remote achievement service.
+**Game Library in 0.5.63:** the emulator now exposes its local SQLite ROM history as a navigable game library with search, filters, sorting, per-game achievement progress, play time, session counts, last-played state and a game-detail/achievement browser. Everything remains offline and local-first; there is no account, cloud sync, leaderboard or remote achievement service.
 
 Zumbra NES is a local-first NES/Famicom emulator written in **Zumbra**. The application repository keeps the emulator code in `.zum`; video, audio, input, packaging and desktop integration come from the official Zumbra runtime.
 
@@ -37,7 +37,10 @@ See `docs/compatibility-matrix-z28.md`, `docs/mappers-z23.md` and `docs/local-ac
 - PPU 2C02 background, sprites, scrolling, VBlank/NMI and OAM DMA;
 - APU pulse 1/2, triangle, noise and DMC;
 - keyboard and gamepad input;
-- SQLite-backed local settings, ROM history and achievements;
+- SQLite-backed local settings, ROM history, play sessions and achievements;
+- in-emulator Game Library with recent/known/no-pack/completion filters, title/progress/play-time/session sorting and keyboard search;
+- per-game detail screen with ROM availability, mapper, SHA-256 identity, play time, session count and relative last-played status;
+- per-game achievement browser with all/locked/unlocked views and keyboard/gamepad navigation;
 - local offline achievement unlocks using game-specific ROM-hash packs, summaries and JSON backup/export;
 - SRAM persistence;
 - ten save-state slots plus SQLite save-state metadata;
@@ -91,7 +94,7 @@ Open a ROM you own:
 Run the legal visual fixture:
 
 ```bash
-./build/zumbra-nes fixtures/synthetic/z23-visible-frame.nes
+./build/zumbra-nes fixtures/synthetic/visible-frame.nes
 ```
 
 ## Gate
@@ -107,7 +110,7 @@ The gate validates:
 - CPU opcode table;
 - formatter and linter;
 - project info/check diagnostics;
-- 83 direct test files;
+- 84 direct test files;
 - docs generation;
 - VM smoke;
 - native C11 smoke;
@@ -133,16 +136,16 @@ scripts/package-z23-linux.sh
 Main artifacts:
 
 ```text
-dist/zumbra-nes-0.5.62-linux-amd64.AppDir/
-dist/zumbra-nes_0.5.62_amd64.deb
+dist/zumbra-nes-0.5.63-linux-amd64.AppDir/
+dist/zumbra-nes_0.5.63_amd64.deb
 ```
 
 ## Current status
 
 ```text
 Zumbra-lang baseline: 0.14.5
-zumbra-nes release: 0.5.62
-release focus: local achievements offline
+zumbra-nes release: 0.5.63
+release focus: local Game Library + achievement UI
 supported mappers: 15
 local achievements: SQLite-only, offline
 ```

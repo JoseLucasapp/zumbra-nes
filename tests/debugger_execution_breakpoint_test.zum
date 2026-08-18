@@ -2,7 +2,7 @@ import "../src/core/cartridge.zum" as cartridge;
 import "../src/core/console.zum" as console;
 import "../src/debugger/debugger.zum" as debugger;
 import "../src/testing/assert.zum" as test;
-var machine << console.create(cartridge.load("fixtures/synthetic/z23-visible-frame.nes"));
+var machine << console.create(cartridge.load("fixtures/synthetic/visible-frame.nes"));
 var debug << debugger.create(machine);
 debugger.addWriteBreakpoint(debug, 0x2000);
 var executed << debugger.run(debug, 20);

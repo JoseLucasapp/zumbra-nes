@@ -1,6 +1,6 @@
 import "frontend/playable_headless.zum" as playable;
 fct main() {
-    var report << playable.runFile("fixtures/synthetic/z23-visible-frame.nes");
+    var report << playable.runFile("fixtures/synthetic/visible-frame.nes");
     playable.printReport(report);
 }
 main();

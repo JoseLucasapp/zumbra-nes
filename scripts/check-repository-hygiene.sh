@@ -40,7 +40,7 @@ if grep -R --include='*.zum' -n 'extern "C"' src tests >/dev/null 2>&1; then
 fi
 test -f assets/zumbra-nes.png
 test -f fixtures/synthetic/mapper227-multicart.nes
-test -f fixtures/synthetic/z23-visible-frame.nes
+test -f fixtures/synthetic/visible-frame.nes
 test -f src/core/mapper.zum
 test -f src/persistence/save_ram.zum
 test -f src/persistence/save_state.zum
@@ -48,17 +48,19 @@ test -f src/debugger/debugger.zum
 test -f src/achievements/catalog.zum
 test -f src/achievements/engine.zum
 test -f src/achievements/offline.zum
+test -f src/frontend/library.zum
 test -f tests/achievement_offline_install_test.zum
 test -f tests/achievement_export_import_test.zum
 test -f tests/achievement_summary_test.zum
 test -f tests/achievement_progress_monotonic_test.zum
+test -f tests/game_library_test.zum
 test -x scripts/test-z23-compatibility.sh
 test -x scripts/check-zumbra-native-performance.sh
 test -x scripts/check-z23-sustained-memory.sh
 test -x scripts/check-z23-fast-frame-loop.sh
 test -x scripts/run-z23-tests.sh
 test -x scripts/package-z23-linux.sh
-test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 83
+test "$(find tests -maxdepth 1 -type f -name '*_test.zum' | wc -l)" -eq 84
 
 if [[ -d .git ]]; then
     tracked_generated="$(git ls-files 'build/**' 'dist/**' '.zumbra/**')"

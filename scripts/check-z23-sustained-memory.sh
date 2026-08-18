@@ -16,8 +16,8 @@ import "../../src/core/cartridge.zum" as cartridge;
 import "../../src/core/console.zum" as console;
 import "../../src/core/palette.zum" as palette;
 
-var data << readBytes("fixtures/synthetic/z23-visible-frame.nes");
-var cart << cartridge.fromBytes(data, "fixtures/synthetic/z23-visible-frame.nes");
+var data << readBytes("fixtures/synthetic/visible-frame.nes");
+var cart << cartridge.fromBytes(data, "fixtures/synthetic/visible-frame.nes");
 var machine << console.create(cart);
 var rgba << palette.rgbaBuffer(machine["bus"]["ppu"]["framebuffer"]);
 var before << runtimeMemoryStats();

@@ -2653,6 +2653,303 @@ A/B    = Z/X or J/K
 | `settings` | parameter | `` |
 | `player` | parameter | `` |
 
+## `/home/joselucasapp/projects/zumbra-nes/src/frontend/library.zum`
+
+### filterName
+
+```zumbra
+pub fct filterName(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### filterLabel
+
+```zumbra
+pub fct filterLabel(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### nextFilter
+
+```zumbra
+pub fct nextFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### previousFilter
+
+```zumbra
+pub fct previousFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### sortName
+
+```zumbra
+pub fct sortName(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### sortLabel
+
+```zumbra
+pub fct sortLabel(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### nextSort
+
+```zumbra
+pub fct nextSort(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### previousSort
+
+```zumbra
+pub fct previousSort(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### titleFromPath
+
+```zumbra
+pub fct titleFromPath(path)
+```
+
+Returns a friendly file name without parent directories and the final extension.
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `path` | parameter | `` |
+
+### displayTitle
+
+```zumbra
+pub fct displayTitle(row)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `row` | parameter | `` |
+
+### hasAchievementPack
+
+```zumbra
+pub fct hasAchievementPack(row)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `row` | parameter | `` |
+
+### completionPercent
+
+```zumbra
+pub fct completionPercent(row)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `row` | parameter | `` |
+
+### completionLabel
+
+```zumbra
+pub fct completionLabel(row)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `row` | parameter | `` |
+
+### playTimeLabel
+
+```zumbra
+pub fct playTimeLabel(secondsValue)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `secondsValue` | parameter | `` |
+
+### lastPlayedLabel
+
+```zumbra
+pub fct lastPlayedLabel(timestampValue, nowValue)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `timestampValue` | parameter | `` |
+| `nowValue` | parameter | `` |
+
+### page
+
+```zumbra
+pub fct page(db, filterIndex, sortIndex, search, limit, offset)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `sortIndex` | parameter | `` |
+| `search` | parameter | `` |
+| `limit` | parameter | `` |
+| `offset` | parameter | `` |
+
+### count
+
+```zumbra
+pub fct count(db, filterIndex, search)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `search` | parameter | `` |
+
+### detail
+
+```zumbra
+pub fct detail(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### achievements
+
+```zumbra
+pub fct achievements(db, digest, filter)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `filter` | parameter | `` |
+
+### sessions
+
+```zumbra
+pub fct sessions(db, digest, limit)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `limit` | parameter | `` |
+
+### achievementFilterName
+
+```zumbra
+pub fct achievementFilterName(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### achievementFilterLabel
+
+```zumbra
+pub fct achievementFilterLabel(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### nextAchievementFilter
+
+```zumbra
+pub fct nextAchievementFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### previousAchievementFilter
+
+```zumbra
+pub fct previousAchievementFilter(index)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `index` | parameter | `` |
+
+### prefix
+
+```zumbra
+pub fct prefix(text, limit)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `text` | parameter | `` |
+| `limit` | parameter | `` |
+
+### pageState
+
+```zumbra
+pub fct pageState(db, filterIndex, sortIndex, search, cursor, pageSize)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `sortIndex` | parameter | `` |
+| `search` | parameter | `` |
+| `cursor` | parameter | `` |
+| `pageSize` | parameter | `` |
+
+### achievementState
+
+```zumbra
+pub fct achievementState(db, digest, filterIndex, cursor, pageSize)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `filterIndex` | parameter | `` |
+| `cursor` | parameter | `` |
+| `pageSize` | parameter | `` |
+
 ## `/home/joselucasapp/projects/zumbra-nes/src/frontend/native_bridge.zum`
 
 ### COMMAND_OPEN
@@ -3628,6 +3925,68 @@ pub fct recentRoms(db, limit)
 | Member | Kind | Type / Signature |
 |---|---|---|
 | `db` | parameter | `` |
+| `limit` | parameter | `` |
+
+### libraryRows
+
+```zumbra
+pub fct libraryRows(db, filter, sort, search, limit, offset)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filter` | parameter | `` |
+| `sort` | parameter | `` |
+| `search` | parameter | `` |
+| `limit` | parameter | `` |
+| `offset` | parameter | `` |
+
+### libraryCount
+
+```zumbra
+pub fct libraryCount(db, filter, search)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `filter` | parameter | `` |
+| `search` | parameter | `` |
+
+### libraryGame
+
+```zumbra
+pub fct libraryGame(db, digest)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+
+### libraryAchievementRows
+
+```zumbra
+pub fct libraryAchievementRows(db, digest, filter)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
+| `filter` | parameter | `` |
+
+### librarySessionRows
+
+```zumbra
+pub fct librarySessionRows(db, digest, limit)
+```
+
+| Member | Kind | Type / Signature |
+|---|---|---|
+| `db` | parameter | `` |
+| `digest` | parameter | `` |
 | `limit` | parameter | `` |
 
 ### mostRecentPath
